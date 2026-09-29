@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "531615769377",
+    "project_id": "moneytrail-se3092",
+    "storage_bucket": "moneytrail-se3092.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:531615769377:android:b93a0a61a4c56d53edd460",
+        "android_client_info": {
+          "package_name": "lk.moneytrail.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "531615769377-t190h0clvvp8aa024issq5fq2mljc0o0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "lk.moneytrail.app",
+            "certificate_hash": "ed4954ba4eecc4698168a09900fc910761e31f75"
+          }
+        },
+        {
+          "client_id": "531615769377-p96f8smqpek6evnq83a6vd59ooni0mb1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0TnutUCQ9hbIC4XpQkQY2aUivrQj8Ya4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "531615769377-p96f8smqpek6evnq83a6vd59ooni0mb1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
