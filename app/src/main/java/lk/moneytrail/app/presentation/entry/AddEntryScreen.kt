@@ -31,11 +31,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
@@ -46,8 +43,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -79,13 +74,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.presentation.components.MINUS_SIGN
+import lk.moneytrail.app.presentation.components.MoneyTrailDatePickerDialog
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.Ink
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -314,7 +308,7 @@ private fun AddEntryContent(
     }
 
     if (isDatePickerOpen) {
-        EntryDatePickerDialog(
+        MoneyTrailDatePickerDialog(
             date = uiState.date,
             onDateSelected = onDateChange,
             onDismiss = { isDatePickerOpen = false }
@@ -552,35 +546,6 @@ private fun KeypadKey(onClick: () -> Unit, modifier: Modifier = Modifier, conten
 @Composable
 private fun KeyLabel(text: String) {
     Text(text, style = MaterialTheme.typography.titleMedium, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EntryDatePickerDialog(
-    date: LocalDate,
-    onDateSelected: (LocalDate) -> Unit,
-    onDismiss: () -> Unit
-) {
-    // The date picker works in UTC milliseconds at midnight.
-    val pickerState = rememberDatePickerState(
-        initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                pickerState.selectedDateMillis?.let { millis ->
-                    onDateSelected(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
-                }
-                onDismiss()
-            }) { Text("OK") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    ) {
-        DatePicker(state = pickerState)
-    }
 }
 
 @Preview(showBackground = true, heightDp = 860)
