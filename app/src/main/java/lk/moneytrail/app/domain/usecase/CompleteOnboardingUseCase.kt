@@ -2,6 +2,7 @@ package lk.moneytrail.app.domain.usecase
 
 import lk.moneytrail.app.domain.model.Account
 import lk.moneytrail.app.domain.model.AppException
+import lk.moneytrail.app.domain.model.IncomeSource
 import lk.moneytrail.app.domain.model.MoneyPlan
 import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
@@ -20,6 +21,7 @@ class CompleteOnboardingUseCase @Inject constructor(
     suspend operator fun invoke(accounts: List<Account>, plan: MoneyPlan, today: LocalDate): Result<Unit> {
         val error = accountsError(accounts)
             ?: salaryError(plan.payDay, plan.baseSalary)
+            ?: incomeSourcesError(plan.incomeSources)
             ?: goalError(plan.goal.name, plan.goal.targetAmount, plan.goal.savedAmount, plan.goal.targetDate, today)
         if (error != null) return Result.failure(AppException(error))
 
@@ -40,6 +42,9 @@ class CompleteOnboardingUseCase @Inject constructor(
             baseSalary < 0 || baseSalary > MAX_AMOUNT -> "That salary amount isn't valid."
             else -> null
         }
+
+        fun incomeSourcesError(sources: Set<IncomeSource>): String? =
+            if (sources.isEmpty()) "Pick at least one way you earn money." else null
 
         fun goalError(
             name: String,
