@@ -1,95 +1,106 @@
 package lk.moneytrail.app.presentation.dashboard
 
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import lk.moneytrail.app.presentation.calendar.CalendarScreen
 import lk.moneytrail.app.presentation.components.EmptyView
-import lk.moneytrail.app.presentation.components.ErrorView
-import lk.moneytrail.app.presentation.components.LoadingView
-import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
+import lk.moneytrail.app.presentation.components.MoneyTrailIcons
+import lk.moneytrail.app.presentation.more.MoreScreen
+import java.time.LocalDate
 
-@Composable
-fun DashboardScreen(
-    onSignedOut: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: DashboardViewModel = hiltViewModel()
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    DashboardContent(
-        uiState = uiState,
-        onRetry = viewModel::loadProfile,
-        onSignOutClick = {
-            viewModel.signOut()
-            onSignedOut()
-        },
-        modifier = modifier
-    )
+private enum class DashboardTab(val label: String, val icon: ImageVector) {
+    CALENDAR("Calendar", MoneyTrailIcons.Calendar),
+    FOLDERS("Folders", MoneyTrailIcons.Folder),
+    INSIGHTS("Insights", MoneyTrailIcons.Insights),
+    MORE("More", MoneyTrailIcons.More)
 }
 
-// Placeholder until balances and transactions are built.
+/** The signed-in home: the bottom bar from the Figma screens, with the calendar first. */
 @Composable
-private fun DashboardContent(
-    uiState: DashboardState,
-    onRetry: () -> Unit,
-    onSignOutClick: () -> Unit,
+fun DashboardScreen(
+    onAddEntryClick: (date: LocalDate) -> Unit,
+    onSignedOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedTab by rememberSaveable { mutableStateOf(DashboardTab.CALENDAR) }
+
     Scaffold(
         modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            TextButton(
-                onClick = onSignOutClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(8.dp)
-            ) {
-                Text("Sign out")
-            }
+            DashboardNavigationBar(selected = selectedTab, onTabClick = { selectedTab = it })
         }
     ) { innerPadding ->
-        val contentModifier = Modifier.padding(innerPadding)
-        when (uiState) {
-            DashboardState.Loading -> LoadingView(
-                message = "Loading your profile…",
+        val contentModifier = Modifier
+            .padding(innerPadding)
+            .consumeWindowInsets(innerPadding)
+        when (selectedTab) {
+            DashboardTab.CALENDAR -> CalendarScreen(onAddEntryClick = onAddEntryClick, modifier = contentModifier)
+            DashboardTab.FOLDERS -> EmptyView(
+                title = "Folders are on the way",
+                message = "Your entries will be grouped into income and expense folders here.",
                 modifier = contentModifier
             )
-            is DashboardState.Error -> ErrorView(
-                message = uiState.message,
-                onRetry = onRetry,
+            DashboardTab.INSIGHTS -> EmptyView(
+                title = "Insights are on the way",
+                message = "Charts of where your money goes will appear here.",
                 modifier = contentModifier
             )
-            is DashboardState.Ready -> EmptyView(
-                title = if (uiState.name.isNullOrBlank()) "Welcome" else "Hi, ${uiState.name}",
-                message = listOfNotNull(
-                    "Your dashboard is coming soon.",
-                    uiState.email?.let { "Signed in as $it" }
-                ).joinToString("\n"),
-                modifier = contentModifier
-            )
+            DashboardTab.MORE -> MoreScreen(onSignedOut = onSignedOut, modifier = contentModifier)
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun DashboardScreenPreview() {
-    MoneyTrailTheme {
-        DashboardContent(
-            uiState = DashboardState.Ready(name = "Nimal", email = "nimal@example.com"),
-            onRetry = {},
-            onSignOutClick = {}
-        )
+private fun DashboardNavigationBar(
+    selected: DashboardTab,
+    onTabClick: (DashboardTab) -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    Column {
+        HorizontalDivider(color = colors.outlineVariant)
+        NavigationBar(containerColor = colors.surface, tonalElevation = 0.dp) {
+            DashboardTab.entries.forEach { tab ->
+                val isSelected = tab == selected
+                NavigationBarItem(
+                    selected = isSelected,
+                    onClick = { onTabClick(tab) },
+                    icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(22.dp)) },
+                    label = {
+                        Text(
+                            text = tab.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = colors.primary,
+                        selectedTextColor = colors.primary,
+                        indicatorColor = colors.primaryContainer,
+                        unselectedIconColor = colors.outline,
+                        unselectedTextColor = colors.outline
+                    )
+                )
+            }
+        }
     }
 }

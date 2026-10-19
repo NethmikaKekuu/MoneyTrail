@@ -1,4 +1,4 @@
-package lk.moneytrail.app.presentation.dashboard
+package lk.moneytrail.app.presentation.more
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,13 +12,13 @@ import lk.moneytrail.app.domain.repository.UserRepository
 import javax.inject.Inject
 
 @HiltViewModel
-class DashboardViewModel @Inject constructor(
+class MoreViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<DashboardState>(DashboardState.Loading)
-    val uiState: StateFlow<DashboardState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<MoreState>(MoreState.Loading)
+    val uiState: StateFlow<MoreState> = _uiState.asStateFlow()
 
     init {
         loadProfile()
@@ -27,21 +27,21 @@ class DashboardViewModel @Inject constructor(
     fun loadProfile() {
         val uid = authRepository.currentUserId
         if (uid == null) {
-            _uiState.value = DashboardState.Error("You're signed out. Sign in again.")
+            _uiState.value = MoreState.Error("You're signed out. Sign in again.")
             return
         }
 
-        _uiState.value = DashboardState.Loading
+        _uiState.value = MoreState.Loading
         viewModelScope.launch {
             userRepository.getProfile(uid)
                 .onSuccess { profile ->
-                    _uiState.value = DashboardState.Ready(
+                    _uiState.value = MoreState.Ready(
                         name = profile?.name,
                         email = profile?.email ?: authRepository.currentUserEmail
                     )
                 }
                 .onFailure { e ->
-                    _uiState.value = DashboardState.Error(
+                    _uiState.value = MoreState.Error(
                         e.message ?: "Couldn't load your profile."
                     )
                 }
