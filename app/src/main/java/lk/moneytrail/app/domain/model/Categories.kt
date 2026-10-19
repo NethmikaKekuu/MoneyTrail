@@ -27,8 +27,8 @@ object Categories {
 }
 
 /**
- * Where the money comes from or goes to. A fixed list until onboarding lets people
- * name their own; these match the onboarding design.
+ * Accounts offered on the new entry screen for someone who skipped onboarding.
+ * Once onboarding is finished, the accounts they picked are used instead.
  */
 object Accounts {
     val defaults: List<String> = listOf("Main bank", "Secondary bank", "Cash wallet", "Savings")
