@@ -69,6 +69,11 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)
 
+    // Google sign-in (Credential Manager hands the Google ID token to Firebase Auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+
     // Room (offline cache)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

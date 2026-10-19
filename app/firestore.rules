@@ -1,8 +1,38 @@
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{uid}/{document=**} {
-         allow read, write: if request.auth != null && request.auth.uid == uid;
-       }
-     }
-   }
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // users/{uid}: the profile written when an account is made, by email sign-up or
+    // the first Google sign-in. It holds only the name, the email and the server's
+    // creation time, and createdAt can't be changed afterwards. Google accounts with
+    // no display name save an empty name, so the name may be empty.
+    function isValidProfile(data) {
+      return data.keys().hasAll(['name', 'email', 'createdAt'])
+        && data.keys().hasOnly(['name', 'email', 'createdAt'])
+        && data.name is string && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 254
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && isValidProfile(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid)
+        && isValidProfile(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // Everything stored under a user (transactions, accounts, ...) is private to them.
+    // The {collection} segment keeps this from also matching users/{uid} itself, which
+    // would skip the profile checks above.
+    match /users/{uid}/{collection}/{document=**} {
+      allow read, write: if isOwner(uid);
+    }
+  }
+}
