@@ -28,11 +28,39 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt;
     }
 
-    // Everything stored under a user (transactions, accounts, ...) is private to them.
-    // The {collection} segment keeps this from also matching users/{uid} itself, which
-    // would skip the profile checks above.
+    // users/{uid}/entries/{entryId}: one income or expense on the calendar.
+    // Amounts are whole rupees (LKR) and always positive; type says which way the money
+    // went. date is yyyy-MM-dd. Expenses say whether they were committed or
+    // discretionary; income has no spendingType.
+    function isValidEntry(data) {
+      let fields = ['type', 'amount', 'category', 'account', 'date', 'note', 'spendingType', 'createdAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.type in ['INCOME', 'EXPENSE']
+        && data.amount is int && data.amount > 0 && data.amount <= 999999999
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 50
+        && data.account is string && data.account.size() > 0 && data.account.size() <= 50
+        && data.date is string && data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && data.note is string && data.note.size() <= 200
+        && ((data.type == 'INCOME' && data.spendingType == null)
+          || (data.type == 'EXPENSE' && data.spendingType in ['COMMITTED', 'DISCRETIONARY']))
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid}/entries/{entryId} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && isValidEntry(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid)
+        && isValidEntry(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // Everything else stored under a user is private to them. The {collection} segment
+    // keeps this from also matching users/{uid} itself, and entries are left out so
+    // their checks above can't be skipped.
     match /users/{uid}/{collection}/{document=**} {
-      allow read, write: if isOwner(uid);
+      allow read, write: if isOwner(uid) && collection != 'entries';
     }
   }
 }
