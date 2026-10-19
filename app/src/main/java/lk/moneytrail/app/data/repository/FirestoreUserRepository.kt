@@ -4,7 +4,6 @@ import android.util.Log
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.tasks.await
@@ -57,24 +56,13 @@ class FirestoreUserRepository @Inject constructor(
             Result.success(block())
         } catch (e: TimeoutCancellationException) {
             Log.w(TAG, "Firestore call timed out", e)
-            Result.failure(AppException(UNREACHABLE_MESSAGE, e))
+            Result.failure(AppException(FIRESTORE_UNREACHABLE_MESSAGE, e))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "Firestore call failed", e)
-            Result.failure(AppException(e.toUserMessage(), e))
+            Result.failure(AppException(e.toFirestoreMessage(PROFILE_FAILED_MESSAGE), e))
         }
-
-    private fun Exception.toUserMessage(): String = when ((this as? FirebaseFirestoreException)?.code) {
-        FirebaseFirestoreException.Code.PERMISSION_DENIED ->
-            "Firestore blocked this request. Check the Rules tab of Firestore in the Firebase console."
-        FirebaseFirestoreException.Code.NOT_FOUND ->
-            "The Firestore database hasn't been created yet in the Firebase console."
-        FirebaseFirestoreException.Code.UNAVAILABLE ->
-            UNREACHABLE_MESSAGE
-        else ->
-            "Couldn't load or save your profile. Please try again."
-    }
 
     private companion object {
         const val TAG = "FirestoreUserRepository"
@@ -83,6 +71,6 @@ class FirestoreUserRepository @Inject constructor(
         const val FIELD_EMAIL = "email"
         const val FIELD_CREATED_AT = "createdAt"
         const val WRITE_TIMEOUT_MS = 15_000L
-        const val UNREACHABLE_MESSAGE = "Can't reach Firestore. Check your internet connection and try again."
+        const val PROFILE_FAILED_MESSAGE = "Couldn't load or save your profile. Please try again."
     }
 }
