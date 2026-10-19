@@ -56,11 +56,58 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt;
     }
 
+    // users/{uid}/accounts/{accountId}: a place the user keeps money, picked during
+    // onboarding. The id is a short slug such as "main-bank".
+    function isValidAccount(data) {
+      let fields = ['name', 'description', 'kind', 'createdAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 50
+        && data.description is string && data.description.size() <= 100
+        && data.kind in ['BANK', 'CASH', 'SAVINGS', 'CRYPTO']
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid}/accounts/{accountId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && accountId.size() <= 50
+        && isValidAccount(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+    }
+
+    // users/{uid}/settings/plan: pay day, base salary (whole LKR, 0 when there is no
+    // salary), income sources and the savings goal, written at the end of onboarding.
+    // What's already saved can't be more than the goal; dates are yyyy-MM-dd.
+    function isValidGoal(goal) {
+      let fields = ['name', 'targetAmount', 'savedAmount', 'targetDate'];
+      return goal is map && goal.keys().hasAll(fields) && goal.keys().hasOnly(fields)
+        && goal.name is string && goal.name.size() > 0 && goal.name.size() <= 60
+        && goal.targetAmount is int && goal.targetAmount > 0 && goal.targetAmount <= 999999999
+        && goal.savedAmount is int && goal.savedAmount >= 0 && goal.savedAmount <= goal.targetAmount
+        && goal.targetDate is string && goal.targetDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
+    }
+
+    function isValidPlan(data) {
+      let fields = ['payDay', 'baseSalary', 'incomeSources', 'goal', 'updatedAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.payDay is int && data.payDay >= 1 && data.payDay <= 31
+        && data.baseSalary is int && data.baseSalary >= 0 && data.baseSalary <= 999999999
+        && data.incomeSources is list && data.incomeSources.size() <= 5
+        && data.incomeSources.hasOnly(['SALARY', 'FREELANCE', 'ADSENSE', 'CRYPTO', 'OTHER'])
+        && isValidGoal(data.goal)
+        && data.updatedAt == request.time;
+    }
+
+    match /users/{uid}/settings/plan {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidPlan(request.resource.data);
+    }
+
     // Everything else stored under a user is private to them. The {collection} segment
-    // keeps this from also matching users/{uid} itself, and entries are left out so
-    // their checks above can't be skipped.
+    // keeps this from also matching users/{uid} itself, and the collections checked
+    // above are left out so their checks can't be skipped.
     match /users/{uid}/{collection}/{document=**} {
-      allow read, write: if isOwner(uid) && collection != 'entries';
+      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings']);
     }
   }
 }
