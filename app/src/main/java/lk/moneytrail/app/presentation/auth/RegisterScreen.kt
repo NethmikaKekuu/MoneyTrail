@@ -22,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -34,7 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import lk.moneytrail.app.R
+import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.MoneyTrailLogo
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
@@ -201,7 +200,7 @@ private fun PasswordRule(text: String, isMet: Boolean) {
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Icon(
-            painter = painterResource(if (isMet) R.drawable.ic_check else R.drawable.ic_circle),
+            imageVector = if (isMet) MoneyTrailIcons.Check else MoneyTrailIcons.Circle,
             contentDescription = if (isMet) "Done:" else "Not yet:",
             tint = if (isMet) colors.primary else colors.outlineVariant,
             modifier = Modifier.size(14.dp)

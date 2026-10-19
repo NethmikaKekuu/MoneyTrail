@@ -42,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -52,7 +51,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import lk.moneytrail.app.R
+import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 
 // Building blocks for the auth screens, styled after MoneyTrail-Figma-HTML/03 to 05.
 
@@ -217,9 +216,7 @@ internal fun PasswordField(
         trailingIcon = {
             IconButton(onClick = { isVisible = !isVisible }) {
                 Icon(
-                    painter = painterResource(
-                        if (isVisible) R.drawable.ic_visibility_off else R.drawable.ic_visibility
-                    ),
+                    imageVector = if (isVisible) MoneyTrailIcons.VisibilityOff else MoneyTrailIcons.Visibility,
                     contentDescription = if (isVisible) "Hide password" else "Show password",
                     tint = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(20.dp)
@@ -365,7 +362,7 @@ internal fun GoogleSignInButton(
             ButtonSpinner()
         } else {
             Icon(
-                painter = painterResource(R.drawable.ic_google),
+                imageVector = MoneyTrailIcons.GoogleLogo,
                 contentDescription = null,
                 tint = Color.Unspecified,
                 modifier = Modifier.size(18.dp)
@@ -392,7 +389,7 @@ internal fun AuthBackButton(
         modifier = modifier.size(44.dp)
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_chevron_left),
+            imageVector = MoneyTrailIcons.ChevronLeft,
             contentDescription = contentDescription,
             modifier = Modifier.size(18.dp)
         )

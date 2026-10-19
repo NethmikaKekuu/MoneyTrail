@@ -1,6 +1,5 @@
 package lk.moneytrail.app.presentation.auth
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,14 +17,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import lk.moneytrail.app.R
+import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
 // MoneyTrail-Figma-HTML/05-ForgotPassword.html
@@ -76,7 +75,7 @@ private fun ForgotPasswordContent(
             verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
             if (uiState.sentTo == null) {
-                IconTile(R.drawable.ic_lock)
+                IconTile(MoneyTrailIcons.Lock)
                 TitleAndMessage(
                     title = "Forgot your password?",
                     message = "No problem. Enter the email you signed up with and we'll send you a reset link."
@@ -99,7 +98,7 @@ private fun ForgotPasswordContent(
                     isLoading = uiState.isLoading
                 )
             } else {
-                IconTile(R.drawable.ic_mail)
+                IconTile(MoneyTrailIcons.Mail)
                 TitleAndMessage(
                     title = "Check your email",
                     message = "If ${uiState.sentTo} has a MoneyTrail account, a reset link is on its way. " +
@@ -120,7 +119,7 @@ private fun ForgotPasswordContent(
 }
 
 @Composable
-private fun IconTile(@DrawableRes icon: Int) {
+private fun IconTile(icon: ImageVector) {
     Box(
         modifier = Modifier
             .size(84.dp)
@@ -128,7 +127,7 @@ private fun IconTile(@DrawableRes icon: Int) {
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            painter = painterResource(icon),
+            imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(38.dp)

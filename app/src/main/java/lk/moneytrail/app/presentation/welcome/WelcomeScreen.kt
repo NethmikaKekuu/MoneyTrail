@@ -35,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -44,9 +43,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import lk.moneytrail.app.R
 import lk.moneytrail.app.presentation.auth.AuthPrimaryButton
 import lk.moneytrail.app.presentation.auth.AuthSecondaryButton
+import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.MoneyTrailLogo
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 import lk.moneytrail.app.presentation.theme.Rust
@@ -142,7 +141,7 @@ fun WelcomeScreen(
                     modifier = Modifier.size(52.dp)
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_arrow_forward),
+                        imageVector = MoneyTrailIcons.ArrowForward,
                         contentDescription = "Next slide",
                         tint = colors.primary,
                         modifier = Modifier.size(20.dp)
