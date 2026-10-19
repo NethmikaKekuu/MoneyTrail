@@ -4,13 +4,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import lk.moneytrail.app.presentation.auth.ForgotPasswordScreen
 import lk.moneytrail.app.presentation.auth.LoginScreen
 import lk.moneytrail.app.presentation.auth.RegisterScreen
 import lk.moneytrail.app.presentation.dashboard.DashboardScreen
+import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
 import lk.moneytrail.app.presentation.splash.SplashScreen
 import lk.moneytrail.app.presentation.welcome.WelcomeScreen
@@ -65,7 +68,26 @@ fun MoneyTrailNavHost(
         }
         composable(Routes.DASHBOARD) {
             DashboardScreen(
+                onAddEntryClick = { date ->
+                    navController.navigate(Routes.addEntry(date)) { launchSingleTop = true }
+                },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
+            )
+        }
+        composable(
+            route = Routes.ADD_ENTRY,
+            arguments = listOf(
+                navArgument(Routes.ADD_ENTRY_DATE_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            AddEntryScreen(
+                // Pops only this screen, so saving and tapping close together can't also
+                // pop the dashboard.
+                onClose = { navController.popBackStack(Routes.ADD_ENTRY, inclusive = true) }
             )
         }
     }
