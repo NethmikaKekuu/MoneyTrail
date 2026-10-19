@@ -1,0 +1,149 @@
+package lk.moneytrail.app.data.repository
+
+import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
+import lk.moneytrail.app.domain.model.AppException
+import lk.moneytrail.app.domain.model.Entry
+import lk.moneytrail.app.domain.model.EntryType
+import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.domain.repository.EntryRepository
+import java.time.LocalDate
+import java.time.YearMonth
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Entries live in users/{uid}/entries/{entryId}. The date is stored as a yyyy-MM-dd
+ * string, which sorts the same way as the dates, so a month is a single range query
+ * on one field and needs no composite index.
+ */
+@Singleton
+class FirestoreEntryRepository @Inject constructor(
+    private val firestore: FirebaseFirestore,
+    private val auth: FirebaseAuth
+) : EntryRepository {
+
+    override fun observeMonth(month: YearMonth): Flow<Result<List<Entry>>> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            trySend(Result.failure(AppException(SIGNED_OUT_MESSAGE)))
+            close()
+            awaitClose()
+            return@callbackFlow
+        }
+
+        // A snapshot listener, so the calendar updates the moment an entry is saved. It
+        // answers from the offline cache first, so the calendar also opens without internet.
+        val registration = entriesOf(uid)
+            .whereGreaterThanOrEqualTo(FIELD_DATE, month.atDay(1).toString())
+            .whereLessThanOrEqualTo(FIELD_DATE, month.atEndOfMonth().toString())
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "Listening to entries failed", error)
+                    trySend(Result.failure(AppException(error.toFirestoreMessage(LOAD_FAILED_MESSAGE), error)))
+                    close()
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val entries = snapshot.documents
+                        .sortedWith(
+                            compareBy<DocumentSnapshot>(
+                                { it.getString(FIELD_DATE) },
+                                // Entries saved offline have no server time yet; use Firestore's estimate.
+                                { it.getTimestamp(FIELD_CREATED_AT, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE) }
+                            )
+                        )
+                        .mapNotNull { it.toEntry() }
+                    trySend(Result.success(entries))
+                }
+            }
+        awaitClose { registration.remove() }
+    }
+
+    override suspend fun addEntry(entry: Entry): Result<Unit> {
+        val uid = auth.currentUser?.uid
+            ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
+
+        return try {
+            val write = entriesOf(uid).document().set(entry.toFirestore())
+            write.addOnFailureListener { Log.w(TAG, "Saving an entry failed on the server", it) }
+            // Firestore puts the entry in its offline cache straight away, so the calendar
+            // shows it at once. The server's confirmation never comes while offline, so
+            // wait briefly for it and otherwise let Firestore sync in the background.
+            withTimeoutOrNull(SERVER_WAIT_MS) { write.await() }
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Saving an entry failed", e)
+            Result.failure(AppException(e.toFirestoreMessage(SAVE_FAILED_MESSAGE), e))
+        }
+    }
+
+    private fun entriesOf(uid: String): CollectionReference =
+        firestore.collection(USERS_COLLECTION).document(uid).collection(ENTRIES_COLLECTION)
+
+    private fun Entry.toFirestore(): Map<String, Any?> = mapOf(
+        FIELD_TYPE to type.name,
+        FIELD_AMOUNT to amount,
+        FIELD_CATEGORY to category,
+        FIELD_ACCOUNT to account,
+        FIELD_DATE to date.toString(),
+        FIELD_NOTE to note,
+        FIELD_SPENDING_TYPE to spendingType?.name,
+        FIELD_CREATED_AT to FieldValue.serverTimestamp()
+    )
+
+    /** Null for a document with missing or unreadable fields, which is skipped rather than crashing the calendar. */
+    private fun DocumentSnapshot.toEntry(): Entry? {
+        val type = getString(FIELD_TYPE)?.let { name -> EntryType.entries.find { it.name == name } }
+        val amount = getLong(FIELD_AMOUNT)
+        val category = getString(FIELD_CATEGORY)
+        val account = getString(FIELD_ACCOUNT)
+        val date = getString(FIELD_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        if (type == null || amount == null || category == null || account == null || date == null) {
+            Log.w(TAG, "Skipping entry $id: missing or invalid fields")
+            return null
+        }
+        return Entry(
+            id = id,
+            type = type,
+            amount = amount,
+            category = category,
+            account = account,
+            date = date,
+            note = getString(FIELD_NOTE).orEmpty(),
+            spendingType = getString(FIELD_SPENDING_TYPE)?.let { name ->
+                SpendingType.entries.find { it.name == name }
+            }
+        )
+    }
+
+    private companion object {
+        const val TAG = "FirestoreEntryRepository"
+        const val USERS_COLLECTION = "users"
+        const val ENTRIES_COLLECTION = "entries"
+        const val FIELD_TYPE = "type"
+        const val FIELD_AMOUNT = "amount"
+        const val FIELD_CATEGORY = "category"
+        const val FIELD_ACCOUNT = "account"
+        const val FIELD_DATE = "date"
+        const val FIELD_NOTE = "note"
+        const val FIELD_SPENDING_TYPE = "spendingType"
+        const val FIELD_CREATED_AT = "createdAt"
+        const val SERVER_WAIT_MS = 3_000L
+        const val SIGNED_OUT_MESSAGE = "You're signed out. Sign in again."
+        const val LOAD_FAILED_MESSAGE = "Couldn't load your entries. Please try again."
+        const val SAVE_FAILED_MESSAGE = "Couldn't save the entry. Please try again."
+    }
+}
