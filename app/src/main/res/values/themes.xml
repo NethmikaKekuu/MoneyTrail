@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <style name="Theme.MoneyTrail" parent="android:Theme.Material.Light.NoActionBar">
-        <!-- Shown while the app starts, so launch blends into the orange splash screen. -->
-        <item name="android:windowBackground">@color/ember</item>
-    </style>
-</resources>

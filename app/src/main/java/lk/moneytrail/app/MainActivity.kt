@@ -19,8 +19,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MoneyTrailTheme {
-                // The window background is orange for the launch screen, so give the
-                // app its own background to stop it showing through screen transitions.
+                // Paints the theme background behind every screen, including while
+                // screens cross-fade during navigation.
                 Surface(modifier = Modifier.fillMaxSize()) {
                     MoneyTrailNavHost()
                 }
