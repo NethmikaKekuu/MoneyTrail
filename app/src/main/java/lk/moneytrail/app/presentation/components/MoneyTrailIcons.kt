@@ -44,6 +44,58 @@ object MoneyTrailIcons {
 
     val Circle = lineIcon("Circle", 2.5f, "M5,12a7,7 0,1 0,14 0a7,7 0,1 0,-14 0")
 
+    val ChevronRight = lineIcon("ChevronRight", 2.2f, "M9,18l6,-6 -6,-6")
+
+    val Close = lineIcon("Close", 2.2f, "M6,6l12,12M18,6L6,18")
+
+    val Plus = lineIcon("Plus", 2.4f, "M12,5v14M5,12h14")
+
+    val Calendar = lineIcon(
+        "Calendar", 2f,
+        "M6,4h12a3,3 0,0 1,3 3v11a3,3 0,0 1,-3 3h-12a3,3 0,0 1,-3 -3v-11a3,3 0,0 1,3 -3z",
+        "M3,9h18M8,2v4M16,2v4"
+    )
+
+    val Folder = lineIcon(
+        "Folder", 2f,
+        "M3,7a2,2 0,0 1,2 -2h4l2,2h8a2,2 0,0 1,2 2v8a2,2 0,0 1,-2 2H5a2,2 0,0 1,-2 -2z"
+    )
+
+    val Insights = lineIcon("Insights", 2f, "M4,20V10M10,20V4M16,20v-7M22,20H2")
+
+    val More = lineIcon(
+        "More", 2f,
+        "M3.5,12a1.5,1.5 0,1 0,3 0a1.5,1.5 0,1 0,-3 0",
+        "M10.5,12a1.5,1.5 0,1 0,3 0a1.5,1.5 0,1 0,-3 0",
+        "M17.5,12a1.5,1.5 0,1 0,3 0a1.5,1.5 0,1 0,-3 0"
+    )
+
+    val Note = lineIcon(
+        "Note", 2f,
+        "M14,3H6a2,2 0,0 0,-2 2v14a2,2 0,0 0,2 2h12a2,2 0,0 0,2 -2V9z",
+        "M14,3v6h6",
+        "M8,13h8M8,17h5"
+    )
+
+    /** Bank card, for the account picker. */
+    val Card = lineIcon(
+        "Card", 2f,
+        "M5,5h14a3,3 0,0 1,3 3v8a3,3 0,0 1,-3 3h-14a3,3 0,0 1,-3 -3v-8a3,3 0,0 1,3 -3z",
+        "M2,10h20"
+    )
+
+    val Backspace = lineIcon(
+        "Backspace", 2f,
+        "M21,5H9l-7,7 7,7h12a2,2 0,0 0,2 -2V7a2,2 0,0 0,-2 -2z",
+        "M17,9l-6,6M11,9l6,6"
+    )
+
+    val SignOut = lineIcon(
+        "SignOut", 2f,
+        "M9,21H5a2,2 0,0 1,-2 -2V5a2,2 0,0 1,2 -2h4",
+        "M16,17l5,-5 -5,-5M21,12H9"
+    )
+
     /** Google's "G" for the "Continue with Google" button. */
     val GoogleLogo: ImageVector = ImageVector.Builder(
         name = "GoogleLogo",
