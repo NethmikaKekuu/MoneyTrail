@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -30,10 +31,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
-// The start of MoneyTrail-Figma-HTML/12-More.html: the profile and sign-out. The money
-// in, bills and account sections come with the features they open.
+// The start of MoneyTrail-Figma-HTML/12-More.html: the profile, Settings and sign-out.
+// The money in, bills and account sections come with the features they open.
 @Composable
 fun MoreScreen(
+    onSettingsClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MoreViewModel = hiltViewModel()
@@ -43,6 +45,7 @@ fun MoreScreen(
     MoreContent(
         uiState = uiState,
         onRetry = viewModel::loadProfile,
+        onSettingsClick = onSettingsClick,
         onSignOutClick = {
             viewModel.signOut()
             onSignedOut()
@@ -55,6 +58,7 @@ fun MoreScreen(
 private fun MoreContent(
     uiState: MoreState,
     onRetry: () -> Unit,
+    onSettingsClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -80,24 +84,40 @@ private fun MoreContent(
             )
         }
 
+        MoreRow(
+            icon = MoneyTrailIcons.Settings,
+            title = "Settings",
+            subtitle = "Salary, pay day and your categories",
+            onClick = onSettingsClick
+        )
         // Always shown, so the user can sign out even if the profile didn't load.
-        Surface(
-            onClick = onSignOutClick,
-            shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.surface,
+        MoreRow(icon = MoneyTrailIcons.SignOut, title = "Sign out", subtitle = null, onClick = onSignOutClick)
+    }
+}
+
+@Composable
+private fun MoreRow(icon: ImageVector, title: String, subtitle: String?, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
+    ) {
+        Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
+                .heightIn(min = 56.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .heightIn(min = 56.dp)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(MoneyTrailIcons.SignOut, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Text("Sign out", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                if (subtitle != null) {
+                    Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                }
             }
         }
     }
@@ -156,6 +176,7 @@ private fun MoreScreenPreview() {
         MoreContent(
             uiState = MoreState.Ready(name = "Kavindu Silva", email = "kavindu.silva@gmail.com"),
             onRetry = {},
+            onSettingsClick = {},
             onSignOutClick = {}
         )
     }

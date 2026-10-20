@@ -7,6 +7,7 @@ import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.IncomeSource
+import lk.moneytrail.app.domain.model.payDateIn
 import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
@@ -17,7 +18,7 @@ import javax.inject.Inject
 /**
  * Adds this month's salary as an expected entry on pay day, for the base salary in the
  * user's plan, so it shows on the calendar and gets checked on the day like any other
- * expected money. A pay day of 31 falls on the last day of shorter months.
+ * expected money.
  *
  * Does nothing when there's no plan or no salary, when this month already has a
  * Salary entry (expected or confirmed), or once pay day has passed, so a salary the
@@ -34,7 +35,7 @@ class EnsureMonthlySalaryUseCase @Inject constructor(
         if (plan.baseSalary <= 0 || IncomeSource.SALARY !in plan.incomeSources) return Result.success(Unit)
 
         val month = YearMonth.from(today)
-        val payDate = month.atDay(plan.payDay.coerceAtMost(month.lengthOfMonth()))
+        val payDate = plan.payDateIn(month)
         if (today.isAfter(payDate)) return Result.success(Unit)
 
         val entries = entryRepository.observeMonth(month).first().getOrElse { return Result.failure(it) }

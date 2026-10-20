@@ -16,6 +16,7 @@ import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
+import lk.moneytrail.app.presentation.settings.SettingsScreen
 import lk.moneytrail.app.presentation.splash.SplashScreen
 import lk.moneytrail.app.presentation.welcome.WelcomeScreen
 
@@ -75,7 +76,15 @@ fun MoneyTrailNavHost(
                 onEntryClick = { entryId ->
                     navController.navigate(Routes.editEntry(entryId)) { launchSingleTop = true }
                 },
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
+            )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBackClick = { navController.popBackStack(Routes.SETTINGS, inclusive = true) },
+                // Onboarding ends on a fresh dashboard, which then expects the new salary.
+                onSetUpClick = { navController.navigate(Routes.ONBOARDING) { launchSingleTop = true } }
             )
         }
         composable(
