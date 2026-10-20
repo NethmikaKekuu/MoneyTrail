@@ -10,8 +10,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withTimeoutOrNull
 import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryType
@@ -75,12 +73,7 @@ class FirestoreEntryRepository @Inject constructor(
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
 
         return try {
-            val write = entriesOf(uid).document().set(entry.toFirestore())
-            write.addOnFailureListener { Log.w(TAG, "Saving an entry failed on the server", it) }
-            // Firestore puts the entry in its offline cache straight away, so the calendar
-            // shows it at once. The server's confirmation never comes while offline, so
-            // wait briefly for it and otherwise let Firestore sync in the background.
-            withTimeoutOrNull(SERVER_WAIT_MS) { write.await() }
+            entriesOf(uid).document().set(entry.toFirestore()).awaitServerBriefly(TAG)
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -141,8 +134,6 @@ class FirestoreEntryRepository @Inject constructor(
         const val FIELD_NOTE = "note"
         const val FIELD_SPENDING_TYPE = "spendingType"
         const val FIELD_CREATED_AT = "createdAt"
-        const val SERVER_WAIT_MS = 3_000L
-        const val SIGNED_OUT_MESSAGE = "You're signed out. Sign in again."
         const val LOAD_FAILED_MESSAGE = "Couldn't load your entries. Please try again."
         const val SAVE_FAILED_MESSAGE = "Couldn't save the entry. Please try again."
     }

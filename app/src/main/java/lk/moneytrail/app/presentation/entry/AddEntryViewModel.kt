@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.moneytrail.app.domain.model.Categories
 import lk.moneytrail.app.domain.model.EntryType
+import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.usecase.AddEntryUseCase
 import lk.moneytrail.app.presentation.navigation.Routes
 import java.time.LocalDate
@@ -19,11 +20,27 @@ import javax.inject.Inject
 @HiltViewModel
 class AddEntryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val addEntryUseCase: AddEntryUseCase
+    private val addEntryUseCase: AddEntryUseCase,
+    accountRepository: AccountRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEntryState(date = startDate(savedStateHandle)))
     val uiState: StateFlow<AddEntryState> = _uiState.asStateFlow()
+
+    init {
+        // Offer the accounts picked during onboarding. Someone who skipped it, or whose
+        // accounts can't load, keeps the default list.
+        viewModelScope.launch {
+            accountRepository.observeAccounts().collect { result ->
+                val names = result.getOrNull()?.map { it.name }.orEmpty()
+                if (names.isNotEmpty()) {
+                    _uiState.update {
+                        it.copy(accounts = names, account = if (it.account in names) it.account else names.first())
+                    }
+                }
+            }
+        }
+    }
 
     fun onTypeChange(type: EntryType) {
         _uiState.update {

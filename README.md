@@ -41,11 +41,12 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Sign up and log in | Email and password, with Firestore user profiles | 03, 04 |
 | Google sign-in | Credential Manager account picker, then Firebase Auth | 03 |
 | Forgot password | Firebase reset email, then a "check your email" screen | 05 |
+| Onboarding | Four steps after sign-up: money places, pay day and base salary, income sources, and a savings goal showing the amount to save each month | 06 (steps 2–4 follow its style) |
 | Calendar | Month grid with income and expense markers, month totals, the selected day's entries, updated live from Firestore | 07 |
-| New entry | Expense or income, amount keypad, category, account, date and note | 08 |
+| New entry | Expense or income, amount keypad, category, account (from onboarding), date and note | 08 |
 | More | Profile and sign-out | 12 (first part) |
 
-**Next, in order:** onboarding (money places, pay day, goal), edit and delete entries, folders, expense insights, goal progress, salary confirm, AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
+**Next, in order:** edit and delete entries, folders, expense insights, goal progress, salary confirm, AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
 
 ## Tech stack
 
@@ -160,7 +161,9 @@ Everything a user owns sits under their own document, so one rule (`request.auth
 
 ```
 users/{uid}                       profile
-└── entries/{entryId}             one income or expense on the calendar
+├── entries/{entryId}             one income or expense on the calendar
+├── accounts/{accountId}          a place money sits, picked in onboarding
+└── settings/plan                 pay day, salary, income sources and the savings goal
 ```
 
 ### `users/{uid}`
@@ -193,6 +196,34 @@ Written once when the account is made: on email sign-up, or the first Google sig
 - **`spendingType` is stored, not worked out each time**, so a later "edit entry" can override the category's default.
 - **Live and offline.** The calendar uses a snapshot listener, so new entries appear at once. Firestore's persistent cache is turned on in `di/FirebaseModule.kt`, so the calendar opens and entries save without internet, then sync later.
 
+### `users/{uid}/accounts/{accountId}`
+
+Written at the end of onboarding, one document per place the user ticked, all in one batch. The id is a short slug: `main-bank`, `secondary-bank`, `cash-wallet`, `savings`, `binance`.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `name` | string | 1–50 characters, e.g. `Main bank`. Entries store this name in their `account` field |
+| `description` | string | Up to 100 characters, e.g. `Card and salary account` |
+| `kind` | string | `BANK`, `CASH`, `SAVINGS` or `CRYPTO` |
+| `createdAt` | timestamp | Set by the server |
+
+### `users/{uid}/settings/plan`
+
+One document, written at the end of onboarding. The goal is a map inside it, so one read gives a screen everything it needs about the plan.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `payDay` | integer | Day of the month the salary arrives, 1–31 |
+| `baseSalary` | integer | The fixed part of the salary in LKR, before bonuses; 0 when there is no salary |
+| `incomeSources` | array of strings | Any of `SALARY`, `FREELANCE`, `ADSENSE`, `CRYPTO`, `OTHER` |
+| `goal.name` | string | 1–60 characters, e.g. `MacBook Pro M4` |
+| `goal.targetAmount` | integer | LKR, 1 to 999,999,999 |
+| `goal.savedAmount` | integer | LKR already saved before using the app; never more than the target |
+| `goal.targetDate` | string | `yyyy-MM-dd` |
+| `updatedAt` | timestamp | Set by the server on every save |
+
+The monthly amount to save is worked out when needed (`SavingsGoal.monthlySavingNeeded`), not stored, so it stays right as the months pass.
+
 ## Security rules
 
 `app/firestore.rules` enforces:
@@ -200,7 +231,9 @@ Written once when the account is made: on email sign-up, or the first Google sig
 - A user can only read and write data under their own `users/{uid}`.
 - The profile may only hold `name`, `email` and `createdAt`; `createdAt` must be the server time on create and can't change later.
 - Every entry is checked field by field: allowed keys only, `type` and `spendingType` from fixed lists, amount range, `yyyy-MM-dd` date, note length, server `createdAt`.
-- Any other collection under a user is owner-only. Entries are excluded from that catch-all, so their checks can't be skipped.
+- Each account must have a name, a description and a `kind` from a fixed list, with a server `createdAt`.
+- The plan must have a pay day of 1–31, a salary of 0 or more, income sources from a fixed list, and a goal whose saved amount is no more than its target.
+- Any other collection under a user is owner-only. Entries, accounts and settings are excluded from that catch-all, so their checks can't be skipped.
 
 **Every new collection needs its own validation function and match block**, in the same style as `isValidEntry`.
 
@@ -223,12 +256,12 @@ Compose screen  →  ViewModel  →  use case (optional)  →  repository interf
 ```
 app/src/main/java/lk/moneytrail/app/
 ├── MainActivity.kt, MoneyTrailApp.kt
-├── data/repository/      Firebase implementations + shared Firestore error messages
+├── data/repository/      Firebase implementations + shared Firestore error messages and write helper
 ├── di/                   Hilt modules: FirebaseModule, RepositoryModule
 ├── domain/
-│   ├── model/            Entry, Categories, Accounts, EntryTotals, UserProfile, AuthUser, AppException
-│   ├── repository/       AuthRepository, UserRepository, EntryRepository (interfaces)
-│   └── usecase/          RegisterUseCase, SignInWithGoogleUseCase, AddEntryUseCase
+│   ├── model/            Entry, Categories, Account, MoneyPlan, EntryTotals, UserProfile, AuthUser, AppException
+│   ├── repository/       Auth, User, Entry, Account and Plan repositories (interfaces)
+│   └── usecase/          RegisterUseCase, SignInWithGoogleUseCase, AddEntryUseCase, CompleteOnboardingUseCase
 └── presentation/
     ├── auth/             Login, Register, Forgot password, Google sign-in helper
     ├── calendar/         Calendar screen, month grid logic
@@ -237,7 +270,7 @@ app/src/main/java/lk/moneytrail/app/
     ├── entry/            New entry screen and keypad
     ├── more/             Profile and sign-out
     ├── navigation/       Routes and the NavHost
-    ├── onboarding/       Onboarding (placeholder for now)
+    ├── onboarding/       Four-step onboarding: money places, salary, income sources, goal
     ├── splash/, welcome/
     └── theme/            Colours, Sora and DM Sans typography, MoneyTrailTheme
 ```
@@ -249,7 +282,7 @@ app/src/main/java/lk/moneytrail/app/
 | `splash` | Start screen; sends signed-in users to `dashboard`, others to `welcome` |
 | `welcome` | 3-slide intro with Create account / Log in |
 | `login`, `register`, `forgot_password` | Auth screens |
-| `onboarding` | After first sign-up |
+| `onboarding` | After the first sign-up or first Google sign-in; Skip goes straight to the dashboard |
 | `dashboard` | Bottom-bar home (calendar first) |
 | `add_entry?date={yyyy-MM-dd}` | New entry, starting on the given day |
 
@@ -312,7 +345,7 @@ Use `.\gradlew` in Windows PowerShell and `./gradlew` in macOS, Linux or Git Bas
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Before submitting, install it on an **Android 8.0 (API 26)** emulator and check the main flows: sign up, add entries, see them on the calendar, sign out.
 
-Unit tests cover entry totals, entry validation, the calendar month grid and the keypad rules.
+Unit tests cover entry totals, entry validation, the calendar month grid, the keypad rules, the onboarding checks and the monthly saving needed for the goal.
 
 ## Troubleshooting
 

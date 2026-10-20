@@ -1,0 +1,11 @@
+package lk.moneytrail.app.domain.repository
+
+import lk.moneytrail.app.domain.model.MoneyPlan
+
+// Works on the signed-in user's money plan. Failures are returned as an
+// lk.moneytrail.app.domain.model.AppException whose message can be shown to the user.
+interface PlanRepository {
+
+    /** Saves the pay day, salary, income sources and goal, replacing the previous plan. */
+    suspend fun savePlan(plan: MoneyPlan): Result<Unit>
+}
