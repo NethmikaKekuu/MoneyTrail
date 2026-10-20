@@ -73,6 +73,10 @@ class AddEntryViewModel @Inject constructor(
         _uiState.update { it.copy(note = note.take(AddEntryUseCase.MAX_NOTE_LENGTH), errorMessage = null) }
     }
 
+    fun onExpectedChange(isExpected: Boolean) {
+        _uiState.update { it.copy(isExpected = isExpected, errorMessage = null) }
+    }
+
     fun save() {
         val state = _uiState.value
         if (state.isSaving) return
@@ -85,7 +89,8 @@ class AddEntryViewModel @Inject constructor(
                 category = state.category,
                 account = state.account,
                 date = state.date,
-                note = state.note
+                note = state.note,
+                isExpected = state.isExpected
             )
                 .onSuccess { _uiState.update { it.copy(isSaving = false, isSaved = true) } }
                 .onFailure { e -> _uiState.update { it.copy(isSaving = false, errorMessage = e.message) } }

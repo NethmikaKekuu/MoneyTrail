@@ -15,6 +15,8 @@ data class AddEntryState(
     val accounts: List<String> = Accounts.defaults,
     val date: LocalDate,
     val note: String = "",
+    /** Money planned for [date] rather than money that has already moved. */
+    val isExpected: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
     /** Set once the entry is saved; the screen then closes. */
