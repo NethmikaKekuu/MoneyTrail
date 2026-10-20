@@ -14,6 +14,7 @@ import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.AccountRepository
+import lk.moneytrail.app.domain.repository.CategoryRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.usecase.AddEntryUseCase
 import lk.moneytrail.app.domain.usecase.UpdateEntryUseCase
@@ -26,7 +27,8 @@ class EditEntryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val entryRepository: EntryRepository,
     private val updateEntryUseCase: UpdateEntryUseCase,
-    accountRepository: AccountRepository
+    accountRepository: AccountRepository,
+    categoryRepository: CategoryRepository
 ) : ViewModel() {
 
     private val entryId: String = savedStateHandle.get<String>(Routes.EDIT_ENTRY_ID_ARG).orEmpty()
@@ -41,6 +43,11 @@ class EditEntryViewModel @Inject constructor(
             accountRepository.observeAccounts().collect { result ->
                 val names = result.getOrNull()?.map { it.name }.orEmpty()
                 if (names.isNotEmpty()) _uiState.update { it.copy(accounts = names) }
+            }
+        }
+        viewModelScope.launch {
+            categoryRepository.observeCategories().collect { result ->
+                result.onSuccess { categories -> _uiState.update { it.copy(customCategories = categories) } }
             }
         }
     }
@@ -69,10 +76,18 @@ class EditEntryViewModel @Inject constructor(
         _uiState.update { it.copy(amountDigits = digits, errorMessage = null) }
     }
 
-    /** A new expense category brings its usual committed or discretionary setting with it. */
+    /**
+     * A new expense category brings its usual committed or discretionary setting with it,
+     * whether it's built in or the user's own. One with no setting keeps the current choice.
+     */
     fun onCategoryChange(category: String) {
+        val custom = _uiState.value.customCategories
         updateDraft {
-            val spendingType = if (it.type == EntryType.EXPENSE) Categories.expense[category] else null
+            val spendingType = if (it.type == EntryType.EXPENSE) {
+                Categories.defaultSpending(category, custom) ?: it.spendingType
+            } else {
+                null
+            }
             it.copy(category = category, spendingType = spendingType)
         }
     }

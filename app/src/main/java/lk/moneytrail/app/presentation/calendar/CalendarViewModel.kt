@@ -9,11 +9,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.moneytrail.app.domain.model.Categories
+import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.confirmed
 import lk.moneytrail.app.domain.model.dueExpected
 import lk.moneytrail.app.domain.repository.AuthRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.UserRepository
+import lk.moneytrail.app.domain.usecase.AddEntryUseCase
+import lk.moneytrail.app.domain.usecase.EnsureMonthlySalaryUseCase
 import lk.moneytrail.app.domain.usecase.UpdateEntryUseCase
 import java.time.LocalDate
 import java.time.YearMonth
@@ -24,7 +28,9 @@ class CalendarViewModel @Inject constructor(
     private val entryRepository: EntryRepository,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-    private val updateEntryUseCase: UpdateEntryUseCase
+    private val updateEntryUseCase: UpdateEntryUseCase,
+    private val addEntryUseCase: AddEntryUseCase,
+    private val ensureMonthlySalary: EnsureMonthlySalaryUseCase
 ) : ViewModel() {
 
     private val today = LocalDate.now()
@@ -41,6 +47,11 @@ class CalendarViewModel @Inject constructor(
         loadFirstName()
         listenToMonth(_uiState.value.month)
         listenToExpected()
+        viewModelScope.launch {
+            // Puts this month's salary on the calendar as expected. If it fails, the
+            // user can still add it by hand, so there's nothing to show.
+            ensureMonthlySalary(today)
+        }
     }
 
     fun onPreviousMonthClick() {
@@ -96,15 +107,40 @@ class CalendarViewModel @Inject constructor(
         updateCheck { copy(amountDigits = text.filter(Char::isDigit).trimStart('0').take(MAX_DIGITS), errorMessage = null) }
     }
 
+    fun onCheckBonusChange(text: String) {
+        updateCheck { copy(bonusDigits = text.filter(Char::isDigit).trimStart('0').take(MAX_DIGITS), errorMessage = null) }
+    }
+
     fun onCheckDateChange(date: LocalDate) {
         updateCheck { copy(date = date, errorMessage = null) }
     }
 
-    /** The money moved: the entry becomes confirmed with the real amount and date. */
+    /**
+     * The money moved: the entry becomes confirmed with the real amount and date. A
+     * salary's bonus is saved as a separate Bonus entry, so the dependable base and the
+     * variable extra stay apart.
+     */
     fun onCheckConfirm() {
         saveCheck { check ->
             val amount = check.amountDigits.toLongOrNull() ?: 0L
-            updateEntryUseCase(check.entry.confirmed(amount, check.date))
+            val bonus = check.bonusDigits.toLongOrNull() ?: 0L
+            updateEntryUseCase(check.entry.confirmed(amount, check.date)).fold(
+                onSuccess = {
+                    if (check.isSalary && bonus > 0) {
+                        addEntryUseCase(
+                            type = EntryType.INCOME,
+                            amount = bonus,
+                            category = Categories.BONUS,
+                            account = check.entry.account,
+                            date = check.date,
+                            note = "Salary bonus"
+                        )
+                    } else {
+                        Result.success(Unit)
+                    }
+                },
+                onFailure = { Result.failure(it) }
+            )
         }
     }
 

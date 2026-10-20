@@ -1,6 +1,8 @@
 package lk.moneytrail.app.presentation.calendar
 
+import lk.moneytrail.app.domain.model.Categories
 import lk.moneytrail.app.domain.model.Entry
+import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.EntryTotals
 import lk.moneytrail.app.domain.model.totals
 import java.time.LocalDate
@@ -42,8 +44,13 @@ data class ExpectedCheck(
     val amountDigits: String,
     /** When the money really moved: the planned day or today. */
     val date: LocalDate,
+    /** For a salary: this month's bonus, saved as its own Bonus entry. Empty for none. */
+    val bonusDigits: String = "",
     /** True while the "Not yet" date picker is open. */
     val isPickingNewDate: Boolean = false,
     val isSaving: Boolean = false,
     val errorMessage: String? = null
-)
+) {
+    val isSalary: Boolean
+        get() = entry.type == EntryType.INCOME && entry.category == Categories.SALARY
+}

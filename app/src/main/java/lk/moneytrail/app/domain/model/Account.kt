@@ -24,4 +24,23 @@ object AccountTemplates {
 
     /** Ticked to begin with, as in the design. */
     val defaultIds: Set<String> = setOf("main-bank", "secondary-bank", "cash-wallet", "savings")
+
+    /**
+     * A place the user named in onboarding, such as "Sampath Bank". Its id is the name as
+     * a slug ("sampath-bank"), with a number added when [takenIds] already has it.
+     */
+    fun custom(name: String, kind: AccountKind, takenIds: Set<String>): Account {
+        val base = name.trim().lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(40).ifEmpty { "place" }
+        var id = base
+        var number = 2
+        while (id in takenIds) id = "$base-${number++}"
+
+        val description = when (kind) {
+            AccountKind.BANK -> "Bank account you added"
+            AccountKind.CASH -> "Cash you added"
+            AccountKind.SAVINGS -> "Savings you added"
+            AccountKind.CRYPTO -> "Crypto you added"
+        }
+        return Account(id, name.trim(), description, kind)
+    }
 }

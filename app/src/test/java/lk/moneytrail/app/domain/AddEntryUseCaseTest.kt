@@ -81,10 +81,17 @@ class AddEntryUseCaseTest {
     }
 
     @Test
-    fun categoryOfTheOtherType_isRejected() = runBlocking {
-        val result = addEntry(EntryType.INCOME, 5_000, "Coffee", "Main bank", day, "")
+    fun blankCategory_isRejected() = runBlocking {
+        val result = addEntry(EntryType.INCOME, 5_000, " ", "Main bank", day, "")
 
         assertTrue(result.isFailure)
         assertTrue(repository.saved.isEmpty())
+    }
+
+    @Test
+    fun ownExpenseCategory_usesTheSpendingTypeGiven() = runBlocking {
+        addEntry(EntryType.EXPENSE, 3_500, "Pet care", "Main bank", day, "", spendingType = SpendingType.COMMITTED)
+
+        assertEquals(SpendingType.COMMITTED, repository.saved.single().spendingType)
     }
 }

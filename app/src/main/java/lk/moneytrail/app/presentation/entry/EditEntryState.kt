@@ -2,6 +2,7 @@ package lk.moneytrail.app.presentation.entry
 
 import lk.moneytrail.app.domain.model.Accounts
 import lk.moneytrail.app.domain.model.Categories
+import lk.moneytrail.app.domain.model.CustomCategory
 import lk.moneytrail.app.domain.model.Entry
 
 data class EditEntryState(
@@ -16,6 +17,8 @@ data class EditEntryState(
     val amountDigits: String = "",
     /** The user's accounts from onboarding, or the defaults. */
     val accounts: List<String> = Accounts.defaults,
+    /** Categories the user added in Settings, on a new entry or during onboarding. */
+    val customCategories: List<CustomCategory> = emptyList(),
     val isSaving: Boolean = false,
     /** True while the "Delete this entry?" dialog is open. */
     val isConfirmingDelete: Boolean = false,
@@ -26,8 +29,13 @@ data class EditEntryState(
     val amount: Long
         get() = amountDigits.toLongOrNull() ?: 0L
 
+    /** Categories to pick from, keeping the entry's own even if the user has since deleted it. */
     val categories: List<String>
-        get() = draft?.let { Categories.namesFor(it.type) }.orEmpty()
+        get() {
+            val type = draft?.type ?: return emptyList()
+            val own = original?.takeIf { it.type == type }?.category
+            return (Categories.namesFor(type, customCategories) + listOfNotNull(own)).distinct()
+        }
 
     /** Accounts to pick from, keeping the entry's own even if it's no longer in the list. */
     val accountChoices: List<String>

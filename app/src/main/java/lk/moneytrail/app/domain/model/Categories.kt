@@ -1,9 +1,10 @@
 package lk.moneytrail.app.domain.model
 
 /**
- * The categories offered on the new entry screen. Each expense category says whether
- * it's usually committed or discretionary, so the app can show how much of Kavindu's
- * spending was a choice without asking him every time.
+ * The built-in categories offered on the new entry screen; users can add their own
+ * ([CustomCategory]). Each expense category says whether it's usually committed or
+ * discretionary, so the app can show how much of Kavindu's spending was a choice
+ * without asking him every time.
  */
 object Categories {
 
@@ -18,12 +19,24 @@ object Categories {
         "Other" to SpendingType.DISCRETIONARY
     )
 
-    val income: List<String> = listOf("Salary", "Freelance", "AdSense", "Crypto", "Other")
+    const val SALARY = "Salary"
+    const val BONUS = "Bonus"
+
+    /** Bonus sits apart from Salary, so the dependable base and the variable extra stay separate. */
+    val income: List<String> = listOf(SALARY, BONUS, "Freelance", "AdSense", "Crypto", "Other")
 
     fun namesFor(type: EntryType): List<String> = when (type) {
         EntryType.EXPENSE -> expense.keys.toList()
         EntryType.INCOME -> income
     }
+
+    /** The built-in names for [type] followed by the user's own, without repeats. */
+    fun namesFor(type: EntryType, custom: List<CustomCategory>): List<String> =
+        (namesFor(type) + custom.filter { it.type == type }.map { it.name }).distinct()
+
+    /** The usual committed or discretionary setting of an expense category, built-in or the user's own. */
+    fun defaultSpending(category: String, custom: List<CustomCategory>): SpendingType? =
+        expense[category] ?: custom.find { it.type == EntryType.EXPENSE && it.name == category }?.spendingType
 }
 
 /**

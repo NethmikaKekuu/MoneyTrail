@@ -8,9 +8,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.moneytrail.app.domain.model.AccountKind
+import lk.moneytrail.app.domain.model.AccountTemplates
+import lk.moneytrail.app.domain.model.CustomCategory
+import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.IncomeSource
 import lk.moneytrail.app.domain.model.MoneyPlan
 import lk.moneytrail.app.domain.model.SavingsGoal
+import lk.moneytrail.app.domain.usecase.AddCategoryUseCase
 import lk.moneytrail.app.domain.usecase.CompleteOnboardingUseCase
 import java.time.LocalDate
 import javax.inject.Inject
@@ -30,6 +35,31 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    fun onAddPlaceClick() {
+        _uiState.update { it.copy(isAddingPlace = true, placeError = null) }
+    }
+
+    fun onAddPlaceDismiss() {
+        _uiState.update { it.copy(isAddingPlace = false, placeError = null) }
+    }
+
+    /** Adds a place of the user's own to step 1, already ticked. */
+    fun onAddPlace(name: String, kind: AccountKind) {
+        _uiState.update { state ->
+            val error = CompleteOnboardingUseCase.placeError(name, state.accountChoices)
+            if (error != null) return@update state.copy(placeError = error)
+
+            val place = AccountTemplates.custom(name, kind, state.accountChoices.map { it.id }.toSet())
+            state.copy(
+                customAccounts = state.customAccounts + place,
+                selectedAccountIds = state.selectedAccountIds + place.id,
+                isAddingPlace = false,
+                placeError = null,
+                errorMessage = null
+            )
+        }
+    }
+
     fun onPayDayClick(day: Int) {
         _uiState.update { it.copy(payDay = day, errorMessage = null) }
     }
@@ -42,6 +72,38 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update {
             val sources = if (source in it.incomeSources) it.incomeSources - source else it.incomeSources + source
             it.copy(incomeSources = sources, errorMessage = null)
+        }
+    }
+
+    fun onOwnIncomeToggle(name: String) {
+        _uiState.update {
+            val names = if (name in it.selectedOwnIncome) it.selectedOwnIncome - name else it.selectedOwnIncome + name
+            it.copy(selectedOwnIncome = names, errorMessage = null)
+        }
+    }
+
+    fun onAddIncomeClick() {
+        _uiState.update { it.copy(isAddingIncome = true, incomeError = null) }
+    }
+
+    fun onAddIncomeDismiss() {
+        _uiState.update { it.copy(isAddingIncome = false, incomeError = null) }
+    }
+
+    /** Adds a way of earning of the user's own to step 3, already ticked. It's saved at the end. */
+    fun onAddIncome(name: String) {
+        _uiState.update { state ->
+            val error = AddCategoryUseCase.categoryError(name, EntryType.INCOME, null, state.ownIncome)
+            if (error != null) return@update state.copy(incomeError = error)
+
+            val income = CustomCategory(id = "", name = name.trim(), type = EntryType.INCOME, spendingType = null)
+            state.copy(
+                ownIncome = state.ownIncome + income,
+                selectedOwnIncome = state.selectedOwnIncome + income.name,
+                isAddingIncome = false,
+                incomeError = null,
+                errorMessage = null
+            )
         }
     }
 
@@ -92,7 +154,8 @@ class OnboardingViewModel @Inject constructor(
     private fun stepError(state: OnboardingState): String? = when (state.step) {
         OnboardingStep.MONEY_PLACES -> CompleteOnboardingUseCase.accountsError(state.selectedAccounts)
         OnboardingStep.SALARY -> CompleteOnboardingUseCase.salaryError(state.payDay, state.baseSalary)
-        OnboardingStep.INCOME_SOURCES -> CompleteOnboardingUseCase.incomeSourcesError(state.incomeSources)
+        OnboardingStep.INCOME_SOURCES ->
+            CompleteOnboardingUseCase.incomeSourcesError(state.incomeSources, state.selectedOwnIncomeList)
         OnboardingStep.GOAL -> CompleteOnboardingUseCase.goalError(
             name = state.goalName,
             targetAmount = state.goalTarget,
@@ -122,7 +185,7 @@ class OnboardingViewModel @Inject constructor(
 
         _uiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            completeOnboarding(state.selectedAccounts, plan, state.today)
+            completeOnboarding(state.selectedAccounts, plan, state.today, state.selectedOwnIncomeList)
                 .onSuccess { _uiState.update { it.copy(isSaving = false, isFinished = true) } }
                 .onFailure { e -> _uiState.update { it.copy(isSaving = false, errorMessage = e.message) } }
         }

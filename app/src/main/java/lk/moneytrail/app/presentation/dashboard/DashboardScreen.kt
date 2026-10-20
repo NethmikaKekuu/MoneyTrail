@@ -40,6 +40,7 @@ private enum class DashboardTab(val label: String, val icon: ImageVector) {
 fun DashboardScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
+    onSettingsClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -66,7 +67,11 @@ fun DashboardScreen(
                 modifier = contentModifier
             )
             DashboardTab.INSIGHTS -> InsightsScreen(modifier = contentModifier)
-            DashboardTab.MORE -> MoreScreen(onSignedOut = onSignedOut, modifier = contentModifier)
+            DashboardTab.MORE -> MoreScreen(
+                onSettingsClick = onSettingsClick,
+                onSignedOut = onSignedOut,
+                modifier = contentModifier
+            )
         }
     }
 }

@@ -3,6 +3,7 @@ package lk.moneytrail.app.presentation.entry
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -75,6 +76,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.EntryType
+import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.presentation.components.AddCategoryDialog
 import lk.moneytrail.app.presentation.components.MINUS_SIGN
 import lk.moneytrail.app.presentation.components.MoneyTrailDatePickerDialog
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
@@ -105,6 +108,9 @@ fun AddEntryScreen(
         onKeyPress = viewModel::onKeyPress,
         onDeletePress = viewModel::onDeletePress,
         onCategoryChange = viewModel::onCategoryChange,
+        onAddCategoryClick = viewModel::onAddCategoryClick,
+        onAddCategory = viewModel::onAddCategory,
+        onAddCategoryDismiss = viewModel::onAddCategoryDismiss,
         onAccountChange = viewModel::onAccountChange,
         onDateChange = viewModel::onDateChange,
         onNoteChange = viewModel::onNoteChange,
@@ -124,6 +130,9 @@ private fun AddEntryContent(
     onKeyPress: (String) -> Unit,
     onDeletePress: () -> Unit,
     onCategoryChange: (String) -> Unit,
+    onAddCategoryClick: () -> Unit,
+    onAddCategory: (String, EntryType, SpendingType?) -> Unit,
+    onAddCategoryDismiss: () -> Unit,
     onAccountChange: (String) -> Unit,
     onDateChange: (LocalDate) -> Unit,
     onNoteChange: (String) -> Unit,
@@ -192,6 +201,7 @@ private fun AddEntryContent(
                 categories = uiState.categories,
                 selected = uiState.category,
                 onCategoryChange = onCategoryChange,
+                onAddClick = onAddCategoryClick,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp)
             )
 
@@ -326,6 +336,16 @@ private fun AddEntryContent(
             onDismiss = { isDatePickerOpen = false }
         )
     }
+
+    if (uiState.isAddingCategory) {
+        AddCategoryDialog(
+            fixedType = uiState.type,
+            errorMessage = uiState.categoryError,
+            isSaving = uiState.isSavingCategory,
+            onAdd = onAddCategory,
+            onDismiss = onAddCategoryDismiss
+        )
+    }
 }
 
 /** Expense / Income switch at the top. */
@@ -400,6 +420,7 @@ private fun CategoryChips(
     categories: List<String>,
     selected: String,
     onCategoryChange: (String) -> Unit,
+    onAddClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
@@ -432,6 +453,26 @@ private fun CategoryChips(
                     color = if (isSelected) Ink else colors.onSurface
                 )
             }
+        }
+
+        // Last chip: lets the user add a category of their own for this type.
+        val addShape = RoundedCornerShape(19.dp)
+        Box(
+            modifier = Modifier
+                .height(38.dp)
+                .clip(addShape)
+                .border(1.5.dp, colors.outlineVariant, addShape)
+                .clickable(role = Role.Button, onClick = onAddClick)
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "+ New",
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.primary
+            )
         }
     }
 }
@@ -629,6 +670,9 @@ private fun AddEntryScreenPreview() {
             onKeyPress = {},
             onDeletePress = {},
             onCategoryChange = {},
+            onAddCategoryClick = {},
+            onAddCategory = { _, _, _ -> },
+            onAddCategoryDismiss = {},
             onAccountChange = {},
             onDateChange = {},
             onNoteChange = {},
