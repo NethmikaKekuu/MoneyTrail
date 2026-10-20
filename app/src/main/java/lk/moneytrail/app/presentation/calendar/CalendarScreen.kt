@@ -9,12 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.presentation.components.AddEntryButton
 import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.ErrorView
 import lk.moneytrail.app.presentation.components.LoadingView
@@ -121,18 +119,12 @@ private fun CalendarContent(
             )
         }
 
-        FloatingActionButton(
+        AddEntryButton(
             onClick = onAddEntryClick,
-            shape = RoundedCornerShape(20.dp),
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 22.dp, bottom = 16.dp)
-                .size(60.dp)
-        ) {
-            Icon(MoneyTrailIcons.Plus, contentDescription = "Add entry", modifier = Modifier.size(26.dp))
-        }
+        )
     }
 }
 

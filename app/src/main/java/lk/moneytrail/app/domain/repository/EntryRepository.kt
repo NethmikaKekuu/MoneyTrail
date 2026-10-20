@@ -2,6 +2,7 @@ package lk.moneytrail.app.domain.repository
 
 import kotlinx.coroutines.flow.Flow
 import lk.moneytrail.app.domain.model.Entry
+import java.time.LocalDate
 import java.time.YearMonth
 
 // Works on the signed-in user's entries. Failures are returned as an
@@ -9,11 +10,15 @@ import java.time.YearMonth
 interface EntryRepository {
 
     /**
-     * The entries dated in [month], oldest first. Emits again whenever an entry is added
-     * or changed, including straight after a save while offline. After a failure the flow
-     * ends; collect it again to retry.
+     * The entries dated from [from] to [to], both included, oldest first. Emits again
+     * whenever an entry is added, changed or deleted, including straight after a save
+     * while offline. After a failure the flow ends; collect it again to retry.
      */
-    fun observeMonth(month: YearMonth): Flow<Result<List<Entry>>>
+    fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>>
+
+    /** The entries dated in [month]; see [observeBetween]. */
+    fun observeMonth(month: YearMonth): Flow<Result<List<Entry>>> =
+        observeBetween(month.atDay(1), month.atEndOfMonth())
 
     /** The entry with this id, or null if it has been deleted. */
     suspend fun getEntry(id: String): Result<Entry?>
