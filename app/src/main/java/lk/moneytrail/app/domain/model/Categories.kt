@@ -19,11 +19,10 @@ object Categories {
         "Other" to SpendingType.DISCRETIONARY
     )
 
+    /** A salary's bonus is kept on the salary entry itself ([Entry.bonus]), not as a category. */
     const val SALARY = "Salary"
-    const val BONUS = "Bonus"
 
-    /** Bonus sits apart from Salary, so the dependable base and the variable extra stay separate. */
-    val income: List<String> = listOf(SALARY, BONUS, "Freelance", "AdSense", "Crypto", "Other")
+    val income: List<String> = listOf(SALARY, "Freelance", "AdSense", "Crypto", "Other")
 
     fun namesFor(type: EntryType): List<String> = when (type) {
         EntryType.EXPENSE -> expense.keys.toList()

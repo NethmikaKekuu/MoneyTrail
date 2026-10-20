@@ -61,7 +61,13 @@ class EditEntryViewModel @Inject constructor(
                         if (entry == null) {
                             it.copy(isLoading = false, loadError = "This entry has been deleted.")
                         } else {
-                            it.copy(isLoading = false, original = entry, draft = entry, amountDigits = entry.amount.toString())
+                            it.copy(
+                                isLoading = false,
+                                original = entry,
+                                draft = entry,
+                                amountDigits = entry.baseAmount.toString(),
+                                bonusDigits = entry.bonus.takeIf { bonus -> bonus > 0 }?.toString().orEmpty()
+                            )
                         }
                     }
                 }
@@ -76,19 +82,31 @@ class EditEntryViewModel @Inject constructor(
         _uiState.update { it.copy(amountDigits = digits, errorMessage = null) }
     }
 
+    fun onBonusChange(text: String) {
+        val digits = text.filter(Char::isDigit).trimStart('0').take(MAX_DIGITS)
+        _uiState.update { it.copy(bonusDigits = digits, errorMessage = null) }
+    }
+
     /**
      * A new expense category brings its usual committed or discretionary setting with it,
      * whether it's built in or the user's own. One with no setting keeps the current choice.
      */
     fun onCategoryChange(category: String) {
-        val custom = _uiState.value.customCategories
-        updateDraft {
-            val spendingType = if (it.type == EntryType.EXPENSE) {
-                Categories.defaultSpending(category, custom) ?: it.spendingType
+        _uiState.update { state ->
+            val draft = state.draft ?: return@update state
+            val spendingType = if (draft.type == EntryType.EXPENSE) {
+                Categories.defaultSpending(category, state.customCategories) ?: draft.spendingType
             } else {
                 null
             }
-            it.copy(category = category, spendingType = spendingType)
+            val changed = draft.copy(category = category, spendingType = spendingType)
+            // Only a salary has a bonus, so moving away from Salary keeps it in the amount.
+            if (state.isSalary && !changed.isSalary) {
+                val whole = state.amount.takeIf { it > 0 }?.toString().orEmpty()
+                state.copy(draft = changed, amountDigits = whole, bonusDigits = "", errorMessage = null)
+            } else {
+                state.copy(draft = changed, errorMessage = null)
+            }
         }
     }
 
@@ -115,7 +133,7 @@ class EditEntryViewModel @Inject constructor(
 
         _uiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            updateEntryUseCase(draft.copy(amount = state.amount))
+            updateEntryUseCase(draft.copy(amount = state.amount, bonus = state.bonus))
                 .onSuccess { _uiState.update { it.copy(isSaving = false, isDone = true) } }
                 .onFailure { e -> _uiState.update { it.copy(isSaving = false, errorMessage = e.message) } }
         }

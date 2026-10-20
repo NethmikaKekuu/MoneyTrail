@@ -1,8 +1,6 @@
 package lk.moneytrail.app.presentation.calendar
 
-import lk.moneytrail.app.domain.model.Categories
 import lk.moneytrail.app.domain.model.Entry
-import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.EntryTotals
 import lk.moneytrail.app.domain.model.totals
 import java.time.LocalDate
@@ -40,11 +38,11 @@ data class CalendarState(
 /** "Did it come in?" for one expected entry, with what the user has typed so far. */
 data class ExpectedCheck(
     val entry: Entry,
-    /** What really arrived or was paid; starts as the expected amount. */
+    /** What really arrived or was paid; starts as the expected amount. For a salary, the base pay. */
     val amountDigits: String,
     /** When the money really moved: the planned day or today. */
     val date: LocalDate,
-    /** For a salary: this month's bonus, saved as its own Bonus entry. Empty for none. */
+    /** For a salary: this month's bonus, added to the salary itself. Empty for none. */
     val bonusDigits: String = "",
     /** True while the "Not yet" date picker is open. */
     val isPickingNewDate: Boolean = false,
@@ -52,5 +50,12 @@ data class ExpectedCheck(
     val errorMessage: String? = null
 ) {
     val isSalary: Boolean
-        get() = entry.type == EntryType.INCOME && entry.category == Categories.SALARY
+        get() = entry.isSalary
+
+    val bonus: Long
+        get() = if (isSalary) bonusDigits.toLongOrNull() ?: 0L else 0L
+
+    /** What the entry will be confirmed with: for a salary, the base pay plus the bonus. */
+    val total: Long
+        get() = (amountDigits.toLongOrNull() ?: 0L) + bonus
 }

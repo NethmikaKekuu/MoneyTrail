@@ -13,3 +13,7 @@ fun List<Entry>.dueExpected(today: LocalDate): List<Entry> =
 /** The entry once the money has really moved: [amount] is what arrived or was paid, on [date]. */
 fun Entry.confirmed(amount: Long, date: LocalDate): Entry =
     copy(status = EntryStatus.CONFIRMED, amount = amount, date = date)
+
+/** A salary once it has arrived: the [base] pay plus this month's [bonus] make up its amount. */
+fun Entry.confirmedSalary(base: Long, bonus: Long, date: LocalDate): Entry =
+    confirmed(base + bonus, date).copy(bonus = bonus)
