@@ -44,9 +44,10 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Onboarding | Four steps after sign-up: money places, pay day and base salary, income sources, and a savings goal showing the amount to save each month | 06 (steps 2–4 follow its style) |
 | Calendar | Month grid with income and expense markers, month totals, the selected day's entries, updated live from Firestore | 07 |
 | New entry | Expense or income, amount keypad, category, account (from onboarding), date and note | 08 |
+| Edit entry | Tap an entry to change its amount, category, account, committed or discretionary, date and note, or delete it after a confirm dialog | 24 |
 | More | Profile and sign-out | 12 (first part) |
 
-**Next, in order:** edit and delete entries, folders, expense insights, goal progress, salary confirm, AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
+**Next, in order:** folders, expense insights, goal progress, salary confirm, AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
 
 ## Tech stack
 
@@ -193,7 +194,7 @@ Written once when the account is made: on email sign-up, or the first Google sig
 
 - **The date is a string.** `yyyy-MM-dd` strings sort in date order, so a whole month is one range query (`date >= "2026-10-01"` and `date <= "2026-10-31"`) on one field, with no time-zone surprises and no composite index.
 - **Amounts are whole rupees as integers**, so there are no floating-point rounding errors. Multi-currency fields (`currency`, `originalAmount`, `rate`) will be added for AdSense income in USD.
-- **`spendingType` is stored, not worked out each time**, so a later "edit entry" can override the category's default.
+- **`spendingType` is stored, not worked out each time**, so Edit entry can override the category's default (a Rent payment marked discretionary stays that way).
 - **Live and offline.** The calendar uses a snapshot listener, so new entries appear at once. Firestore's persistent cache is turned on in `di/FirebaseModule.kt`, so the calendar opens and entries save without internet, then sync later.
 
 ### `users/{uid}/accounts/{accountId}`
@@ -261,13 +262,14 @@ app/src/main/java/lk/moneytrail/app/
 ├── domain/
 │   ├── model/            Entry, Categories, Account, MoneyPlan, EntryTotals, UserProfile, AuthUser, AppException
 │   ├── repository/       Auth, User, Entry, Account and Plan repositories (interfaces)
-│   └── usecase/          RegisterUseCase, SignInWithGoogleUseCase, AddEntryUseCase, CompleteOnboardingUseCase
+│   └── usecase/          RegisterUseCase, SignInWithGoogleUseCase, AddEntryUseCase, UpdateEntryUseCase,
+│                         CompleteOnboardingUseCase
 └── presentation/
     ├── auth/             Login, Register, Forgot password, Google sign-in helper
     ├── calendar/         Calendar screen, month grid logic
     ├── components/       Logo, icons (MoneyTrailIcons), money formatting, loading/error/empty views
     ├── dashboard/        Bottom-bar home: Calendar, Folders, Insights, More
-    ├── entry/            New entry screen and keypad
+    ├── entry/            New entry (with keypad) and Edit entry screens
     ├── more/             Profile and sign-out
     ├── navigation/       Routes and the NavHost
     ├── onboarding/       Four-step onboarding: money places, salary, income sources, goal
@@ -285,6 +287,7 @@ app/src/main/java/lk/moneytrail/app/
 | `onboarding` | After the first sign-up or first Google sign-in; Skip goes straight to the dashboard |
 | `dashboard` | Bottom-bar home (calendar first) |
 | `add_entry?date={yyyy-MM-dd}` | New entry, starting on the given day |
+| `edit_entry/{entryId}` | Edit or delete one entry, opened by tapping it on the calendar |
 
 Signing in or out clears the back stack, so Back can't cross between signed-in and signed-out screens.
 
@@ -345,7 +348,7 @@ Use `.\gradlew` in Windows PowerShell and `./gradlew` in macOS, Linux or Git Bas
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Before submitting, install it on an **Android 8.0 (API 26)** emulator and check the main flows: sign up, add entries, see them on the calendar, sign out.
 
-Unit tests cover entry totals, entry validation, the calendar month grid, the keypad rules, the onboarding checks and the monthly saving needed for the goal.
+Unit tests cover entry totals, adding and editing entries, the calendar month grid, the keypad rules, the onboarding checks and the monthly saving needed for the goal.
 
 ## Troubleshooting
 
