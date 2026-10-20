@@ -15,9 +15,9 @@ import javax.inject.Inject
 
 /**
  * Changes the pay day and base salary from Settings, with the same checks as onboarding.
- * This month's salary follows: one still expected moves to the new amount and day (or
- * goes, for a salary of 0), and if there's none yet it's added as on any new month.
- * A salary already confirmed is left as it is.
+ * This month's salary follows: one still expected moves to the new base and day, keeping
+ * any bonus already added to it (or goes, for a salary of 0), and if there's none yet
+ * it's added as on any new month. A salary already confirmed is left as it is.
  */
 class UpdateSalaryUseCase @Inject constructor(
     private val planRepository: PlanRepository,
@@ -44,7 +44,9 @@ class UpdateSalaryUseCase @Inject constructor(
             salary == null -> ensureMonthlySalary(today)
             salary.status != EntryStatus.EXPECTED -> Result.success(Unit)
             baseSalary == 0L -> entryRepository.deleteEntry(salary.id)
-            else -> entryRepository.updateEntry(salary.copy(amount = baseSalary, date = updated.payDateIn(month)))
+            else -> entryRepository.updateEntry(
+                salary.copy(amount = baseSalary + salary.bonus, date = updated.payDateIn(month))
+            )
         }
     }
 

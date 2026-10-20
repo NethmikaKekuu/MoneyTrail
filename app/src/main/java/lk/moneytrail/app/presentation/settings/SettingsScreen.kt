@@ -214,7 +214,10 @@ private fun ColumnScope.SalarySection(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
     )
     Text(
-        text = uiState.baseSalary?.let { "LKR ${formatAmount(it)} a month, before bonuses. Bonuses are added when you confirm a salary." }
+        text = uiState.baseSalary?.let {
+            "LKR ${formatAmount(it)} a month, before bonuses. A month's bonus goes on that salary: " +
+                "add it when you confirm the salary, or open the salary on the calendar."
+        }
             ?: "Before bonuses. Enter 0 if you don't get a salary.",
         style = MaterialTheme.typography.bodySmall,
         color = colors.outline
