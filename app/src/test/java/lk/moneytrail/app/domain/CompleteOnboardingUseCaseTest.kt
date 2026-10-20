@@ -105,6 +105,31 @@ class CompleteOnboardingUseCaseTest {
     }
 
     @Test
+    fun ownIncome_isSavedAsIncomeCategories_skippingOnesAlreadySaved() = runBlocking {
+        val tuition = CustomCategory("c1", "Tuition classes", EntryType.INCOME, null)
+        val categoryRepository = FakeCategoryRepository(existing = listOf(tuition))
+        val ownIncome = listOf(
+            CustomCategory("", "tuition classes", EntryType.INCOME, null),
+            CustomCategory("", " Pottery sales ", EntryType.INCOME, null)
+        )
+
+        val result = CompleteOnboardingUseCase(FakeAccountRepository(), FakePlanRepository(), categoryRepository)(
+            accounts, plan, today, ownIncome
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf("Pottery sales"), categoryRepository.added.map { it.name })
+    }
+
+    @Test
+    fun incomeSourceChecks() {
+        val pottery = CustomCategory("", "Pottery sales", EntryType.INCOME, null)
+
+        assertEquals("Pick at least one way you earn money.", CompleteOnboardingUseCase.incomeSourcesError(emptySet()))
+        assertNull(CompleteOnboardingUseCase.incomeSourcesError(emptySet(), listOf(pottery)))
+    }
+
+    @Test
     fun salaryChecks() {
         assertEquals("Pick the day your salary usually arrives.", CompleteOnboardingUseCase.salaryError(null, 120_000))
         assertEquals("Pick the day your salary usually arrives.", CompleteOnboardingUseCase.salaryError(32, 120_000))
