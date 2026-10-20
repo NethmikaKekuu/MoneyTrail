@@ -105,11 +105,30 @@ service cloud.firestore {
       allow create, update: if isOwner(uid) && isValidPlan(request.resource.data);
     }
 
+    // users/{uid}/categories/{categoryId}: a category the user added, e.g. "Pet care".
+    // Expense categories say whether they're usually committed or discretionary;
+    // income categories have no spendingType.
+    function isValidCategory(data) {
+      let fields = ['name', 'type', 'spendingType', 'createdAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 30
+        && ((data.type == 'INCOME' && data.spendingType == null)
+          || (data.type == 'EXPENSE' && data.spendingType in ['COMMITTED', 'DISCRETIONARY']))
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid}/categories/{categoryId} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && isValidCategory(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+    }
+
     // Everything else stored under a user is private to them. The {collection} segment
     // keeps this from also matching users/{uid} itself, and the collections checked
     // above are left out so their checks can't be skipped.
     match /users/{uid}/{collection}/{document=**} {
-      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings']);
+      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories']);
     }
   }
 }
