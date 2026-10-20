@@ -24,14 +24,7 @@ class AddEntryUseCase @Inject constructor(
         note: String
     ): Result<Unit> {
         val trimmedNote = note.trim()
-        val error = when {
-            amount <= 0 -> "Enter an amount."
-            amount > MAX_AMOUNT -> "That amount is too large."
-            category !in Categories.namesFor(type) -> "Pick a category."
-            account.isBlank() -> "Pick an account."
-            trimmedNote.length > MAX_NOTE_LENGTH -> "Keep the note under $MAX_NOTE_LENGTH characters."
-            else -> null
-        }
+        val error = entryError(type, amount, category, account, trimmedNote)
         if (error != null) return Result.failure(AppException(error))
 
         val entry = Entry(
@@ -51,5 +44,15 @@ class AddEntryUseCase @Inject constructor(
         /** LKR 999,999,999: nine keypad digits. */
         const val MAX_AMOUNT = 999_999_999L
         const val MAX_NOTE_LENGTH = 200
+
+        /** What's wrong with an entry's fields, or null when it can be saved. Editing uses the same checks. */
+        fun entryError(type: EntryType, amount: Long, category: String, account: String, note: String): String? = when {
+            amount <= 0 -> "Enter an amount."
+            amount > MAX_AMOUNT -> "That amount is too large."
+            category !in Categories.namesFor(type) -> "Pick a category."
+            account.isBlank() -> "Pick an account."
+            note.length > MAX_NOTE_LENGTH -> "Keep the note under $MAX_NOTE_LENGTH characters."
+            else -> null
+        }
     }
 }
