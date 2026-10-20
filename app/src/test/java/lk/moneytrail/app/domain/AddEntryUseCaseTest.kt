@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
 import lk.moneytrail.app.domain.model.Entry
+import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.EntryRepository
@@ -54,6 +55,13 @@ class AddEntryUseCaseTest {
         addEntry(EntryType.INCOME, 120_000, "Salary", "Main bank", day, "")
 
         assertNull(repository.saved.single().spendingType)
+    }
+
+    @Test
+    fun expectedEntry_isSavedAsExpected() = runBlocking {
+        addEntry(EntryType.INCOME, 30_000, "Freelance", "Main bank", day, "Bakery website", isExpected = true)
+
+        assertEquals(EntryStatus.EXPECTED, repository.saved.single().status)
     }
 
     @Test
