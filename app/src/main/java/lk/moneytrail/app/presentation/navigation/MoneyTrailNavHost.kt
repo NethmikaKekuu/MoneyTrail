@@ -14,6 +14,7 @@ import lk.moneytrail.app.presentation.auth.LoginScreen
 import lk.moneytrail.app.presentation.auth.RegisterScreen
 import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
+import lk.moneytrail.app.presentation.entry.EditEntryScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
 import lk.moneytrail.app.presentation.splash.SplashScreen
 import lk.moneytrail.app.presentation.welcome.WelcomeScreen
@@ -71,6 +72,9 @@ fun MoneyTrailNavHost(
                 onAddEntryClick = { date ->
                     navController.navigate(Routes.addEntry(date)) { launchSingleTop = true }
                 },
+                onEntryClick = { entryId ->
+                    navController.navigate(Routes.editEntry(entryId)) { launchSingleTop = true }
+                },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
             )
         }
@@ -88,6 +92,15 @@ fun MoneyTrailNavHost(
                 // Pops only this screen, so saving and tapping close together can't also
                 // pop the dashboard.
                 onClose = { navController.popBackStack(Routes.ADD_ENTRY, inclusive = true) }
+            )
+        }
+        composable(
+            route = Routes.EDIT_ENTRY,
+            arguments = listOf(navArgument(Routes.EDIT_ENTRY_ID_ARG) { type = NavType.StringType })
+        ) {
+            EditEntryScreen(
+                // Pops only this screen, like the new entry screen does.
+                onClose = { navController.popBackStack(Routes.EDIT_ENTRY, inclusive = true) }
             )
         }
     }

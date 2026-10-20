@@ -38,6 +38,7 @@ private enum class DashboardTab(val label: String, val icon: ImageVector) {
 @Composable
 fun DashboardScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
+    onEntryClick: (entryId: String) -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -54,7 +55,11 @@ fun DashboardScreen(
             .padding(innerPadding)
             .consumeWindowInsets(innerPadding)
         when (selectedTab) {
-            DashboardTab.CALENDAR -> CalendarScreen(onAddEntryClick = onAddEntryClick, modifier = contentModifier)
+            DashboardTab.CALENDAR -> CalendarScreen(
+                onAddEntryClick = onAddEntryClick,
+                onEntryClick = onEntryClick,
+                modifier = contentModifier
+            )
             DashboardTab.FOLDERS -> EmptyView(
                 title = "Folders are on the way",
                 message = "Your entries will be grouped into income and expense folders here.",
