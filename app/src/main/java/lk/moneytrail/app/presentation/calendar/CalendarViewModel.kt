@@ -14,6 +14,7 @@ import lk.moneytrail.app.domain.model.dueExpected
 import lk.moneytrail.app.domain.repository.AuthRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.UserRepository
+import lk.moneytrail.app.domain.usecase.EnsureMonthlySalaryUseCase
 import lk.moneytrail.app.domain.usecase.UpdateEntryUseCase
 import java.time.LocalDate
 import java.time.YearMonth
@@ -24,7 +25,8 @@ class CalendarViewModel @Inject constructor(
     private val entryRepository: EntryRepository,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-    private val updateEntryUseCase: UpdateEntryUseCase
+    private val updateEntryUseCase: UpdateEntryUseCase,
+    private val ensureMonthlySalary: EnsureMonthlySalaryUseCase
 ) : ViewModel() {
 
     private val today = LocalDate.now()
@@ -41,6 +43,11 @@ class CalendarViewModel @Inject constructor(
         loadFirstName()
         listenToMonth(_uiState.value.month)
         listenToExpected()
+        viewModelScope.launch {
+            // Puts this month's salary on the calendar as expected. If it fails, the
+            // user can still add it by hand, so there's nothing to show.
+            ensureMonthlySalary(today)
+        }
     }
 
     fun onPreviousMonthClick() {
