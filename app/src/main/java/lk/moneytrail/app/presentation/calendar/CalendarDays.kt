@@ -11,8 +11,12 @@ data class CalendarDay(
     val date: LocalDate,
     /** False for the days of the previous or next month that fill the first and last week. */
     val isInMonth: Boolean,
+    /** Confirmed income on this day. */
     val hasIncome: Boolean,
+    /** Confirmed spending on this day. */
     val hasExpense: Boolean,
+    /** Money expected on this day that hasn't been confirmed yet. */
+    val hasExpected: Boolean,
     val entryCount: Int
 )
 
@@ -35,8 +39,9 @@ fun buildCalendarDays(month: YearMonth, entries: List<Entry>): List<CalendarDay>
             CalendarDay(
                 date = date,
                 isInMonth = isInMonth,
-                hasIncome = dayEntries.any { it.type == EntryType.INCOME },
-                hasExpense = dayEntries.any { it.type == EntryType.EXPENSE },
+                hasIncome = dayEntries.any { it.type == EntryType.INCOME && !it.isExpected },
+                hasExpense = dayEntries.any { it.type == EntryType.EXPENSE && !it.isExpected },
+                hasExpected = dayEntries.any { it.isExpected },
                 entryCount = dayEntries.size
             )
         }

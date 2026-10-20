@@ -44,6 +44,10 @@ data class FoldersState(
                 .sortedByDescending { it.month }
         }
 
+    /** How many entries of [type] in the open month are expected but not yet confirmed. */
+    fun expectedCount(type: EntryType): Int =
+        entries.count { it.type == type && it.isExpected && YearMonth.from(it.date) == selectedMonth }
+
     private fun totalFor(type: EntryType): MonthTotal =
         entries.monthTotals(type).find { it.month == selectedMonth } ?: MonthTotal(selectedMonth, 0, 0)
 }
