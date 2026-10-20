@@ -1,15 +1,18 @@
 package lk.moneytrail.app.data.repository
 
 import android.util.Log
+import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryType
@@ -68,6 +71,23 @@ class FirestoreEntryRepository @Inject constructor(
         awaitClose { registration.remove() }
     }
 
+    override suspend fun getEntry(id: String): Result<Entry?> {
+        val uid = auth.currentUser?.uid
+            ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
+
+        return try {
+            // Answered from the offline cache when there's no internet; any entry shown
+            // on the calendar is already there.
+            val snapshot = entriesOf(uid).document(id).get().await()
+            Result.success(if (snapshot.exists()) snapshot.toEntry() else null)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Loading entry $id failed", e)
+            Result.failure(AppException(e.toFirestoreMessage(LOAD_ONE_FAILED_MESSAGE), e))
+        }
+    }
+
     override suspend fun addEntry(entry: Entry): Result<Unit> {
         val uid = auth.currentUser?.uid
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
@@ -83,18 +103,54 @@ class FirestoreEntryRepository @Inject constructor(
         }
     }
 
+    override suspend fun updateEntry(entry: Entry): Result<Unit> = writeEntry("Updating entry ${entry.id}") { uid ->
+        // update() leaves createdAt alone, which the rules require.
+        entriesOf(uid).document(entry.id).update(entry.toFirestoreFields())
+    }
+
+    override suspend fun deleteEntry(id: String): Result<Unit> = writeEntry("Deleting entry $id") { uid ->
+        entriesOf(uid).document(id).delete()
+    }
+
+    /** Runs a write on one of the user's entries and turns failures into messages. */
+    private suspend fun writeEntry(
+        action: String,
+        write: (uid: String) -> Task<Void>
+    ): Result<Unit> {
+        val uid = auth.currentUser?.uid
+            ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
+
+        return try {
+            write(uid).awaitServerBriefly(TAG)
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "$action failed", e)
+            val message = if ((e as? FirebaseFirestoreException)?.code == FirebaseFirestoreException.Code.NOT_FOUND) {
+                GONE_MESSAGE
+            } else {
+                e.toFirestoreMessage(SAVE_FAILED_MESSAGE)
+            }
+            Result.failure(AppException(message, e))
+        }
+    }
+
     private fun entriesOf(uid: String): CollectionReference =
         firestore.collection(USERS_COLLECTION).document(uid).collection(ENTRIES_COLLECTION)
 
-    private fun Entry.toFirestore(): Map<String, Any?> = mapOf(
+    private fun Entry.toFirestore(): Map<String, Any?> =
+        toFirestoreFields() + (FIELD_CREATED_AT to FieldValue.serverTimestamp())
+
+    /** Every field except createdAt, which is only set when the entry is first saved. */
+    private fun Entry.toFirestoreFields(): Map<String, Any?> = mapOf(
         FIELD_TYPE to type.name,
         FIELD_AMOUNT to amount,
         FIELD_CATEGORY to category,
         FIELD_ACCOUNT to account,
         FIELD_DATE to date.toString(),
         FIELD_NOTE to note,
-        FIELD_SPENDING_TYPE to spendingType?.name,
-        FIELD_CREATED_AT to FieldValue.serverTimestamp()
+        FIELD_SPENDING_TYPE to spendingType?.name
     )
 
     /** Null for a document with missing or unreadable fields, which is skipped rather than crashing the calendar. */
@@ -136,5 +192,7 @@ class FirestoreEntryRepository @Inject constructor(
         const val FIELD_CREATED_AT = "createdAt"
         const val LOAD_FAILED_MESSAGE = "Couldn't load your entries. Please try again."
         const val SAVE_FAILED_MESSAGE = "Couldn't save the entry. Please try again."
+        const val LOAD_ONE_FAILED_MESSAGE = "Couldn't load this entry. Please try again."
+        const val GONE_MESSAGE = "This entry has already been deleted."
     }
 }

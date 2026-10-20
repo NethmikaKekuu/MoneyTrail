@@ -1,5 +1,6 @@
 package lk.moneytrail.app.presentation.navigation
 
+import android.net.Uri
 import java.time.LocalDate
 
 object Routes {
@@ -16,4 +17,10 @@ object Routes {
     const val ADD_ENTRY = "add_entry?$ADD_ENTRY_DATE_ARG={$ADD_ENTRY_DATE_ARG}"
 
     fun addEntry(date: LocalDate): String = "add_entry?$ADD_ENTRY_DATE_ARG=$date"
+
+    /** Firestore id of the entry to edit. */
+    const val EDIT_ENTRY_ID_ARG = "entryId"
+    const val EDIT_ENTRY = "edit_entry/{$EDIT_ENTRY_ID_ARG}"
+
+    fun editEntry(id: String): String = "edit_entry/${Uri.encode(id)}"
 }
