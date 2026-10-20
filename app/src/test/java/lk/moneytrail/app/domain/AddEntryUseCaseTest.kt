@@ -22,6 +22,8 @@ class AddEntryUseCaseTest {
 
         override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> = emptyFlow()
 
+        override fun observeExpected(): Flow<Result<List<Entry>>> = emptyFlow()
+
         override suspend fun getEntry(id: String): Result<Entry?> = Result.success(null)
 
         override suspend fun addEntry(entry: Entry): Result<Unit> {

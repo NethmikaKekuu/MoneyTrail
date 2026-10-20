@@ -16,6 +16,9 @@ interface EntryRepository {
      */
     fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>>
 
+    /** Every expected entry, whatever its date, oldest first. Updates live. */
+    fun observeExpected(): Flow<Result<List<Entry>>>
+
     /** The entries dated in [month]; see [observeBetween]. */
     fun observeMonth(month: YearMonth): Flow<Result<List<Entry>>> =
         observeBetween(month.atDay(1), month.atEndOfMonth())
