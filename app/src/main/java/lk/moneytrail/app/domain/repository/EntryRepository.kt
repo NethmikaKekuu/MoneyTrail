@@ -15,6 +15,14 @@ interface EntryRepository {
      */
     fun observeMonth(month: YearMonth): Flow<Result<List<Entry>>>
 
+    /** The entry with this id, or null if it has been deleted. */
+    suspend fun getEntry(id: String): Result<Entry?>
+
     /** Saves a new entry. The id of [entry] is ignored; Firestore picks one. */
     suspend fun addEntry(entry: Entry): Result<Unit>
+
+    /** Saves changes to an existing entry, found by its id. Its creation time is kept. */
+    suspend fun updateEntry(entry: Entry): Result<Unit>
+
+    suspend fun deleteEntry(id: String): Result<Unit>
 }
