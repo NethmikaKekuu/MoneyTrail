@@ -22,9 +22,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import lk.moneytrail.app.presentation.calendar.CalendarScreen
-import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.folders.FoldersScreen
+import lk.moneytrail.app.presentation.insights.InsightsScreen
 import lk.moneytrail.app.presentation.more.MoreScreen
 import java.time.LocalDate
 
@@ -65,11 +65,7 @@ fun DashboardScreen(
                 onAddEntryClick = { onAddEntryClick(LocalDate.now()) },
                 modifier = contentModifier
             )
-            DashboardTab.INSIGHTS -> EmptyView(
-                title = "Insights are on the way",
-                message = "Charts of where your money goes will appear here.",
-                modifier = contentModifier
-            )
+            DashboardTab.INSIGHTS -> InsightsScreen(modifier = contentModifier)
             DashboardTab.MORE -> MoreScreen(onSignedOut = onSignedOut, modifier = contentModifier)
         }
     }
