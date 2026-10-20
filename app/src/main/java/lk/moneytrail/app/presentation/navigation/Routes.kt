@@ -11,6 +11,7 @@ object Routes {
     const val FORGOT_PASSWORD = "forgot_password"
     const val ONBOARDING = "onboarding"
     const val DASHBOARD = "dashboard"
+    const val SETTINGS = "settings"
 
     /** Optional yyyy-MM-dd day for a new entry to start on, e.g. the day picked on the calendar. */
     const val ADD_ENTRY_DATE_ARG = "date"

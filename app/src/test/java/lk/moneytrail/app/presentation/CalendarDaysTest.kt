@@ -1,6 +1,7 @@
 package lk.moneytrail.app.presentation
 
 import lk.moneytrail.app.domain.model.Entry
+import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.presentation.calendar.buildCalendarDays
@@ -44,6 +45,17 @@ class CalendarDaysTest {
         assertTrue(days.getValue(busyDay).hasExpense)
         assertEquals(2, days.getValue(busyDay).entryCount)
         assertEquals(0, days.getValue(LocalDate.of(2026, 10, 11)).entryCount)
+    }
+
+    @Test
+    fun expectedEntries_getTheirOwnMarker() {
+        val invoiceDay = LocalDate.of(2026, 10, 14)
+        val invoice = Entry("1", EntryType.INCOME, 30_000, "Freelance", "Main bank", invoiceDay, "", null, EntryStatus.EXPECTED)
+
+        val day = buildCalendarDays(october, listOf(invoice)).single { it.date == invoiceDay }
+
+        assertTrue(day.hasExpected)
+        assertFalse(day.hasIncome)
     }
 
     @Test

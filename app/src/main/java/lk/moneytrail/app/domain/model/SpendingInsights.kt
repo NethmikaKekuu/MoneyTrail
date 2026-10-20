@@ -23,18 +23,24 @@ data class SpendingSplit(
 /** The categories counted as "coffee and dining out", Kavindu's LKR 24,000 surprise. */
 val DiningCategories: Set<String> = setOf("Coffee", "Food out", "Food delivery")
 
-/** Committed and discretionary spending in [month]. An expense with no type counts as discretionary. */
+/**
+ * Committed and discretionary spending confirmed in [month]. An expense with no type
+ * counts as discretionary.
+ */
 fun List<Entry>.spendingSplit(month: YearMonth): SpendingSplit {
-    val expenses = filter { it.type == EntryType.EXPENSE && YearMonth.from(it.date) == month }
+    val expenses = filter { it.type == EntryType.EXPENSE && !it.isExpected && YearMonth.from(it.date) == month }
     return SpendingSplit(
         committed = expenses.filter { it.spendingType == SpendingType.COMMITTED }.sumOf { it.amount },
         discretionary = expenses.filter { it.spendingType != SpendingType.COMMITTED }.sumOf { it.amount }
     )
 }
 
-/** What went on coffee and dining out in [month]. */
+/** What went on coffee and dining out in [month], confirmed entries only. */
 fun List<Entry>.diningSpend(month: YearMonth): Long =
-    filter { it.type == EntryType.EXPENSE && it.category in DiningCategories && YearMonth.from(it.date) == month }
+    filter {
+        it.type == EntryType.EXPENSE && !it.isExpected && it.category in DiningCategories &&
+            YearMonth.from(it.date) == month
+    }
         .sumOf { it.amount }
 
 /**

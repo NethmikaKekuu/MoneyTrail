@@ -9,9 +9,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.moneytrail.app.domain.model.Categories
+import lk.moneytrail.app.domain.model.EntryType
+import lk.moneytrail.app.domain.model.confirmed
+import lk.moneytrail.app.domain.model.dueExpected
 import lk.moneytrail.app.domain.repository.AuthRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.UserRepository
+import lk.moneytrail.app.domain.usecase.AddEntryUseCase
+import lk.moneytrail.app.domain.usecase.EnsureMonthlySalaryUseCase
+import lk.moneytrail.app.domain.usecase.UpdateEntryUseCase
 import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
@@ -20,7 +27,10 @@ import javax.inject.Inject
 class CalendarViewModel @Inject constructor(
     private val entryRepository: EntryRepository,
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val updateEntryUseCase: UpdateEntryUseCase,
+    private val addEntryUseCase: AddEntryUseCase,
+    private val ensureMonthlySalary: EnsureMonthlySalaryUseCase
 ) : ViewModel() {
 
     private val today = LocalDate.now()
@@ -36,6 +46,12 @@ class CalendarViewModel @Inject constructor(
     init {
         loadFirstName()
         listenToMonth(_uiState.value.month)
+        listenToExpected()
+        viewModelScope.launch {
+            // Puts this month's salary on the calendar as expected. If it fails, the
+            // user can still add it by hand, so there's nothing to show.
+            ensureMonthlySalary(today)
+        }
     }
 
     fun onPreviousMonthClick() {
@@ -81,6 +97,107 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
+    /** Opens "Did it come in?" for the oldest expected entry that's due. */
+    fun onCheckDueClick() {
+        val entry = _uiState.value.dueExpected.firstOrNull() ?: return
+        _uiState.update { it.copy(check = ExpectedCheck(entry, entry.amount.toString(), date = today)) }
+    }
+
+    fun onCheckAmountChange(text: String) {
+        updateCheck { copy(amountDigits = text.filter(Char::isDigit).trimStart('0').take(MAX_DIGITS), errorMessage = null) }
+    }
+
+    fun onCheckBonusChange(text: String) {
+        updateCheck { copy(bonusDigits = text.filter(Char::isDigit).trimStart('0').take(MAX_DIGITS), errorMessage = null) }
+    }
+
+    fun onCheckDateChange(date: LocalDate) {
+        updateCheck { copy(date = date, errorMessage = null) }
+    }
+
+    /**
+     * The money moved: the entry becomes confirmed with the real amount and date. A
+     * salary's bonus is saved as a separate Bonus entry, so the dependable base and the
+     * variable extra stay apart.
+     */
+    fun onCheckConfirm() {
+        saveCheck { check ->
+            val amount = check.amountDigits.toLongOrNull() ?: 0L
+            val bonus = check.bonusDigits.toLongOrNull() ?: 0L
+            updateEntryUseCase(check.entry.confirmed(amount, check.date)).fold(
+                onSuccess = {
+                    if (check.isSalary && bonus > 0) {
+                        addEntryUseCase(
+                            type = EntryType.INCOME,
+                            amount = bonus,
+                            category = Categories.BONUS,
+                            account = check.entry.account,
+                            date = check.date,
+                            note = "Salary bonus"
+                        )
+                    } else {
+                        Result.success(Unit)
+                    }
+                },
+                onFailure = { Result.failure(it) }
+            )
+        }
+    }
+
+    fun onCheckNotYetClick() {
+        updateCheck { copy(isPickingNewDate = true, errorMessage = null) }
+    }
+
+    fun onCheckNewDateDismiss() {
+        updateCheck { copy(isPickingNewDate = false) }
+    }
+
+    /** Not yet: the entry stays expected and moves to [date]. */
+    fun onCheckReschedule(date: LocalDate) {
+        if (!date.isAfter(today)) {
+            updateCheck { copy(isPickingNewDate = false, errorMessage = "Pick a date after today.") }
+            return
+        }
+        saveCheck { check -> updateEntryUseCase(check.entry.copy(date = date)) }
+    }
+
+    /** It didn't happen: the expected entry is removed. */
+    fun onCheckRemove() {
+        saveCheck { check -> entryRepository.deleteEntry(check.entry.id) }
+    }
+
+    fun onCheckDismiss() {
+        _uiState.update { it.copy(check = null) }
+    }
+
+    /** Every expected entry, so ones due from earlier months still show. */
+    private fun listenToExpected() {
+        viewModelScope.launch {
+            entryRepository.observeExpected().collect { result ->
+                // Only the "due" card depends on this, so a failure just hides it.
+                result.onSuccess { expected ->
+                    _uiState.update { it.copy(dueExpected = expected.dueExpected(today)) }
+                }
+            }
+        }
+    }
+
+    private fun saveCheck(action: suspend (ExpectedCheck) -> Result<Unit>) {
+        val check = _uiState.value.check ?: return
+        if (check.isSaving) return
+
+        updateCheck { copy(isSaving = true, isPickingNewDate = false, errorMessage = null) }
+        viewModelScope.launch {
+            action(check)
+                .onSuccess { _uiState.update { it.copy(check = null) } }
+                .onFailure { e -> updateCheck { copy(isSaving = false, errorMessage = e.message) } }
+        }
+    }
+
+    private fun updateCheck(change: ExpectedCheck.() -> ExpectedCheck) {
+        _uiState.update { state -> state.check?.let { state.copy(check = it.change()) } ?: state }
+    }
+
     private fun loadFirstName() {
         val uid = authRepository.currentUserId ?: return
         viewModelScope.launch {
@@ -90,5 +207,10 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { it.copy(firstName = firstName) }
             }
         }
+    }
+
+    private companion object {
+        /** LKR 999,999,999 at most, as everywhere else in the app. */
+        const val MAX_DIGITS = 9
     }
 }

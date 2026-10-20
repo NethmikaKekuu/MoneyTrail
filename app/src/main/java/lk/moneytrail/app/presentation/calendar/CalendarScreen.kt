@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +49,19 @@ fun CalendarScreen(
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val checkActions = remember(viewModel) {
+        ExpectedCheckActions(
+            onAmountChange = viewModel::onCheckAmountChange,
+            onBonusChange = viewModel::onCheckBonusChange,
+            onDateChange = viewModel::onCheckDateChange,
+            onConfirm = viewModel::onCheckConfirm,
+            onNotYet = viewModel::onCheckNotYetClick,
+            onReschedule = viewModel::onCheckReschedule,
+            onNewDateDismiss = viewModel::onCheckNewDateDismiss,
+            onRemove = viewModel::onCheckRemove,
+            onDismiss = viewModel::onCheckDismiss
+        )
+    }
 
     CalendarContent(
         uiState = uiState,
@@ -57,6 +71,8 @@ fun CalendarScreen(
         onRetryClick = viewModel::onRetryClick,
         onAddEntryClick = { onAddEntryClick(uiState.selectedDate) },
         onEntryClick = onEntryClick,
+        onCheckDueClick = viewModel::onCheckDueClick,
+        checkActions = checkActions,
         modifier = modifier
     )
 }
@@ -73,6 +89,8 @@ private fun CalendarContent(
     onRetryClick: () -> Unit,
     onAddEntryClick: () -> Unit,
     onEntryClick: (String) -> Unit,
+    onCheckDueClick: () -> Unit,
+    checkActions: ExpectedCheckActions,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -97,6 +115,15 @@ private fun CalendarContent(
                     SquareIconButton(MoneyTrailIcons.ChevronLeft, "Previous month", onPreviousMonthClick)
                     SquareIconButton(MoneyTrailIcons.ChevronRight, "Next month", onNextMonthClick)
                 }
+            }
+
+            if (uiState.dueExpected.isNotEmpty()) {
+                DueBanner(
+                    due = uiState.dueExpected,
+                    today = uiState.today,
+                    onCheckClick = onCheckDueClick,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp)
+                )
             }
 
             MonthSummary(uiState.monthTotals, Modifier.padding(horizontal = 20.dp))
@@ -125,6 +152,10 @@ private fun CalendarContent(
                 .align(Alignment.BottomEnd)
                 .padding(end = 22.dp, bottom = 16.dp)
         )
+    }
+
+    if (uiState.check != null) {
+        ExpectedCheckDialog(check = uiState.check, today = uiState.today, actions = checkActions)
     }
 }
 
@@ -213,7 +244,9 @@ private fun CalendarScreenPreview() {
             onDayClick = {},
             onRetryClick = {},
             onAddEntryClick = {},
-            onEntryClick = {}
+            onEntryClick = {},
+            onCheckDueClick = {},
+            checkActions = ExpectedCheckActions({}, {}, {}, {}, {}, {}, {}, {}, {})
         )
     }
 }

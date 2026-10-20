@@ -17,18 +17,18 @@ data class MonthTotal(
 )
 
 /**
- * The entries of [type] dated in [month], grouped by category, biggest total first.
- * Equal totals are sorted by name so the order doesn't jump around.
+ * The confirmed entries of [type] dated in [month], grouped by category, biggest total
+ * first. Equal totals are sorted by name so the order doesn't jump around.
  */
 fun List<Entry>.categoryTotals(type: EntryType, month: YearMonth): List<CategoryTotal> =
-    filter { it.type == type && YearMonth.from(it.date) == month }
+    filter { it.type == type && !it.isExpected && YearMonth.from(it.date) == month }
         .groupBy { it.category }
         .map { (category, entries) -> CategoryTotal(category, entries.sumOf { it.amount }, entries.size) }
         .sortedWith(compareByDescending<CategoryTotal> { it.total }.thenBy { it.category })
 
-/** The total of [type] for every month that has entries of it, newest month first. */
+/** The confirmed total of [type] for every month that has some, newest month first. */
 fun List<Entry>.monthTotals(type: EntryType): List<MonthTotal> =
-    filter { it.type == type }
+    filter { it.type == type && !it.isExpected }
         .groupBy { YearMonth.from(it.date) }
         .map { (month, entries) -> MonthTotal(month, entries.sumOf { it.amount }, entries.size) }
         .sortedByDescending { it.month }

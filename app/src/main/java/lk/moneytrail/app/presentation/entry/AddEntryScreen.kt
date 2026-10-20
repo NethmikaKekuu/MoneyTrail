@@ -3,6 +3,7 @@ package lk.moneytrail.app.presentation.entry
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,6 +44,7 @@ import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +76,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.EntryType
+import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.presentation.components.AddCategoryDialog
 import lk.moneytrail.app.presentation.components.MINUS_SIGN
 import lk.moneytrail.app.presentation.components.MoneyTrailDatePickerDialog
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
@@ -103,9 +108,13 @@ fun AddEntryScreen(
         onKeyPress = viewModel::onKeyPress,
         onDeletePress = viewModel::onDeletePress,
         onCategoryChange = viewModel::onCategoryChange,
+        onAddCategoryClick = viewModel::onAddCategoryClick,
+        onAddCategory = viewModel::onAddCategory,
+        onAddCategoryDismiss = viewModel::onAddCategoryDismiss,
         onAccountChange = viewModel::onAccountChange,
         onDateChange = viewModel::onDateChange,
         onNoteChange = viewModel::onNoteChange,
+        onExpectedChange = viewModel::onExpectedChange,
         onSaveClick = viewModel::save,
         onCloseClick = onClose,
         modifier = modifier
@@ -121,9 +130,13 @@ private fun AddEntryContent(
     onKeyPress: (String) -> Unit,
     onDeletePress: () -> Unit,
     onCategoryChange: (String) -> Unit,
+    onAddCategoryClick: () -> Unit,
+    onAddCategory: (String, EntryType, SpendingType?) -> Unit,
+    onAddCategoryDismiss: () -> Unit,
     onAccountChange: (String) -> Unit,
     onDateChange: (LocalDate) -> Unit,
     onNoteChange: (String) -> Unit,
+    onExpectedChange: (Boolean) -> Unit,
     onSaveClick: () -> Unit,
     onCloseClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -188,6 +201,7 @@ private fun AddEntryContent(
                 categories = uiState.categories,
                 selected = uiState.category,
                 onCategoryChange = onCategoryChange,
+                onAddClick = onAddCategoryClick,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp)
             )
 
@@ -246,10 +260,18 @@ private fun AddEntryContent(
                 )
             }
 
+            ExpectedSwitch(
+                type = uiState.type,
+                checked = uiState.isExpected,
+                onCheckedChange = onExpectedChange,
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp)
+            )
+
             FolderHint(
                 type = uiState.type,
                 category = uiState.category,
                 date = uiState.date,
+                isExpected = uiState.isExpected,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp)
             )
 
@@ -312,6 +334,16 @@ private fun AddEntryContent(
             date = uiState.date,
             onDateSelected = onDateChange,
             onDismiss = { isDatePickerOpen = false }
+        )
+    }
+
+    if (uiState.isAddingCategory) {
+        AddCategoryDialog(
+            fixedType = uiState.type,
+            errorMessage = uiState.categoryError,
+            isSaving = uiState.isSavingCategory,
+            onAdd = onAddCategory,
+            onDismiss = onAddCategoryDismiss
         )
     }
 }
@@ -388,6 +420,7 @@ private fun CategoryChips(
     categories: List<String>,
     selected: String,
     onCategoryChange: (String) -> Unit,
+    onAddClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
@@ -420,6 +453,26 @@ private fun CategoryChips(
                     color = if (isSelected) Ink else colors.onSurface
                 )
             }
+        }
+
+        // Last chip: lets the user add a category of their own for this type.
+        val addShape = RoundedCornerShape(19.dp)
+        Box(
+            modifier = Modifier
+                .height(38.dp)
+                .clip(addShape)
+                .border(1.5.dp, colors.outlineVariant, addShape)
+                .clickable(role = Role.Button, onClick = onAddClick)
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "+ New",
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.primary
+            )
         }
     }
 }
@@ -485,9 +538,57 @@ private fun PickerButton(
     }
 }
 
+/**
+ * For money that hasn't moved yet, e.g. a freelance payment due on the 14th or a bill
+ * due on the 7th. It shows on the calendar and is checked on the day.
+ */
+@Composable
+private fun ExpectedSwitch(
+    type: EntryType,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.surface)
+            .border(1.dp, colors.outlineVariant, shape)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = if (type == EntryType.INCOME) "Expected, not received yet" else "Expected, not paid yet",
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "Plan it for its date and confirm it on the day.",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Normal,
+                color = colors.outline
+            )
+        }
+        Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
 /** "Files automatically to Expenses › October › Food out", so the user knows where it goes. */
 @Composable
-private fun FolderHint(type: EntryType, category: String, date: LocalDate, modifier: Modifier = Modifier) {
+private fun FolderHint(
+    type: EntryType,
+    category: String,
+    date: LocalDate,
+    isExpected: Boolean,
+    modifier: Modifier = Modifier
+) {
     val colors = MaterialTheme.colorScheme
     val folder = if (type == EntryType.EXPENSE) "Expenses" else "Income"
     val month = date.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
@@ -502,8 +603,14 @@ private fun FolderHint(type: EntryType, category: String, date: LocalDate, modif
         Icon(MoneyTrailIcons.Folder, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
         Text(
             text = buildAnnotatedString {
-                append("Files automatically to ")
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("$folder › $month › $category") }
+                if (isExpected) {
+                    append("Shows as expected on ")
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(date.format(DateButtonFormatter)) }
+                    append(". It counts in $folder once you confirm it.")
+                } else {
+                    append("Files automatically to ")
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("$folder › $month › $category") }
+                }
             },
             style = MaterialTheme.typography.bodySmall,
             color = colors.onPrimaryContainer
@@ -563,9 +670,13 @@ private fun AddEntryScreenPreview() {
             onKeyPress = {},
             onDeletePress = {},
             onCategoryChange = {},
+            onAddCategoryClick = {},
+            onAddCategory = { _, _, _ -> },
+            onAddCategoryDismiss = {},
             onAccountChange = {},
             onDateChange = {},
             onNoteChange = {},
+            onExpectedChange = {},
             onSaveClick = {},
             onCloseClick = {}
         )

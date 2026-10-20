@@ -28,6 +28,10 @@ data class MoneyPlan(
     val goal: SavingsGoal
 )
 
+/** The day the salary arrives in [month]. A pay day of 31 falls on the last day of shorter months. */
+fun MoneyPlan.payDateIn(month: YearMonth): LocalDate =
+    month.atDay(payDay.coerceAtMost(month.lengthOfMonth()))
+
 /**
  * LKR to put aside each month to reach the goal by its target month, counting the
  * months from [today]'s month to the target month. A goal due this month or already

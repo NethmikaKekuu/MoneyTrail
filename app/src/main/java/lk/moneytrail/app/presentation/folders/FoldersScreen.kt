@@ -115,6 +115,7 @@ private fun FoldersContent(
                     FolderCard(
                         name = folderName(type),
                         total = total,
+                        expectedCount = uiState.expectedCount(type),
                         selected = type == uiState.selectedType,
                         onClick = { onFolderClick(type) },
                         modifier = Modifier.weight(1f)
@@ -182,6 +183,7 @@ private fun FoldersContent(
 private fun FolderCard(
     name: String,
     total: MonthTotal,
+    expectedCount: Int,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -210,7 +212,8 @@ private fun FolderCard(
         Text(name, style = MaterialTheme.typography.labelLarge, fontSize = 14.sp, color = textColor)
         Text(formatAmount(total.total), style = MaterialTheme.typography.titleMedium, fontSize = 18.sp, color = textColor)
         Text(
-            text = "${entriesText(total.entryCount)} in ${total.month.format(ShortMonthFormatter)}",
+            text = "${entriesText(total.entryCount)} in ${total.month.format(ShortMonthFormatter)}" +
+                if (expectedCount > 0) " · $expectedCount expected" else "",
             style = MaterialTheme.typography.labelSmall,
             color = if (selected) Ink else colors.outline
         )

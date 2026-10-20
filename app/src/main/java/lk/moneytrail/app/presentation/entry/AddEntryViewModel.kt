@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.moneytrail.app.domain.model.Categories
 import lk.moneytrail.app.domain.model.EntryType
+import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.AccountRepository
+import lk.moneytrail.app.domain.repository.CategoryRepository
+import lk.moneytrail.app.domain.usecase.AddCategoryUseCase
 import lk.moneytrail.app.domain.usecase.AddEntryUseCase
 import lk.moneytrail.app.presentation.navigation.Routes
 import java.time.LocalDate
@@ -21,7 +24,9 @@ import javax.inject.Inject
 class AddEntryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val addEntryUseCase: AddEntryUseCase,
-    accountRepository: AccountRepository
+    private val addCategoryUseCase: AddCategoryUseCase,
+    accountRepository: AccountRepository,
+    categoryRepository: CategoryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEntryState(date = startDate(savedStateHandle)))
@@ -39,6 +44,39 @@ class AddEntryViewModel @Inject constructor(
                     }
                 }
             }
+        }
+        // The user's own categories, so they can be picked next to the built-in ones.
+        viewModelScope.launch {
+            categoryRepository.observeCategories().collect { result ->
+                result.onSuccess { categories -> _uiState.update { it.copy(customCategories = categories) } }
+            }
+        }
+    }
+
+    fun onAddCategoryClick() {
+        _uiState.update { it.copy(isAddingCategory = true, categoryError = null) }
+    }
+
+    fun onAddCategoryDismiss() {
+        _uiState.update { it.copy(isAddingCategory = false, categoryError = null) }
+    }
+
+    /** Saves a new category of the current type and picks it for this entry. */
+    fun onAddCategory(name: String, type: EntryType, spendingType: SpendingType?) {
+        val state = _uiState.value
+        if (state.isSavingCategory) return
+
+        _uiState.update { it.copy(isSavingCategory = true, categoryError = null) }
+        viewModelScope.launch {
+            addCategoryUseCase(name, type, spendingType, state.customCategories)
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(isSavingCategory = false, isAddingCategory = false, category = name.trim(), errorMessage = null)
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isSavingCategory = false, categoryError = e.message) }
+                }
         }
     }
 
@@ -73,6 +111,10 @@ class AddEntryViewModel @Inject constructor(
         _uiState.update { it.copy(note = note.take(AddEntryUseCase.MAX_NOTE_LENGTH), errorMessage = null) }
     }
 
+    fun onExpectedChange(isExpected: Boolean) {
+        _uiState.update { it.copy(isExpected = isExpected, errorMessage = null) }
+    }
+
     fun save() {
         val state = _uiState.value
         if (state.isSaving) return
@@ -85,7 +127,9 @@ class AddEntryViewModel @Inject constructor(
                 category = state.category,
                 account = state.account,
                 date = state.date,
-                note = state.note
+                note = state.note,
+                isExpected = state.isExpected,
+                spendingType = Categories.defaultSpending(state.category, state.customCategories)
             )
                 .onSuccess { _uiState.update { it.copy(isSaving = false, isSaved = true) } }
                 .onFailure { e -> _uiState.update { it.copy(isSaving = false, errorMessage = e.message) } }

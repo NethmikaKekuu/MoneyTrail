@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
 import lk.moneytrail.app.domain.model.Entry
+import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.EntryRepository
@@ -21,6 +22,8 @@ class AddEntryUseCaseTest {
         val saved = mutableListOf<Entry>()
 
         override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> = emptyFlow()
+
+        override fun observeExpected(): Flow<Result<List<Entry>>> = emptyFlow()
 
         override suspend fun getEntry(id: String): Result<Entry?> = Result.success(null)
 
@@ -55,6 +58,13 @@ class AddEntryUseCaseTest {
     }
 
     @Test
+    fun expectedEntry_isSavedAsExpected() = runBlocking {
+        addEntry(EntryType.INCOME, 30_000, "Freelance", "Main bank", day, "Bakery website", isExpected = true)
+
+        assertEquals(EntryStatus.EXPECTED, repository.saved.single().status)
+    }
+
+    @Test
     fun note_isTrimmed() = runBlocking {
         addEntry(EntryType.EXPENSE, 2_400, "Food out", "Main bank", day, "  Farewell lunch  ")
 
@@ -71,10 +81,17 @@ class AddEntryUseCaseTest {
     }
 
     @Test
-    fun categoryOfTheOtherType_isRejected() = runBlocking {
-        val result = addEntry(EntryType.INCOME, 5_000, "Coffee", "Main bank", day, "")
+    fun blankCategory_isRejected() = runBlocking {
+        val result = addEntry(EntryType.INCOME, 5_000, " ", "Main bank", day, "")
 
         assertTrue(result.isFailure)
         assertTrue(repository.saved.isEmpty())
+    }
+
+    @Test
+    fun ownExpenseCategory_usesTheSpendingTypeGiven() = runBlocking {
+        addEntry(EntryType.EXPENSE, 3_500, "Pet care", "Main bank", day, "", spendingType = SpendingType.COMMITTED)
+
+        assertEquals(SpendingType.COMMITTED, repository.saved.single().spendingType)
     }
 }

@@ -41,15 +41,18 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Sign up and log in | Email and password, with Firestore user profiles | 03, 04 |
 | Google sign-in | Credential Manager account picker, then Firebase Auth | 03 |
 | Forgot password | Firebase reset email, then a "check your email" screen | 05 |
-| Onboarding | Four steps after sign-up: money places, pay day and base salary, income sources, and a savings goal showing the amount to save each month | 06 (steps 2–4 follow its style) |
-| Calendar | Month grid with income and expense markers, month totals, the selected day's entries, updated live from Firestore | 07 |
-| New entry | Expense or income, amount keypad, category, account (from onboarding), date and note | 08 |
+| Onboarding | Four steps after sign-up: money places, pay day and base salary, income sources, and a savings goal showing the amount to save each month. Places and ways of earning that aren't listed can be added | 06 (steps 2–4 follow its style) |
+| Calendar | Month grid with income, expense and expected markers, Income / Expenses / Expected totals, the selected day's entries, updated live from Firestore | 07 |
+| New entry | Expense or income, amount keypad, category, account (from onboarding), date and note. **+ New** adds a category of your own | 08 |
 | Edit entry | Tap an entry to change its amount, category, account, committed or discretionary, date and note, or delete it after a confirm dialog | 24 |
 | Folders | Expenses and Income for a month, each category's total with a bar against the biggest, and the six earlier months to switch to; updated live | 09 |
+| Expected entries | Plan income or bills for a date (e.g. a freelance payment due on the 14th). On the day, the calendar asks "Did it come in?": confirm with the real amount, move it with Not yet, or remove it. Overdue ones keep showing until checked | 07, 08, 09 |
+| Salary on the calendar | Each month the base salary is added as an expected Salary entry on pay day. Confirming it asks for the amount received and an optional bonus, which is saved as its own Bonus entry | 07 |
 | Expense insights | This month's spending, the committed vs discretionary split, coffee and dining out as days of goal saving, spending by category, and a six-month chart | 10 |
-| More | Profile and sign-out | 12 (first part) |
+| More | Profile, Settings and sign-out | 12 (first part) |
+| Settings | Change the pay day and base salary (this month's expected salary follows), and list, add or delete your own categories | Not in Figma; follows the onboarding style |
 
-**Next, in order:** goal progress, salary confirm, AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
+**Next, in order:** goal progress, AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
 
 ## Tech stack
 
@@ -166,6 +169,7 @@ Everything a user owns sits under their own document, so one rule (`request.auth
 users/{uid}                       profile
 ├── entries/{entryId}             one income or expense on the calendar
 ├── accounts/{accountId}          a place money sits, picked in onboarding
+├── categories/{categoryId}       a category the user added, e.g. "Pet care"
 └── settings/plan                 pay day, salary, income sources and the savings goal
 ```
 
@@ -183,9 +187,10 @@ Written once when the account is made: on email sign-up, or the first Google sig
 
 | Field | Type | Notes |
 | --- | --- | --- |
+| `status` | string | `CONFIRMED` (money that moved) or `EXPECTED` (planned for its date). Entries saved before this field existed are read as confirmed |
 | `type` | string | `INCOME` or `EXPENSE` |
 | `amount` | integer | Whole rupees (LKR), 1 to 999,999,999. Always positive; `type` gives the direction |
-| `category` | string | 1–50 characters, from `domain/model/Categories.kt` |
+| `category` | string | 1–50 characters: a built-in one from `domain/model/Categories.kt` or one of the user's own |
 | `account` | string | 1–50 characters, e.g. `Main bank`, `Cash wallet` |
 | `date` | string | `yyyy-MM-dd`, the day the money moved |
 | `note` | string | Up to 200 characters, may be empty |
@@ -196,12 +201,13 @@ Written once when the account is made: on email sign-up, or the first Google sig
 
 - **The date is a string.** `yyyy-MM-dd` strings sort in date order, so a whole month is one range query (`date >= "2026-10-01"` and `date <= "2026-10-31"`) on one field, with no time-zone surprises and no composite index. Folders uses the same query over seven months.
 - **Amounts are whole rupees as integers**, so there are no floating-point rounding errors. Multi-currency fields (`currency`, `originalAmount`, `rate`) will be added for AdSense income in USD.
+- **Expected money is kept apart.** Totals, folders and insights count only `CONFIRMED` entries, so planned money never makes the real numbers look better. The calendar finds expected entries with one equality query on `status`, which needs no composite index.
 - **`spendingType` is stored, not worked out each time**, so Edit entry can override the category's default (a Rent payment marked discretionary stays that way).
 - **Live and offline.** The calendar uses a snapshot listener, so new entries appear at once. Firestore's persistent cache is turned on in `di/FirebaseModule.kt`, so the calendar opens and entries save without internet, then sync later.
 
 ### `users/{uid}/accounts/{accountId}`
 
-Written at the end of onboarding, one document per place the user ticked, all in one batch. The id is a short slug: `main-bank`, `secondary-bank`, `cash-wallet`, `savings`, `binance`.
+Written at the end of onboarding, one document per place the user ticked, all in one batch. The id is a short slug: `main-bank`, `secondary-bank`, `cash-wallet`, `savings`, `binance`. A place the user added gets a slug of its name, such as `sampath-bank` (`AccountTemplates.custom`).
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -210,9 +216,20 @@ Written at the end of onboarding, one document per place the user ticked, all in
 | `kind` | string | `BANK`, `CASH`, `SAVINGS` or `CRYPTO` |
 | `createdAt` | timestamp | Set by the server |
 
+### `users/{uid}/categories/{categoryId}`
+
+Categories the user added on top of the built-in ones: from **+ New** on the new entry screen, from Settings, or as extra ways of earning in onboarding step 3. They're offered after the built-in ones on New entry and Edit entry (`Categories.namesFor(type, custom)`). Deleting one doesn't change entries already saved with it.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `name` | string | 1–30 characters, not the same as a built-in or another of the user's categories of that type (checked in `AddCategoryUseCase`) |
+| `type` | string | `INCOME` or `EXPENSE` |
+| `spendingType` | string or null | Expenses: `COMMITTED` or `DISCRETIONARY`, the default for new entries in it. Income: `null` |
+| `createdAt` | timestamp | Set by the server |
+
 ### `users/{uid}/settings/plan`
 
-One document, written at the end of onboarding. The goal is a map inside it, so one read gives a screen everything it needs about the plan.
+One document, written at the end of onboarding and changed from Settings. The goal is a map inside it, so one read gives a screen everything it needs about the plan.
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -227,16 +244,19 @@ One document, written at the end of onboarding. The goal is a map inside it, so 
 
 The monthly amount to save is worked out when needed (`SavingsGoal.monthlySavingNeeded`), not stored, so it stays right as the months pass.
 
+**Salary as expected income.** When the calendar opens, `EnsureMonthlySalaryUseCase` adds this month's salary as an `EXPECTED` Salary entry on pay day (a pay day of 31 falls on the last day of shorter months). It does nothing if there's no salary, if this month already has a Salary entry, or once pay day has passed, so a salary removed with "Didn't happen" doesn't come back. Changing the salary in Settings (`UpdateSalaryUseCase`) moves a still-expected salary to the new amount and day. A bonus is entered when confirming the salary and saved as a separate confirmed `Bonus` entry, so the base and the extra stay apart in Folders and insights.
+
 ## Security rules
 
 `app/firestore.rules` enforces:
 
 - A user can only read and write data under their own `users/{uid}`.
 - The profile may only hold `name`, `email` and `createdAt`; `createdAt` must be the server time on create and can't change later.
-- Every entry is checked field by field: allowed keys only, `type` and `spendingType` from fixed lists, amount range, `yyyy-MM-dd` date, note length, server `createdAt`.
+- Every entry is checked field by field: allowed keys only, `status`, `type` and `spendingType` from fixed lists, amount range, `yyyy-MM-dd` date, note length, server `createdAt`.
 - Each account must have a name, a description and a `kind` from a fixed list, with a server `createdAt`.
 - The plan must have a pay day of 1–31, a salary of 0 or more, income sources from a fixed list, and a goal whose saved amount is no more than its target.
-- Any other collection under a user is owner-only. Entries, accounts and settings are excluded from that catch-all, so their checks can't be skipped.
+- Each category must have a 1–30 character name and a `type`; expense categories need a `spendingType`, income ones must have `null`. Categories can be created and deleted, not changed.
+- Any other collection under a user is owner-only. Entries, accounts, settings and categories are excluded from that catch-all, so their checks can't be skipped.
 
 **Every new collection needs its own validation function and match block**, in the same style as `isValidEntry`.
 
@@ -262,21 +282,22 @@ app/src/main/java/lk/moneytrail/app/
 ├── data/repository/      Firebase implementations + shared Firestore error messages and write helper
 ├── di/                   Hilt modules: FirebaseModule, RepositoryModule
 ├── domain/
-│   ├── model/            Entry, Categories, Account, MoneyPlan, EntryTotals, FolderTotals, SpendingInsights, UserProfile, AuthUser, AppException
-│   ├── repository/       Auth, User, Entry, Account and Plan repositories (interfaces)
+│   ├── model/            Entry, Categories, CustomCategory, Account, MoneyPlan, EntryTotals, FolderTotals, SpendingInsights, UserProfile, AuthUser, AppException
+│   ├── repository/       Auth, User, Entry, Account, Plan and Category repositories (interfaces)
 │   └── usecase/          RegisterUseCase, SignInWithGoogleUseCase, AddEntryUseCase, UpdateEntryUseCase,
-│                         CompleteOnboardingUseCase
+│                         CompleteOnboardingUseCase, AddCategoryUseCase, EnsureMonthlySalaryUseCase, UpdateSalaryUseCase
 └── presentation/
     ├── auth/             Login, Register, Forgot password, Google sign-in helper
     ├── calendar/         Calendar screen, month grid logic
-    ├── components/       Logo, icons (MoneyTrailIcons), money formatting, loading/error/empty views
+    ├── components/       Logo, icons (MoneyTrailIcons), money formatting, loading/error/empty views, AddCategoryDialog
     ├── dashboard/        Bottom-bar home: Calendar, Folders, Insights, More
     ├── entry/            New entry (with keypad) and Edit entry screens
     ├── folders/          Expenses and Income folders by category and month
     ├── insights/         Expense insights (income insights to come)
-    ├── more/             Profile and sign-out
+    ├── more/             Profile, Settings link and sign-out
     ├── navigation/       Routes and the NavHost
     ├── onboarding/       Four-step onboarding: money places, salary, income sources, goal
+    ├── settings/         Salary and pay day, the user's own categories
     ├── splash/, welcome/
     └── theme/            Colours, Sora and DM Sans typography, MoneyTrailTheme
 ```
@@ -292,6 +313,7 @@ app/src/main/java/lk/moneytrail/app/
 | `dashboard` | Bottom-bar home (calendar first) |
 | `add_entry?date={yyyy-MM-dd}` | New entry, starting on the given day |
 | `edit_entry/{entryId}` | Edit or delete one entry, opened by tapping it on the calendar |
+| `settings` | Salary and categories, opened from More. For someone who skipped onboarding it links to `onboarding` |
 
 Signing in or out clears the back stack, so Back can't cross between signed-in and signed-out screens.
 
@@ -352,7 +374,7 @@ Use `.\gradlew` in Windows PowerShell and `./gradlew` in macOS, Linux or Git Bas
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Before submitting, install it on an **Android 8.0 (API 26)** emulator and check the main flows: sign up, add entries, see them on the calendar, sign out.
 
-Unit tests cover entry totals, adding and editing entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks and the monthly saving needed for the goal.
+Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks (including added places and income), the user's own categories, the monthly salary and salary changes, and the monthly saving needed for the goal.
 
 ## Troubleshooting
 
