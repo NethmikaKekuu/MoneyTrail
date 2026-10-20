@@ -47,7 +47,7 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Edit entry | Tap an entry to change its amount, category, account, committed or discretionary, date and note, or delete it after a confirm dialog | 24 |
 | Folders | Expenses and Income for a month, each category's total with a bar against the biggest, and the six earlier months to switch to; updated live | 09 |
 | Expected entries | Plan income or bills for a date (e.g. a freelance payment due on the 14th). On the day, the calendar asks "Did it come in?": confirm with the real amount, move it with Not yet, or remove it. Overdue ones keep showing until checked | 07, 08, 09 |
-| Salary on the calendar | Each month the base salary is added as an expected Salary entry on pay day. Confirming it asks for the amount received and an optional bonus, which is saved as its own Bonus entry | 07 |
+| Salary on the calendar | Each month the base salary is added as an expected Salary entry on pay day. The salary is a fixed base (changed in Settings) plus a bonus that varies: confirming it asks for the base received and this month's bonus, and opening the salary later lets you add or change the bonus. The calendar shows "incl. 15,000 bonus" | 07, 24 |
 | Expense insights | This month's spending, the committed vs discretionary split, coffee and dining out as days of goal saving, spending by category, and a six-month chart | 10 |
 | More | Profile, Settings and sign-out | 12 (first part) |
 | Settings | Change the pay day and base salary (this month's expected salary follows), and list, add or delete your own categories | Not in Figma; follows the onboarding style |
@@ -195,6 +195,7 @@ Written once when the account is made: on email sign-up, or the first Google sig
 | `date` | string | `yyyy-MM-dd`, the day the money moved |
 | `note` | string | Up to 200 characters, may be empty |
 | `spendingType` | string or null | Expenses: `COMMITTED` or `DISCRETIONARY`, set from the category. Income: `null` |
+| `bonus` | integer | For a Salary income: the part of `amount` that was a bonus on top of the base pay. Always less than `amount`; 0 for every other entry. Entries saved before this field existed are read as 0 |
 | `createdAt` | timestamp | Set by the server; orders entries within a day |
 
 **Why it is shaped this way**
@@ -202,6 +203,7 @@ Written once when the account is made: on email sign-up, or the first Google sig
 - **The date is a string.** `yyyy-MM-dd` strings sort in date order, so a whole month is one range query (`date >= "2026-10-01"` and `date <= "2026-10-31"`) on one field, with no time-zone surprises and no composite index. Folders uses the same query over seven months.
 - **Amounts are whole rupees as integers**, so there are no floating-point rounding errors. Multi-currency fields (`currency`, `originalAmount`, `rate`) will be added for AdSense income in USD.
 - **Expected money is kept apart.** Totals, folders and insights count only `CONFIRMED` entries, so planned money never makes the real numbers look better. The calendar finds expected entries with one equality query on `status`, which needs no composite index.
+- **A salary's bonus lives on the salary.** `amount` is always the whole sum, so totals, folders and insights need nothing extra, while `bonus` keeps the base and the extra told apart (`Entry.baseAmount`).
 - **`spendingType` is stored, not worked out each time**, so Edit entry can override the category's default (a Rent payment marked discretionary stays that way).
 - **Live and offline.** The calendar uses a snapshot listener, so new entries appear at once. Firestore's persistent cache is turned on in `di/FirebaseModule.kt`, so the calendar opens and entries save without internet, then sync later.
 
@@ -244,7 +246,7 @@ One document, written at the end of onboarding and changed from Settings. The go
 
 The monthly amount to save is worked out when needed (`SavingsGoal.monthlySavingNeeded`), not stored, so it stays right as the months pass.
 
-**Salary as expected income.** When the calendar opens, `EnsureMonthlySalaryUseCase` adds this month's salary as an `EXPECTED` Salary entry on pay day (a pay day of 31 falls on the last day of shorter months). It does nothing if there's no salary, if this month already has a Salary entry, or once pay day has passed, so a salary removed with "Didn't happen" doesn't come back. Changing the salary in Settings (`UpdateSalaryUseCase`) moves a still-expected salary to the new amount and day. A bonus is entered when confirming the salary and saved as a separate confirmed `Bonus` entry, so the base and the extra stay apart in Folders and insights.
+**Salary as expected income.** When the calendar opens, `EnsureMonthlySalaryUseCase` adds this month's salary as an `EXPECTED` Salary entry on pay day (a pay day of 31 falls on the last day of shorter months). It does nothing if there's no salary, if this month already has a Salary entry, or once pay day has passed, so a salary removed with "Didn't happen" doesn't come back. Changing the salary in Settings (`UpdateSalaryUseCase`) moves a still-expected salary to the new base and day, keeping any bonus already on it. A bonus is added to the salary entry itself: in the "Did it come in?" dialog (`Entry.confirmedSalary`) or later on Edit entry, which shows Base salary and Bonus for a Salary income.
 
 ## Security rules
 
@@ -252,7 +254,7 @@ The monthly amount to save is worked out when needed (`SavingsGoal.monthlySaving
 
 - A user can only read and write data under their own `users/{uid}`.
 - The profile may only hold `name`, `email` and `createdAt`; `createdAt` must be the server time on create and can't change later.
-- Every entry is checked field by field: allowed keys only, `status`, `type` and `spendingType` from fixed lists, amount range, `yyyy-MM-dd` date, note length, server `createdAt`.
+- Every entry is checked field by field: allowed keys only, `status`, `type` and `spendingType` from fixed lists, amount range, a `bonus` below the amount and only on a Salary income, `yyyy-MM-dd` date, note length, server `createdAt`.
 - Each account must have a name, a description and a `kind` from a fixed list, with a server `createdAt`.
 - The plan must have a pay day of 1–31, a salary of 0 or more, income sources from a fixed list, and a goal whose saved amount is no more than its target.
 - Each category must have a 1–30 character name and a `type`; expense categories need a `spendingType`, income ones must have `null`. Categories can be created and deleted, not changed.
@@ -374,7 +376,7 @@ Use `.\gradlew` in Windows PowerShell and `./gradlew` in macOS, Linux or Git Bas
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Before submitting, install it on an **Android 8.0 (API 26)** emulator and check the main flows: sign up, add entries, see them on the calendar, sign out.
 
-Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks (including added places and income), the user's own categories, the monthly salary and salary changes, and the monthly saving needed for the goal.
+Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks (including added places and income), the user's own categories, the monthly salary, salary changes and salary bonuses, and the monthly saving needed for the goal.
 
 ## Troubleshooting
 
