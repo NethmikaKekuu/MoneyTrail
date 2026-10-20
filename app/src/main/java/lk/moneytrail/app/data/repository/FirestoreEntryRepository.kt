@@ -19,14 +19,13 @@ import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.EntryRepository
 import java.time.LocalDate
-import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Entries live in users/{uid}/entries/{entryId}. The date is stored as a yyyy-MM-dd
- * string, which sorts the same way as the dates, so a month is a single range query
- * on one field and needs no composite index.
+ * string, which sorts the same way as the dates, so a month (or several) is a single
+ * range query on one field and needs no composite index.
  */
 @Singleton
 class FirestoreEntryRepository @Inject constructor(
@@ -34,7 +33,7 @@ class FirestoreEntryRepository @Inject constructor(
     private val auth: FirebaseAuth
 ) : EntryRepository {
 
-    override fun observeMonth(month: YearMonth): Flow<Result<List<Entry>>> = callbackFlow {
+    override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> = callbackFlow {
         val uid = auth.currentUser?.uid
         if (uid == null) {
             trySend(Result.failure(AppException(SIGNED_OUT_MESSAGE)))
@@ -46,8 +45,8 @@ class FirestoreEntryRepository @Inject constructor(
         // A snapshot listener, so the calendar updates the moment an entry is saved. It
         // answers from the offline cache first, so the calendar also opens without internet.
         val registration = entriesOf(uid)
-            .whereGreaterThanOrEqualTo(FIELD_DATE, month.atDay(1).toString())
-            .whereLessThanOrEqualTo(FIELD_DATE, month.atEndOfMonth().toString())
+            .whereGreaterThanOrEqualTo(FIELD_DATE, from.toString())
+            .whereLessThanOrEqualTo(FIELD_DATE, to.toString())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.w(TAG, "Listening to entries failed", error)

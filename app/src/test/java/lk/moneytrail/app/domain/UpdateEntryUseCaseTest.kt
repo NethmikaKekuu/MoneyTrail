@@ -13,7 +13,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
-import java.time.YearMonth
 
 class UpdateEntryUseCaseTest {
 
@@ -21,7 +20,7 @@ class UpdateEntryUseCaseTest {
     private class FakeEntryRepository : EntryRepository {
         var updated: Entry? = null
 
-        override fun observeMonth(month: YearMonth): Flow<Result<List<Entry>>> = emptyFlow()
+        override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> = emptyFlow()
 
         override suspend fun getEntry(id: String): Result<Entry?> = Result.success(null)
 
