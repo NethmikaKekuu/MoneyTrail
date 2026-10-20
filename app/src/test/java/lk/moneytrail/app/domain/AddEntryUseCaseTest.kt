@@ -23,10 +23,16 @@ class AddEntryUseCaseTest {
 
         override fun observeMonth(month: YearMonth): Flow<Result<List<Entry>>> = emptyFlow()
 
+        override suspend fun getEntry(id: String): Result<Entry?> = Result.success(null)
+
         override suspend fun addEntry(entry: Entry): Result<Unit> {
             saved += entry
             return Result.success(Unit)
         }
+
+        override suspend fun updateEntry(entry: Entry): Result<Unit> = Result.success(Unit)
+
+        override suspend fun deleteEntry(id: String): Result<Unit> = Result.success(Unit)
     }
 
     private val repository = FakeEntryRepository()

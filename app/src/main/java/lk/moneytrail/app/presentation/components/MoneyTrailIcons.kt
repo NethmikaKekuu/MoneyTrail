@@ -90,6 +90,8 @@ object MoneyTrailIcons {
         "M17,9l-6,6M11,9l6,6"
     )
 
+    val Trash = lineIcon("Trash", 2f, "M4,7h16M10,11v6M14,11v6M6,7l1,13h10l1,-13M9,7V4h6v3")
+
     val SignOut = lineIcon(
         "SignOut", 2f,
         "M9,21H5a2,2 0,0 1,-2 -2V5a2,2 0,0 1,2 -2h4",

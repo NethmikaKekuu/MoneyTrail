@@ -226,9 +226,9 @@ private fun LegendItem(label: String, color: Color, shape: Shape) {
     }
 }
 
-/** One entry in the selected day's list, with its note underneath if it has one. */
+/** One entry in the selected day's list, with its note underneath if it has one. Tap to edit it. */
 @Composable
-internal fun EntryCard(entry: Entry, modifier: Modifier = Modifier) {
+internal fun EntryCard(entry: Entry, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(18.dp)
     val isIncome = entry.type == EntryType.INCOME
@@ -241,8 +241,10 @@ internal fun EntryCard(entry: Entry, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.surface, shape)
+            .clip(shape)
+            .background(colors.surface)
             .border(1.dp, colors.outlineVariant, shape)
+            .clickable(role = Role.Button, onClickLabel = "Edit", onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {

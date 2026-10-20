@@ -45,6 +45,7 @@ import java.util.Locale
 @Composable
 fun CalendarScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
+    onEntryClick: (entryId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
@@ -57,6 +58,7 @@ fun CalendarScreen(
         onDayClick = viewModel::onDayClick,
         onRetryClick = viewModel::onRetryClick,
         onAddEntryClick = { onAddEntryClick(uiState.selectedDate) },
+        onEntryClick = onEntryClick,
         modifier = modifier
     )
 }
@@ -72,6 +74,7 @@ private fun CalendarContent(
     onDayClick: (LocalDate) -> Unit,
     onRetryClick: () -> Unit,
     onAddEntryClick: () -> Unit,
+    onEntryClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -111,6 +114,7 @@ private fun CalendarContent(
             SelectedDayPanel(
                 uiState = uiState,
                 onRetryClick = onRetryClick,
+                onEntryClick = onEntryClick,
                 modifier = Modifier
                     .weight(1f)
                     .padding(top = 8.dp)
@@ -137,6 +141,7 @@ private fun CalendarContent(
 private fun SelectedDayPanel(
     uiState: CalendarState,
     onRetryClick: () -> Unit,
+    onEntryClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val date = uiState.selectedDate
@@ -182,7 +187,7 @@ private fun SelectedDayPanel(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(entries, key = { it.id }) { entry ->
-                    EntryCard(entry)
+                    EntryCard(entry, onClick = { onEntryClick(entry.id) })
                 }
             }
         }
@@ -215,7 +220,8 @@ private fun CalendarScreenPreview() {
             onNextMonthClick = {},
             onDayClick = {},
             onRetryClick = {},
-            onAddEntryClick = {}
+            onAddEntryClick = {},
+            onEntryClick = {}
         )
     }
 }
