@@ -40,6 +40,8 @@ class CompleteOnboardingUseCaseTest {
             saved = plan
             return Result.success(Unit)
         }
+
+        override suspend fun getPlan(): Result<MoneyPlan?> = Result.success(saved)
     }
 
     private val today = LocalDate.of(2026, 10, 19)

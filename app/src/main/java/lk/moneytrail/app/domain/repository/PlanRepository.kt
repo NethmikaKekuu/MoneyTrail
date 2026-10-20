@@ -8,4 +8,7 @@ interface PlanRepository {
 
     /** Saves the pay day, salary, income sources and goal, replacing the previous plan. */
     suspend fun savePlan(plan: MoneyPlan): Result<Unit>
+
+    /** The saved plan, or null for someone who skipped onboarding. */
+    suspend fun getPlan(): Result<MoneyPlan?>
 }
