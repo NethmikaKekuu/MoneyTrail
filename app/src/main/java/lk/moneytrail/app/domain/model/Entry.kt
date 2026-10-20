@@ -26,8 +26,21 @@ data class Entry(
     val note: String,
     /** Set for expenses only; null for income. */
     val spendingType: SpendingType?,
-    val status: EntryStatus = EntryStatus.CONFIRMED
+    val status: EntryStatus = EntryStatus.CONFIRMED,
+    /**
+     * For a salary: the part of [amount] that was a bonus on top of the base pay, in LKR.
+     * [amount] is always the whole sum, so totals need nothing extra. 0 for other entries.
+     */
+    val bonus: Long = 0
 ) {
     val isExpected: Boolean
         get() = status == EntryStatus.EXPECTED
+
+    /** Only a salary can carry a bonus. */
+    val isSalary: Boolean
+        get() = type == EntryType.INCOME && category == Categories.SALARY
+
+    /** A salary's base pay without the bonus; the whole amount for other entries. */
+    val baseAmount: Long
+        get() = amount - bonus
 }
