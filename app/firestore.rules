@@ -31,10 +31,12 @@ service cloud.firestore {
     // users/{uid}/entries/{entryId}: one income or expense on the calendar.
     // Amounts are whole rupees (LKR) and always positive; type says which way the money
     // went. date is yyyy-MM-dd. Expenses say whether they were committed or
-    // discretionary; income has no spendingType.
+    // discretionary; income has no spendingType. status is CONFIRMED for money that
+    // moved, EXPECTED for money planned for its date.
     function isValidEntry(data) {
-      let fields = ['type', 'amount', 'category', 'account', 'date', 'note', 'spendingType', 'createdAt'];
+      let fields = ['status', 'type', 'amount', 'category', 'account', 'date', 'note', 'spendingType', 'createdAt'];
       return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.status in ['CONFIRMED', 'EXPECTED']
         && data.type in ['INCOME', 'EXPENSE']
         && data.amount is int && data.amount > 0 && data.amount <= 999999999
         && data.category is string && data.category.size() > 0 && data.category.size() <= 50

@@ -1,6 +1,7 @@
 package lk.moneytrail.app.presentation.calendar
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -69,7 +72,7 @@ internal fun SquareIconButton(
     }
 }
 
-/** The orange card with the month's income, expenses and what's left. */
+/** The orange card with the month's confirmed income and expenses, and what's still expected. */
 @Composable
 internal fun MonthSummary(totals: EntryTotals, modifier: Modifier = Modifier) {
     Row(
@@ -81,7 +84,8 @@ internal fun MonthSummary(totals: EntryTotals, modifier: Modifier = Modifier) {
     ) {
         SummaryItem("Income", formatAmount(totals.income), Modifier.weight(1f))
         SummaryItem("Expenses", formatAmount(totals.expenses), Modifier.weight(1f))
-        SummaryItem("Net", formatNet(totals.net), Modifier.weight(1f))
+        // Expected money in minus expected money out, e.g. "+30,000" for an unpaid invoice.
+        SummaryItem("Expected", formatNet(totals.expectedIncome - totals.expectedExpenses), Modifier.weight(1f))
     }
 }
 
@@ -135,8 +139,9 @@ internal fun MonthGrid(
                 .padding(top = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
         ) {
-            LegendItem("Income", MaterialTheme.colorScheme.secondary, CircleShape)
-            LegendItem("Expense", MaterialTheme.colorScheme.tertiary, RoundedCornerShape(1.dp))
+            LegendItem("Income") { Marker(MaterialTheme.colorScheme.secondary, CircleShape, size = 7) }
+            LegendItem("Expense") { Marker(MaterialTheme.colorScheme.tertiary, RoundedCornerShape(1.dp), size = 7) }
+            LegendItem("Expected") { ExpectedMarker(MaterialTheme.colorScheme.secondary, size = 7) }
         }
     }
 }
@@ -195,6 +200,9 @@ private fun DayCell(
             if (day.hasExpense) {
                 Marker(if (isSelected) markerOnSelected else colors.tertiary, RoundedCornerShape(1.dp))
             }
+            if (day.hasExpected) {
+                ExpectedMarker(if (isSelected) markerOnSelected else colors.secondary)
+            }
         }
     }
 }
@@ -209,13 +217,26 @@ private fun Marker(color: Color, shape: Shape, size: Int = 6) {
     )
 }
 
+/** A dashed ring for days with money expected but not yet confirmed, as in the design. */
 @Composable
-private fun LegendItem(label: String, color: Color, shape: Shape) {
+private fun ExpectedMarker(color: Color, size: Int = 6) {
+    Canvas(Modifier.size(size.dp)) {
+        val stroke = 1.dp.toPx()
+        drawCircle(
+            color = color,
+            radius = (this.size.minDimension - stroke) / 2,
+            style = Stroke(width = stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 1.5f)))
+        )
+    }
+}
+
+@Composable
+private fun LegendItem(label: String, marker: @Composable () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        Marker(color, shape, size = 7)
+        marker()
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
@@ -232,7 +253,7 @@ internal fun EntryCard(entry: Entry, onClick: () -> Unit, modifier: Modifier = M
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(18.dp)
     val isIncome = entry.type == EntryType.INCOME
-    val kind = when (entry.spendingType) {
+    val kind = if (entry.isExpected) "Expected" else when (entry.spendingType) {
         SpendingType.COMMITTED -> "Committed"
         SpendingType.DISCRETIONARY -> "Discretionary"
         null -> "Income"
@@ -278,7 +299,11 @@ internal fun EntryCard(entry: Entry, onClick: () -> Unit, modifier: Modifier = M
                 text = (if (isIncome) "+ " else "$MINUS_SIGN ") + formatAmount(entry.amount),
                 style = MaterialTheme.typography.titleSmall,
                 fontSize = 15.sp,
-                color = if (isIncome) colors.secondary else colors.onSurface,
+                color = when {
+                    entry.isExpected -> colors.outline
+                    isIncome -> colors.secondary
+                    else -> colors.onSurface
+                },
                 maxLines = 1
             )
         }

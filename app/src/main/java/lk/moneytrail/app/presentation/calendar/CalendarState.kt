@@ -16,7 +16,11 @@ data class CalendarState(
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     /** Every entry dated in [month], oldest first. */
-    val entries: List<Entry> = emptyList()
+    val entries: List<Entry> = emptyList(),
+    /** Expected entries whose day has come, from any month, oldest first. */
+    val dueExpected: List<Entry> = emptyList(),
+    /** The expected entry being checked, while its dialog is open. */
+    val check: ExpectedCheck? = null
 ) {
     val days: List<CalendarDay>
         get() = buildCalendarDays(month, entries)
@@ -30,3 +34,16 @@ data class CalendarState(
     val selectedDayTotals: EntryTotals
         get() = selectedDayEntries.totals()
 }
+
+/** "Did it come in?" for one expected entry, with what the user has typed so far. */
+data class ExpectedCheck(
+    val entry: Entry,
+    /** What really arrived or was paid; starts as the expected amount. */
+    val amountDigits: String,
+    /** When the money really moved: the planned day or today. */
+    val date: LocalDate,
+    /** True while the "Not yet" date picker is open. */
+    val isPickingNewDate: Boolean = false,
+    val isSaving: Boolean = false,
+    val errorMessage: String? = null
+)

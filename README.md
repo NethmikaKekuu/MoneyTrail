@@ -42,10 +42,11 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Google sign-in | Credential Manager account picker, then Firebase Auth | 03 |
 | Forgot password | Firebase reset email, then a "check your email" screen | 05 |
 | Onboarding | Four steps after sign-up: money places, pay day and base salary, income sources, and a savings goal showing the amount to save each month | 06 (steps 2–4 follow its style) |
-| Calendar | Month grid with income and expense markers, month totals, the selected day's entries, updated live from Firestore | 07 |
+| Calendar | Month grid with income, expense and expected markers, Income / Expenses / Expected totals, the selected day's entries, updated live from Firestore | 07 |
 | New entry | Expense or income, amount keypad, category, account (from onboarding), date and note | 08 |
 | Edit entry | Tap an entry to change its amount, category, account, committed or discretionary, date and note, or delete it after a confirm dialog | 24 |
 | Folders | Expenses and Income for a month, each category's total with a bar against the biggest, and the six earlier months to switch to; updated live | 09 |
+| Expected entries | Plan income or bills for a date (e.g. a freelance payment due on the 14th). On the day, the calendar asks "Did it come in?": confirm with the real amount, move it with Not yet, or remove it. Overdue ones keep showing until checked | 07, 08, 09 |
 | Expense insights | This month's spending, the committed vs discretionary split, coffee and dining out as days of goal saving, spending by category, and a six-month chart | 10 |
 | More | Profile and sign-out | 12 (first part) |
 
@@ -183,6 +184,7 @@ Written once when the account is made: on email sign-up, or the first Google sig
 
 | Field | Type | Notes |
 | --- | --- | --- |
+| `status` | string | `CONFIRMED` (money that moved) or `EXPECTED` (planned for its date). Entries saved before this field existed are read as confirmed |
 | `type` | string | `INCOME` or `EXPENSE` |
 | `amount` | integer | Whole rupees (LKR), 1 to 999,999,999. Always positive; `type` gives the direction |
 | `category` | string | 1–50 characters, from `domain/model/Categories.kt` |
@@ -196,6 +198,7 @@ Written once when the account is made: on email sign-up, or the first Google sig
 
 - **The date is a string.** `yyyy-MM-dd` strings sort in date order, so a whole month is one range query (`date >= "2026-10-01"` and `date <= "2026-10-31"`) on one field, with no time-zone surprises and no composite index. Folders uses the same query over seven months.
 - **Amounts are whole rupees as integers**, so there are no floating-point rounding errors. Multi-currency fields (`currency`, `originalAmount`, `rate`) will be added for AdSense income in USD.
+- **Expected money is kept apart.** Totals, folders and insights count only `CONFIRMED` entries, so planned money never makes the real numbers look better. The calendar finds expected entries with one equality query on `status`, which needs no composite index.
 - **`spendingType` is stored, not worked out each time**, so Edit entry can override the category's default (a Rent payment marked discretionary stays that way).
 - **Live and offline.** The calendar uses a snapshot listener, so new entries appear at once. Firestore's persistent cache is turned on in `di/FirebaseModule.kt`, so the calendar opens and entries save without internet, then sync later.
 
@@ -233,7 +236,7 @@ The monthly amount to save is worked out when needed (`SavingsGoal.monthlySaving
 
 - A user can only read and write data under their own `users/{uid}`.
 - The profile may only hold `name`, `email` and `createdAt`; `createdAt` must be the server time on create and can't change later.
-- Every entry is checked field by field: allowed keys only, `type` and `spendingType` from fixed lists, amount range, `yyyy-MM-dd` date, note length, server `createdAt`.
+- Every entry is checked field by field: allowed keys only, `status`, `type` and `spendingType` from fixed lists, amount range, `yyyy-MM-dd` date, note length, server `createdAt`.
 - Each account must have a name, a description and a `kind` from a fixed list, with a server `createdAt`.
 - The plan must have a pay day of 1–31, a salary of 0 or more, income sources from a fixed list, and a goal whose saved amount is no more than its target.
 - Any other collection under a user is owner-only. Entries, accounts and settings are excluded from that catch-all, so their checks can't be skipped.
@@ -352,7 +355,7 @@ Use `.\gradlew` in Windows PowerShell and `./gradlew` in macOS, Linux or Git Bas
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Before submitting, install it on an **Android 8.0 (API 26)** emulator and check the main flows: sign up, add entries, see them on the calendar, sign out.
 
-Unit tests cover entry totals, adding and editing entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks and the monthly saving needed for the goal.
+Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks and the monthly saving needed for the goal.
 
 ## Troubleshooting
 

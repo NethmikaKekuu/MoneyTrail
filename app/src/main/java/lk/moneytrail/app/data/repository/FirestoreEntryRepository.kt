@@ -8,6 +8,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.model.Entry
+import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.EntryRepository
@@ -33,7 +35,20 @@ class FirestoreEntryRepository @Inject constructor(
     private val auth: FirebaseAuth
 ) : EntryRepository {
 
-    override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> = callbackFlow {
+    override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> =
+        observeQuery { entries ->
+            entries
+                .whereGreaterThanOrEqualTo(FIELD_DATE, from.toString())
+                .whereLessThanOrEqualTo(FIELD_DATE, to.toString())
+        }
+
+    // One equality filter on one field, so it needs no composite index either. Older
+    // entries have no status field and are left out, which is right: they're confirmed.
+    override fun observeExpected(): Flow<Result<List<Entry>>> =
+        observeQuery { entries -> entries.whereEqualTo(FIELD_STATUS, EntryStatus.EXPECTED.name) }
+
+    /** Listens to the user's entries that [query] picks, sorted by date and then time added. */
+    private fun observeQuery(query: (CollectionReference) -> Query): Flow<Result<List<Entry>>> = callbackFlow {
         val uid = auth.currentUser?.uid
         if (uid == null) {
             trySend(Result.failure(AppException(SIGNED_OUT_MESSAGE)))
@@ -42,11 +57,9 @@ class FirestoreEntryRepository @Inject constructor(
             return@callbackFlow
         }
 
-        // A snapshot listener, so the calendar updates the moment an entry is saved. It
-        // answers from the offline cache first, so the calendar also opens without internet.
-        val registration = entriesOf(uid)
-            .whereGreaterThanOrEqualTo(FIELD_DATE, from.toString())
-            .whereLessThanOrEqualTo(FIELD_DATE, to.toString())
+        // A snapshot listener, so screens update the moment an entry is saved. It answers
+        // from the offline cache first, so they also open without internet.
+        val registration = query(entriesOf(uid))
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.w(TAG, "Listening to entries failed", error)
@@ -143,6 +156,7 @@ class FirestoreEntryRepository @Inject constructor(
 
     /** Every field except createdAt, which is only set when the entry is first saved. */
     private fun Entry.toFirestoreFields(): Map<String, Any?> = mapOf(
+        FIELD_STATUS to status.name,
         FIELD_TYPE to type.name,
         FIELD_AMOUNT to amount,
         FIELD_CATEGORY to category,
@@ -173,7 +187,10 @@ class FirestoreEntryRepository @Inject constructor(
             note = getString(FIELD_NOTE).orEmpty(),
             spendingType = getString(FIELD_SPENDING_TYPE)?.let { name ->
                 SpendingType.entries.find { it.name == name }
-            }
+            },
+            // Entries saved before expected entries existed have no status: they're confirmed.
+            status = getString(FIELD_STATUS)?.let { name -> EntryStatus.entries.find { it.name == name } }
+                ?: EntryStatus.CONFIRMED
         )
     }
 
@@ -181,6 +198,7 @@ class FirestoreEntryRepository @Inject constructor(
         const val TAG = "FirestoreEntryRepository"
         const val USERS_COLLECTION = "users"
         const val ENTRIES_COLLECTION = "entries"
+        const val FIELD_STATUS = "status"
         const val FIELD_TYPE = "type"
         const val FIELD_AMOUNT = "amount"
         const val FIELD_CATEGORY = "category"
