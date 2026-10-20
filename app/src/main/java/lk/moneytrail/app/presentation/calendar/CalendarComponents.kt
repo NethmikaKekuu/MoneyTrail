@@ -289,7 +289,7 @@ internal fun EntryCard(entry: Entry, onClick: () -> Unit, modifier: Modifier = M
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(entry.category, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = "${entry.account} · $kind",
+                    text = "${entry.account} · $kind" + if (entry.bonus > 0) " · incl. ${formatAmount(entry.bonus)} bonus" else "",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Normal,
                     color = colors.outline

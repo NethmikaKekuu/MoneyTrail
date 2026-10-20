@@ -91,6 +91,7 @@ fun EditEntryScreen(
         onBackClick = onClose,
         onRetryClick = viewModel::loadEntry,
         onAmountChange = viewModel::onAmountChange,
+        onBonusChange = viewModel::onBonusChange,
         onCategoryChange = viewModel::onCategoryChange,
         onAccountChange = viewModel::onAccountChange,
         onSpendingTypeChange = viewModel::onSpendingTypeChange,
@@ -112,6 +113,7 @@ private fun EditEntryContent(
     onBackClick: () -> Unit,
     onRetryClick: () -> Unit,
     onAmountChange: (String) -> Unit,
+    onBonusChange: (String) -> Unit,
     onCategoryChange: (String) -> Unit,
     onAccountChange: (String) -> Unit,
     onSpendingTypeChange: (SpendingType) -> Unit,
@@ -168,6 +170,7 @@ private fun EditEntryContent(
                     original = original,
                     draft = draft,
                     onAmountChange = onAmountChange,
+                    onBonusChange = onBonusChange,
                     onCategoryChange = onCategoryChange,
                     onAccountChange = onAccountChange,
                     onSpendingTypeChange = onSpendingTypeChange,
@@ -217,6 +220,7 @@ private fun EditForm(
     original: Entry,
     draft: Entry,
     onAmountChange: (String) -> Unit,
+    onBonusChange: (String) -> Unit,
     onCategoryChange: (String) -> Unit,
     onAccountChange: (String) -> Unit,
     onSpendingTypeChange: (SpendingType) -> Unit,
@@ -253,16 +257,35 @@ private fun EditForm(
                 style = MaterialTheme.typography.displaySmall,
                 color = colors.onSurface
             )
+            if (uiState.bonus > 0) {
+                Text(
+                    text = "Base ${formatAmount(uiState.amount - uiState.bonus)} + bonus ${formatAmount(uiState.bonus)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.outline
+                )
+            }
         }
 
         AuthTextField(
             value = uiState.amountDigits,
             onValueChange = onAmountChange,
-            label = "Amount (LKR)",
+            label = if (uiState.isSalary) "Base salary (LKR)" else "Amount (LKR)",
             placeholder = "0",
             enabled = enabled,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
         )
+
+        // The part of a salary that isn't fixed: added on top of the base pay.
+        if (uiState.isSalary) {
+            AuthTextField(
+                value = uiState.bonusDigits,
+                onValueChange = onBonusChange,
+                label = "Bonus (LKR, optional)",
+                placeholder = "0",
+                enabled = enabled,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
+            )
+        }
 
         Section(
             label = "Category",
@@ -481,6 +504,7 @@ private fun EditEntryScreenPreview() {
             onBackClick = {},
             onRetryClick = {},
             onAmountChange = {},
+            onBonusChange = {},
             onCategoryChange = {},
             onAccountChange = {},
             onSpendingTypeChange = {},

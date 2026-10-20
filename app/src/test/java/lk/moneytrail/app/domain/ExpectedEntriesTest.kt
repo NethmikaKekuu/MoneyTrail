@@ -6,6 +6,7 @@ import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.model.categoryTotals
 import lk.moneytrail.app.domain.model.confirmed
+import lk.moneytrail.app.domain.model.confirmedSalary
 import lk.moneytrail.app.domain.model.dueExpected
 import lk.moneytrail.app.domain.model.spendingSplit
 import lk.moneytrail.app.domain.model.totals
@@ -61,6 +62,18 @@ class ExpectedEntriesTest {
         assertEquals(12_600L, confirmed.amount)
         assertEquals(today, confirmed.date)
         assertFalse(confirmed.isExpected)
+    }
+
+    @Test
+    fun confirmedSalary_addsTheBonusToTheSalaryItself() {
+        val salary = Entry("s1", EntryType.INCOME, 120_000, "Salary", "Main bank", LocalDate.of(2026, 10, 25), "", null, EntryStatus.EXPECTED)
+
+        val confirmed = salary.confirmedSalary(base = 120_000, bonus = 15_000, date = today)
+
+        assertEquals(135_000L, confirmed.amount)
+        assertEquals(15_000L, confirmed.bonus)
+        assertEquals(120_000L, confirmed.baseAmount)
+        assertEquals(EntryStatus.CONFIRMED, confirmed.status)
     }
 
     @Test

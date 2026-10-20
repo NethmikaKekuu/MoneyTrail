@@ -43,7 +43,7 @@ class CategoriesTest {
 
         assertEquals("Pet care", expense.last())
         assertFalse("Tuition classes" in expense)
-        assertEquals(listOf("Salary", "Bonus"), income.take(2))
+        assertEquals("Salary", income.first())
         assertEquals("Tuition classes", income.last())
     }
 

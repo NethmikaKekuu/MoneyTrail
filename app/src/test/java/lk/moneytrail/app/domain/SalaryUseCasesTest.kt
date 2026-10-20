@@ -151,6 +151,16 @@ class SalaryUseCasesTest {
     }
 
     @Test
+    fun update_keepsABonusAlreadyOnTheExpectedSalary() = runBlocking {
+        val entries = FakeEntryRepository(listOf(salary(EntryStatus.EXPECTED).copy(amount = 135_000, bonus = 15_000)))
+
+        update(FakePlanRepository(kavinduPlan), entries)(25, 150_000, today)
+
+        assertEquals(165_000L, entries.entries.single().amount)
+        assertEquals(15_000L, entries.entries.single().bonus)
+    }
+
+    @Test
     fun update_leavesASalaryAlreadyConfirmed() = runBlocking {
         val entries = FakeEntryRepository(listOf(salary(EntryStatus.CONFIRMED)))
 

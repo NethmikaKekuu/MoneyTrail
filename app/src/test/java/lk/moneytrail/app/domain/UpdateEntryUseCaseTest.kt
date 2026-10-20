@@ -83,6 +83,29 @@ class UpdateEntryUseCaseTest {
     }
 
     @Test
+    fun salaryWithABonus_isSaved() = runBlocking {
+        val salary = ride.copy(type = EntryType.INCOME, category = "Salary", amount = 135_000, spendingType = null, bonus = 15_000)
+
+        val result = updateEntry(salary)
+
+        assertTrue(result.isSuccess)
+        assertEquals(15_000L, repository.updated?.bonus)
+    }
+
+    @Test
+    fun bonusChecks() = runBlocking {
+        val salary = ride.copy(type = EntryType.INCOME, category = "Salary", amount = 120_000, spendingType = null)
+
+        assertEquals("Only a salary can have a bonus.", updateEntry(ride.copy(bonus = 100)).exceptionOrNull()?.message)
+        assertEquals(
+            "Enter the base salary as well as the bonus.",
+            updateEntry(salary.copy(bonus = 120_000)).exceptionOrNull()?.message
+        )
+        assertEquals("That bonus isn't valid.", updateEntry(salary.copy(bonus = -1)).exceptionOrNull()?.message)
+        assertNull(repository.updated)
+    }
+
+    @Test
     fun incomeWithSpendingType_isRejected() = runBlocking {
         val salary = ride.copy(type = EntryType.INCOME, category = "Salary", amount = 120_000)
 

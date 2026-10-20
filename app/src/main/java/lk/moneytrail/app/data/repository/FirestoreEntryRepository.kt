@@ -163,7 +163,8 @@ class FirestoreEntryRepository @Inject constructor(
         FIELD_ACCOUNT to account,
         FIELD_DATE to date.toString(),
         FIELD_NOTE to note,
-        FIELD_SPENDING_TYPE to spendingType?.name
+        FIELD_SPENDING_TYPE to spendingType?.name,
+        FIELD_BONUS to bonus
     )
 
     /** Null for a document with missing or unreadable fields, which is skipped rather than crashing the calendar. */
@@ -190,7 +191,9 @@ class FirestoreEntryRepository @Inject constructor(
             },
             // Entries saved before expected entries existed have no status: they're confirmed.
             status = getString(FIELD_STATUS)?.let { name -> EntryStatus.entries.find { it.name == name } }
-                ?: EntryStatus.CONFIRMED
+                ?: EntryStatus.CONFIRMED,
+            // Entries saved before salary bonuses existed have no bonus.
+            bonus = getLong(FIELD_BONUS) ?: 0L
         )
     }
 
@@ -206,6 +209,7 @@ class FirestoreEntryRepository @Inject constructor(
         const val FIELD_DATE = "date"
         const val FIELD_NOTE = "note"
         const val FIELD_SPENDING_TYPE = "spendingType"
+        const val FIELD_BONUS = "bonus"
         const val FIELD_CREATED_AT = "createdAt"
         const val LOAD_FAILED_MESSAGE = "Couldn't load your entries. Please try again."
         const val SAVE_FAILED_MESSAGE = "Couldn't save the entry. Please try again."
