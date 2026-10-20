@@ -141,7 +141,7 @@ internal fun ExpectedCheckDialog(
                     value = check.amountDigits,
                     onValueChange = actions.onAmountChange,
                     label = when {
-                        check.isSalary -> "Salary received (LKR)"
+                        check.isSalary -> "Base salary received (LKR)"
                         isIncome -> "Amount received (LKR)"
                         else -> "Amount paid (LKR)"
                     },
@@ -159,7 +159,11 @@ internal fun ExpectedCheckDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
                     )
                     Text(
-                        text = "Saved as its own Bonus entry, so your base salary stays easy to see.",
+                        text = if (check.bonus > 0) {
+                            "Added to this salary: LKR ${formatAmount(check.total)} in all."
+                        } else {
+                            "Added to this salary. You can also add it later by opening the salary."
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Normal,
                         color = colors.outline
