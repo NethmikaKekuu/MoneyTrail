@@ -45,9 +45,10 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Calendar | Month grid with income and expense markers, month totals, the selected day's entries, updated live from Firestore | 07 |
 | New entry | Expense or income, amount keypad, category, account (from onboarding), date and note | 08 |
 | Edit entry | Tap an entry to change its amount, category, account, committed or discretionary, date and note, or delete it after a confirm dialog | 24 |
+| Folders | Expenses and Income for a month, each category's total with a bar against the biggest, and the six earlier months to switch to; updated live | 09 |
 | More | Profile and sign-out | 12 (first part) |
 
-**Next, in order:** folders, expense insights, goal progress, salary confirm, AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
+**Next, in order:** expense insights, goal progress, salary confirm, AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
 
 ## Tech stack
 
@@ -192,7 +193,7 @@ Written once when the account is made: on email sign-up, or the first Google sig
 
 **Why it is shaped this way**
 
-- **The date is a string.** `yyyy-MM-dd` strings sort in date order, so a whole month is one range query (`date >= "2026-10-01"` and `date <= "2026-10-31"`) on one field, with no time-zone surprises and no composite index.
+- **The date is a string.** `yyyy-MM-dd` strings sort in date order, so a whole month is one range query (`date >= "2026-10-01"` and `date <= "2026-10-31"`) on one field, with no time-zone surprises and no composite index. Folders uses the same query over seven months.
 - **Amounts are whole rupees as integers**, so there are no floating-point rounding errors. Multi-currency fields (`currency`, `originalAmount`, `rate`) will be added for AdSense income in USD.
 - **`spendingType` is stored, not worked out each time**, so Edit entry can override the category's default (a Rent payment marked discretionary stays that way).
 - **Live and offline.** The calendar uses a snapshot listener, so new entries appear at once. Firestore's persistent cache is turned on in `di/FirebaseModule.kt`, so the calendar opens and entries save without internet, then sync later.
@@ -260,7 +261,7 @@ app/src/main/java/lk/moneytrail/app/
 ├── data/repository/      Firebase implementations + shared Firestore error messages and write helper
 ├── di/                   Hilt modules: FirebaseModule, RepositoryModule
 ├── domain/
-│   ├── model/            Entry, Categories, Account, MoneyPlan, EntryTotals, UserProfile, AuthUser, AppException
+│   ├── model/            Entry, Categories, Account, MoneyPlan, EntryTotals, FolderTotals, UserProfile, AuthUser, AppException
 │   ├── repository/       Auth, User, Entry, Account and Plan repositories (interfaces)
 │   └── usecase/          RegisterUseCase, SignInWithGoogleUseCase, AddEntryUseCase, UpdateEntryUseCase,
 │                         CompleteOnboardingUseCase
@@ -270,6 +271,7 @@ app/src/main/java/lk/moneytrail/app/
     ├── components/       Logo, icons (MoneyTrailIcons), money formatting, loading/error/empty views
     ├── dashboard/        Bottom-bar home: Calendar, Folders, Insights, More
     ├── entry/            New entry (with keypad) and Edit entry screens
+    ├── folders/          Expenses and Income folders by category and month
     ├── more/             Profile and sign-out
     ├── navigation/       Routes and the NavHost
     ├── onboarding/       Four-step onboarding: money places, salary, income sources, goal
@@ -348,7 +350,7 @@ Use `.\gradlew` in Windows PowerShell and `./gradlew` in macOS, Linux or Git Bas
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Before submitting, install it on an **Android 8.0 (API 26)** emulator and check the main flows: sign up, add entries, see them on the calendar, sign out.
 
-Unit tests cover entry totals, adding and editing entries, the calendar month grid, the keypad rules, the onboarding checks and the monthly saving needed for the goal.
+Unit tests cover entry totals, adding and editing entries, folder totals, the calendar month grid, the keypad rules, the onboarding checks and the monthly saving needed for the goal.
 
 ## Troubleshooting
 
