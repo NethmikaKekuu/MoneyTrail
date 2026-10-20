@@ -2,14 +2,18 @@ package lk.moneytrail.app.domain
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import lk.moneytrail.app.domain.model.Account
 import lk.moneytrail.app.domain.model.AccountTemplates
 import lk.moneytrail.app.domain.model.AppException
+import lk.moneytrail.app.domain.model.CustomCategory
+import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.IncomeSource
 import lk.moneytrail.app.domain.model.MoneyPlan
 import lk.moneytrail.app.domain.model.SavingsGoal
 import lk.moneytrail.app.domain.repository.AccountRepository
+import lk.moneytrail.app.domain.repository.CategoryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.usecase.CompleteOnboardingUseCase
 import org.junit.Assert.assertEquals
@@ -44,6 +48,19 @@ class CompleteOnboardingUseCaseTest {
         override suspend fun getPlan(): Result<MoneyPlan?> = Result.success(saved)
     }
 
+    private class FakeCategoryRepository(private val existing: List<CustomCategory> = emptyList()) : CategoryRepository {
+        val added = mutableListOf<CustomCategory>()
+
+        override fun observeCategories(): Flow<Result<List<CustomCategory>>> = flowOf(Result.success(existing))
+
+        override suspend fun addCategory(category: CustomCategory): Result<Unit> {
+            added += category
+            return Result.success(Unit)
+        }
+
+        override suspend fun deleteCategory(id: String): Result<Unit> = Result.success(Unit)
+    }
+
     private val today = LocalDate.of(2026, 10, 19)
     private val accounts = AccountTemplates.all.take(4)
     private val plan = MoneyPlan(
@@ -58,7 +75,7 @@ class CompleteOnboardingUseCaseTest {
         val accountRepository = FakeAccountRepository()
         val planRepository = FakePlanRepository()
 
-        val result = CompleteOnboardingUseCase(accountRepository, planRepository)(accounts, plan, today)
+        val result = CompleteOnboardingUseCase(accountRepository, planRepository, FakeCategoryRepository())(accounts, plan, today)
 
         assertTrue(result.isSuccess)
         assertEquals(4, accountRepository.saved.size)
@@ -70,7 +87,7 @@ class CompleteOnboardingUseCaseTest {
         val accountRepository = FakeAccountRepository()
         val planRepository = FakePlanRepository()
 
-        val result = CompleteOnboardingUseCase(accountRepository, planRepository)(emptyList(), plan, today)
+        val result = CompleteOnboardingUseCase(accountRepository, planRepository, FakeCategoryRepository())(emptyList(), plan, today)
 
         assertEquals("Pick at least one place where you keep money.", result.exceptionOrNull()?.message)
         assertTrue(accountRepository.saved.isEmpty())
@@ -81,7 +98,7 @@ class CompleteOnboardingUseCaseTest {
     fun failedAccountSave_stopsBeforeThePlan() = runBlocking {
         val planRepository = FakePlanRepository()
 
-        val result = CompleteOnboardingUseCase(FakeAccountRepository(failSave = true), planRepository)(accounts, plan, today)
+        val result = CompleteOnboardingUseCase(FakeAccountRepository(failSave = true), planRepository, FakeCategoryRepository())(accounts, plan, today)
 
         assertTrue(result.isFailure)
         assertNull(planRepository.saved)

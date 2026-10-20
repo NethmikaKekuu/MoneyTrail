@@ -47,11 +47,13 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.AccountKind
+import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.IncomeSource
 import lk.moneytrail.app.presentation.auth.AuthBackButton
 import lk.moneytrail.app.presentation.auth.AuthErrorText
 import lk.moneytrail.app.presentation.auth.AuthPrimaryButton
 import lk.moneytrail.app.presentation.auth.AuthTextField
+import lk.moneytrail.app.presentation.components.AddCategoryDialog
 import lk.moneytrail.app.presentation.components.MoneyTrailDatePickerDialog
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
@@ -84,9 +86,16 @@ fun OnboardingScreen(
         onSkipClick = onFinishClick,
         onContinueClick = viewModel::onContinueClick,
         onAccountToggle = viewModel::onAccountToggle,
+        onAddPlaceClick = viewModel::onAddPlaceClick,
+        onAddPlace = viewModel::onAddPlace,
+        onAddPlaceDismiss = viewModel::onAddPlaceDismiss,
         onPayDayClick = viewModel::onPayDayClick,
         onBaseSalaryChange = viewModel::onBaseSalaryChange,
         onIncomeSourceToggle = viewModel::onIncomeSourceToggle,
+        onOwnIncomeToggle = viewModel::onOwnIncomeToggle,
+        onAddIncomeClick = viewModel::onAddIncomeClick,
+        onAddIncome = viewModel::onAddIncome,
+        onAddIncomeDismiss = viewModel::onAddIncomeDismiss,
         onGoalNameChange = viewModel::onGoalNameChange,
         onGoalTargetChange = viewModel::onGoalTargetChange,
         onGoalSavedChange = viewModel::onGoalSavedChange,
@@ -105,9 +114,16 @@ private fun OnboardingContent(
     onSkipClick: () -> Unit,
     onContinueClick: () -> Unit,
     onAccountToggle: (String) -> Unit,
+    onAddPlaceClick: () -> Unit,
+    onAddPlace: (String, AccountKind) -> Unit,
+    onAddPlaceDismiss: () -> Unit,
     onPayDayClick: (Int) -> Unit,
     onBaseSalaryChange: (String) -> Unit,
     onIncomeSourceToggle: (IncomeSource) -> Unit,
+    onOwnIncomeToggle: (String) -> Unit,
+    onAddIncomeClick: () -> Unit,
+    onAddIncome: (String) -> Unit,
+    onAddIncomeDismiss: () -> Unit,
     onGoalNameChange: (String) -> Unit,
     onGoalTargetChange: (String) -> Unit,
     onGoalSavedChange: (String) -> Unit,
@@ -166,9 +182,10 @@ private fun OnboardingContent(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             when (uiState.step) {
-                OnboardingStep.MONEY_PLACES -> MoneyPlacesStep(uiState, onAccountToggle)
+                OnboardingStep.MONEY_PLACES -> MoneyPlacesStep(uiState, onAccountToggle, onAddPlaceClick)
                 OnboardingStep.SALARY -> SalaryStep(uiState, onPayDayClick, onBaseSalaryChange)
-                OnboardingStep.INCOME_SOURCES -> IncomeSourcesStep(uiState, onIncomeSourceToggle)
+                OnboardingStep.INCOME_SOURCES ->
+                    IncomeSourcesStep(uiState, onIncomeSourceToggle, onOwnIncomeToggle, onAddIncomeClick)
                 OnboardingStep.GOAL -> GoalStep(uiState, onGoalNameChange, onGoalTargetChange, onGoalSavedChange, onGoalDateChange)
             }
         }
@@ -187,6 +204,19 @@ private fun OnboardingContent(
             )
         }
     }
+
+    if (uiState.isAddingPlace) {
+        AddPlaceDialog(errorMessage = uiState.placeError, onAdd = onAddPlace, onDismiss = onAddPlaceDismiss)
+    }
+    if (uiState.isAddingIncome) {
+        AddCategoryDialog(
+            fixedType = EntryType.INCOME,
+            errorMessage = uiState.incomeError,
+            isSaving = false,
+            onAdd = { name, _, _ -> onAddIncome(name) },
+            onDismiss = onAddIncomeDismiss
+        )
+    }
 }
 
 private fun stepText(step: OnboardingStep): Pair<String, String> = when (step) {
@@ -201,7 +231,11 @@ private fun stepText(step: OnboardingStep): Pair<String, String> = when (step) {
 }
 
 @Composable
-private fun ColumnScope.MoneyPlacesStep(uiState: OnboardingState, onAccountToggle: (String) -> Unit) {
+private fun ColumnScope.MoneyPlacesStep(
+    uiState: OnboardingState,
+    onAccountToggle: (String) -> Unit,
+    onAddPlaceClick: () -> Unit
+) {
     uiState.accountChoices.forEach { account ->
         ChoiceCard(
             // Savings shows "G" for goal, as in the design, so it doesn't clash with Secondary bank.
@@ -213,6 +247,7 @@ private fun ColumnScope.MoneyPlacesStep(uiState: OnboardingState, onAccountToggl
             enabled = !uiState.isSaving
         )
     }
+    AddMoreButton(text = "Add another place", onClick = onAddPlaceClick, enabled = !uiState.isSaving)
 }
 
 @Composable
@@ -239,7 +274,12 @@ private fun ColumnScope.SalaryStep(
 }
 
 @Composable
-private fun ColumnScope.IncomeSourcesStep(uiState: OnboardingState, onIncomeSourceToggle: (IncomeSource) -> Unit) {
+private fun ColumnScope.IncomeSourcesStep(
+    uiState: OnboardingState,
+    onIncomeSourceToggle: (IncomeSource) -> Unit,
+    onOwnIncomeToggle: (String) -> Unit,
+    onAddIncomeClick: () -> Unit
+) {
     IncomeSource.entries.forEach { source ->
         val (title, subtitle) = incomeSourceText(source)
         ChoiceCard(
@@ -251,6 +291,17 @@ private fun ColumnScope.IncomeSourcesStep(uiState: OnboardingState, onIncomeSour
             enabled = !uiState.isSaving
         )
     }
+    uiState.ownIncome.forEach { income ->
+        ChoiceCard(
+            letter = income.name.take(1).uppercase(),
+            title = income.name,
+            subtitle = "Added by you, also offered on new entries",
+            selected = income.name in uiState.selectedOwnIncome,
+            onClick = { onOwnIncomeToggle(income.name) },
+            enabled = !uiState.isSaving
+        )
+    }
+    AddMoreButton(text = "Add another way you earn", onClick = onAddIncomeClick, enabled = !uiState.isSaving)
 }
 
 private fun incomeSourceText(source: IncomeSource): Pair<String, String> = when (source) {
@@ -384,9 +435,16 @@ private fun OnboardingPreviewContent(state: OnboardingState) {
         onSkipClick = {},
         onContinueClick = {},
         onAccountToggle = {},
+        onAddPlaceClick = {},
+        onAddPlace = { _, _ -> },
+        onAddPlaceDismiss = {},
         onPayDayClick = {},
         onBaseSalaryChange = {},
         onIncomeSourceToggle = {},
+        onOwnIncomeToggle = {},
+        onAddIncomeClick = {},
+        onAddIncome = {},
+        onAddIncomeDismiss = {},
         onGoalNameChange = {},
         onGoalTargetChange = {},
         onGoalSavedChange = {},

@@ -1,5 +1,6 @@
 package lk.moneytrail.app.presentation.onboarding
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -16,10 +17,19 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,8 +37,15 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import lk.moneytrail.app.domain.model.AccountKind
+import lk.moneytrail.app.domain.usecase.CompleteOnboardingUseCase
+import lk.moneytrail.app.presentation.auth.AuthErrorText
+import lk.moneytrail.app.presentation.auth.AuthTextField
+import lk.moneytrail.app.presentation.components.ChoiceRow
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 
 // Pieces of the onboarding screen, styled after MoneyTrail-Figma-HTML/06-Onboarding.html.
@@ -159,4 +176,71 @@ internal fun PayDayGrid(
             }
         }
     }
+}
+
+/** Outlined "+ Add another ..." button under a list of choices. */
+@Composable
+internal fun AddMoreButton(text: String, onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.5.dp, colors.outlineVariant),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+    ) {
+        Icon(MoneyTrailIcons.Plus, contentDescription = null, modifier = Modifier.size(18.dp))
+        Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
+    }
+}
+
+/** Asks for the name and kind of a place the user keeps money that isn't listed in step 1. */
+@Composable
+internal fun AddPlaceDialog(
+    errorMessage: String?,
+    onAdd: (name: String, kind: AccountKind) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by rememberSaveable { mutableStateOf("") }
+    var kind by rememberSaveable { mutableStateOf(AccountKind.BANK) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add a place") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AuthTextField(
+                    value = name,
+                    onValueChange = { name = it.take(CompleteOnboardingUseCase.MAX_PLACE_NAME_LENGTH) },
+                    label = "Name",
+                    placeholder = "e.g. Sampath Bank",
+                    enabled = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done)
+                )
+                Text("It's a", style = MaterialTheme.typography.labelMedium)
+                ChoiceRow(
+                    options = listOf(
+                        AccountKind.BANK to "Bank",
+                        AccountKind.CASH to "Cash",
+                        AccountKind.SAVINGS to "Savings",
+                        AccountKind.CRYPTO to "Crypto"
+                    ),
+                    selected = kind,
+                    onSelect = { kind = it }
+                )
+                if (errorMessage != null) {
+                    AuthErrorText(errorMessage)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onAdd(name, kind) }) { Text("Add") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
