@@ -56,6 +56,7 @@ private fun question(entry: Entry): String =
 /** What the check dialog can do, gathered so the calendar screen passes one value. */
 internal class ExpectedCheckActions(
     val onAmountChange: (String) -> Unit,
+    val onBonusChange: (String) -> Unit,
     val onDateChange: (LocalDate) -> Unit,
     val onConfirm: () -> Unit,
     val onNotYet: () -> Unit,
@@ -139,11 +140,31 @@ internal fun ExpectedCheckDialog(
                 AuthTextField(
                     value = check.amountDigits,
                     onValueChange = actions.onAmountChange,
-                    label = if (isIncome) "Amount received (LKR)" else "Amount paid (LKR)",
+                    label = when {
+                        check.isSalary -> "Salary received (LKR)"
+                        isIncome -> "Amount received (LKR)"
+                        else -> "Amount paid (LKR)"
+                    },
                     placeholder = "0",
                     enabled = enabled,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
                 )
+                if (check.isSalary) {
+                    AuthTextField(
+                        value = check.bonusDigits,
+                        onValueChange = actions.onBonusChange,
+                        label = "Bonus this month (LKR, optional)",
+                        placeholder = "0",
+                        enabled = enabled,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
+                    )
+                    Text(
+                        text = "Saved as its own Bonus entry, so your base salary stays easy to see.",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Normal,
+                        color = colors.outline
+                    )
+                }
                 Text(if (isIncome) "Received on" else "Paid on", style = MaterialTheme.typography.labelMedium)
                 Row(
                     modifier = Modifier.selectableGroup(),

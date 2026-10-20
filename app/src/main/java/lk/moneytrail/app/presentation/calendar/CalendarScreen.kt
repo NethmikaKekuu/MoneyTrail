@@ -52,6 +52,7 @@ fun CalendarScreen(
     val checkActions = remember(viewModel) {
         ExpectedCheckActions(
             onAmountChange = viewModel::onCheckAmountChange,
+            onBonusChange = viewModel::onCheckBonusChange,
             onDateChange = viewModel::onCheckDateChange,
             onConfirm = viewModel::onCheckConfirm,
             onNotYet = viewModel::onCheckNotYetClick,
@@ -245,7 +246,7 @@ private fun CalendarScreenPreview() {
             onAddEntryClick = {},
             onEntryClick = {},
             onCheckDueClick = {},
-            checkActions = ExpectedCheckActions({}, {}, {}, {}, {}, {}, {}, {})
+            checkActions = ExpectedCheckActions({}, {}, {}, {}, {}, {}, {}, {}, {})
         )
     }
 }
