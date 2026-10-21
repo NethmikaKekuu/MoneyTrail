@@ -9,12 +9,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import lk.moneytrail.app.domain.model.Accounts
+import lk.moneytrail.app.domain.model.Entry
+import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.confirmed
 import lk.moneytrail.app.domain.model.confirmedSalary
 import lk.moneytrail.app.domain.model.dueExpected
+import lk.moneytrail.app.domain.model.monthlySavingNeeded
+import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.repository.AuthRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
+import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.repository.UserRepository
+import lk.moneytrail.app.domain.usecase.AddEntryUseCase
 import lk.moneytrail.app.domain.usecase.EnsureMonthlySalaryUseCase
 import lk.moneytrail.app.domain.usecase.UpdateEntryUseCase
 import java.time.LocalDate
@@ -27,10 +35,14 @@ class CalendarViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val updateEntryUseCase: UpdateEntryUseCase,
-    private val ensureMonthlySalary: EnsureMonthlySalaryUseCase
+    private val ensureMonthlySalary: EnsureMonthlySalaryUseCase,
+    private val planRepository: PlanRepository,
+    private val accountRepository: AccountRepository,
+    private val addEntryUseCase: AddEntryUseCase
 ) : ViewModel() {
 
     private val today = LocalDate.now()
+    private val promptDismissedMonths = mutableSetOf<YearMonth>()
 
     private val _uiState = MutableStateFlow(
         CalendarState(month = YearMonth.from(today), today = today, selectedDate = today)
@@ -131,8 +143,90 @@ class CalendarViewModel @Inject constructor(
             } else {
                 check.entry.confirmed(amount, check.date)
             }
-            updateEntryUseCase(confirmed)
+            val result = updateEntryUseCase(confirmed)
+            if (result.isSuccess && check.isSalary) {
+                val month = YearMonth.from(confirmed.date)
+                if (month !in promptDismissedMonths) {
+                    promptDismissedMonths.add(month)
+                    triggerPayYourselfFirstPrompt(confirmed)
+                }
+            }
+            result
         }
+    }
+
+    private fun triggerPayYourselfFirstPrompt(salaryEntry: Entry) {
+        viewModelScope.launch {
+            val plan = planRepository.getPlan().getOrNull() ?: return@launch
+            val accountsResult = accountRepository.observeAccounts().first().getOrNull()?.map { it.name }.orEmpty()
+            val accounts = accountsResult.ifEmpty { Accounts.defaults }
+            val monthlyNeeded = plan.goal.monthlySavingNeeded(today)
+            val recommendedAmount = if (monthlyNeeded > 0) monthlyNeeded else (salaryEntry.amount * 0.1).toLong().coerceAtLeast(10_000L)
+            val source = salaryEntry.account.ifEmpty { accounts.first() }
+            val target = accounts.find { it.contains("Savings", ignoreCase = true) } ?: "Savings"
+
+            val prompt = PayYourselfFirstPrompt(
+                salaryEntry = salaryEntry,
+                goalName = plan.goal.name,
+                targetAmount = plan.goal.targetAmount,
+                amountDigits = recommendedAmount.toString(),
+                sourceAccount = source,
+                targetAccount = target,
+                accounts = accounts
+            )
+            _uiState.update { it.copy(payYourselfFirst = prompt) }
+        }
+    }
+
+    fun onPayYourselfFirstAmountChange(text: String) {
+        _uiState.update { state ->
+            val prompt = state.payYourselfFirst ?: return@update state
+            val digits = text.filter(Char::isDigit).trimStart('0').take(MAX_DIGITS)
+            state.copy(payYourselfFirst = prompt.copy(amountDigits = digits, errorMessage = null))
+        }
+    }
+
+    fun onPayYourselfFirstConfirm() {
+        val prompt = _uiState.value.payYourselfFirst ?: return
+        if (prompt.isSaving) return
+
+        _uiState.update { state -> state.copy(payYourselfFirst = prompt.copy(isSaving = true, errorMessage = null)) }
+        viewModelScope.launch {
+            val transferAmount = prompt.transferAmount
+            if (transferAmount <= 0) {
+                _uiState.update { state -> state.copy(payYourselfFirst = prompt.copy(isSaving = false, errorMessage = "Enter a valid amount.")) }
+                return@launch
+            }
+
+            addEntryUseCase(
+                type = EntryType.TRANSFER,
+                amount = transferAmount,
+                category = "Transfer",
+                account = prompt.sourceAccount,
+                date = prompt.salaryEntry.date,
+                note = "Pay yourself first transfer for ${prompt.goalName}",
+                fromAccount = prompt.sourceAccount,
+                toAccount = prompt.targetAccount
+            ).onSuccess {
+                // Also update saved amount in Firestore plan
+                val currentPlan = planRepository.getPlan().getOrNull()
+                if (currentPlan != null) {
+                    val newSaved = currentPlan.goal.savedAmount + transferAmount
+                    planRepository.updateSavedAmount(newSaved)
+                }
+                _uiState.update { state ->
+                    state.copy(payYourselfFirst = prompt.copy(isSaving = false, isTransferred = true))
+                }
+            }.onFailure { e ->
+                _uiState.update { state ->
+                    state.copy(payYourselfFirst = prompt.copy(isSaving = false, errorMessage = e.message))
+                }
+            }
+        }
+    }
+
+    fun onPayYourselfFirstDismiss() {
+        _uiState.update { it.copy(payYourselfFirst = null) }
     }
 
     fun onCheckNotYetClick() {

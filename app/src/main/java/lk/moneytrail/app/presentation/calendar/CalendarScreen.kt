@@ -45,6 +45,7 @@ import java.util.Locale
 fun CalendarScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
+    onGoalProgressClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
@@ -72,6 +73,10 @@ fun CalendarScreen(
         onAddEntryClick = { onAddEntryClick(uiState.selectedDate) },
         onEntryClick = onEntryClick,
         onCheckDueClick = viewModel::onCheckDueClick,
+        onPayYourselfFirstAmountChange = viewModel::onPayYourselfFirstAmountChange,
+        onPayYourselfFirstConfirm = viewModel::onPayYourselfFirstConfirm,
+        onPayYourselfFirstDismiss = viewModel::onPayYourselfFirstDismiss,
+        onGoalProgressClick = onGoalProgressClick,
         checkActions = checkActions,
         modifier = modifier
     )
@@ -90,6 +95,10 @@ private fun CalendarContent(
     onAddEntryClick: () -> Unit,
     onEntryClick: (String) -> Unit,
     onCheckDueClick: () -> Unit,
+    onPayYourselfFirstAmountChange: (String) -> Unit,
+    onPayYourselfFirstConfirm: () -> Unit,
+    onPayYourselfFirstDismiss: () -> Unit,
+    onGoalProgressClick: () -> Unit,
     checkActions: ExpectedCheckActions,
     modifier: Modifier = Modifier
 ) {
@@ -156,6 +165,19 @@ private fun CalendarContent(
 
     if (uiState.check != null) {
         ExpectedCheckDialog(check = uiState.check, today = uiState.today, actions = checkActions)
+    }
+
+    if (uiState.payYourselfFirst != null) {
+        PayYourselfFirstDialog(
+            prompt = uiState.payYourselfFirst,
+            onAmountChange = onPayYourselfFirstAmountChange,
+            onConfirmTransfer = onPayYourselfFirstConfirm,
+            onViewGoalProgress = {
+                onPayYourselfFirstDismiss()
+                onGoalProgressClick()
+            },
+            onDismiss = onPayYourselfFirstDismiss
+        )
     }
 }
 
@@ -246,6 +268,10 @@ private fun CalendarScreenPreview() {
             onAddEntryClick = {},
             onEntryClick = {},
             onCheckDueClick = {},
+            onPayYourselfFirstAmountChange = {},
+            onPayYourselfFirstConfirm = {},
+            onPayYourselfFirstDismiss = {},
+            onGoalProgressClick = {},
             checkActions = ExpectedCheckActions({}, {}, {}, {}, {}, {}, {}, {}, {})
         )
     }

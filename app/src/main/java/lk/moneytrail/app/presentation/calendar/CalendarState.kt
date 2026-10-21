@@ -20,7 +20,9 @@ data class CalendarState(
     /** Expected entries whose day has come, from any month, oldest first. */
     val dueExpected: List<Entry> = emptyList(),
     /** The expected entry being checked, while its dialog is open. */
-    val check: ExpectedCheck? = null
+    val check: ExpectedCheck? = null,
+    /** Prompt shown after confirming a salary entry to move money to Savings. */
+    val payYourselfFirst: PayYourselfFirstPrompt? = null
 ) {
     val days: List<CalendarDay>
         get() = buildCalendarDays(month, entries)
@@ -58,4 +60,20 @@ data class ExpectedCheck(
     /** What the entry will be confirmed with: for a salary, the base pay plus the bonus. */
     val total: Long
         get() = (amountDigits.toLongOrNull() ?: 0L) + bonus
+}
+
+data class PayYourselfFirstPrompt(
+    val salaryEntry: Entry,
+    val goalName: String,
+    val targetAmount: Long,
+    val amountDigits: String,
+    val sourceAccount: String,
+    val targetAccount: String,
+    val accounts: List<String>,
+    val isSaving: Boolean = false,
+    val errorMessage: String? = null,
+    val isTransferred: Boolean = false
+) {
+    val transferAmount: Long
+        get() = amountDigits.toLongOrNull() ?: 0L
 }

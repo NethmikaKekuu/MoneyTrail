@@ -227,3 +227,71 @@ private fun DateChip(text: String, selected: Boolean, onClick: () -> Unit) {
         Text(text, style = MaterialTheme.typography.labelMedium, color = if (selected) Ink else colors.onSurface)
     }
 }
+
+/** Pay Yourself First dialog shown after confirming a salary. */
+@Composable
+internal fun PayYourselfFirstDialog(
+    prompt: PayYourselfFirstPrompt,
+    onAmountChange: (String) -> Unit,
+    onConfirmTransfer: () -> Unit,
+    onViewGoalProgress: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    val enabled = !prompt.isSaving
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Pay Yourself First 🎯") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (prompt.isTransferred) {
+                    Text(
+                        text = "LKR ${formatAmount(prompt.transferAmount)} moved from ${prompt.sourceAccount} to ${prompt.targetAccount} towards your ${prompt.goalName}!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.primary
+                    )
+                } else {
+                    Text(
+                        text = "Your salary is confirmed! Move money into Savings towards your ${prompt.goalName} (Target: LKR ${formatAmount(prompt.targetAmount)}).",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.onSurfaceVariant
+                    )
+                    AuthTextField(
+                        value = prompt.amountDigits,
+                        onValueChange = onAmountChange,
+                        label = "Amount to save (LKR)",
+                        placeholder = "0",
+                        enabled = enabled,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
+                    )
+                    Text(
+                        text = "Transfer from ${prompt.sourceAccount} → ${prompt.targetAccount}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.outline
+                    )
+                    Text(
+                        text = "This transfer is recorded without increasing your expense totals.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.outline
+                    )
+                }
+                if (prompt.errorMessage != null) {
+                    AuthErrorText(prompt.errorMessage)
+                }
+            }
+        },
+        confirmButton = {
+            if (prompt.isTransferred) {
+                TextButton(onClick = onViewGoalProgress) { Text("View Goal Progress") }
+            } else {
+                TextButton(onClick = onConfirmTransfer, enabled = enabled) { Text("Transfer to Savings") }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = enabled) {
+                Text(if (prompt.isTransferred) "Done" else "Later")
+            }
+        }
+    )
+}
