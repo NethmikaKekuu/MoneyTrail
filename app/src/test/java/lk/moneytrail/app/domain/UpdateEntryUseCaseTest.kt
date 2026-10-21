@@ -22,6 +22,8 @@ class UpdateEntryUseCaseTest {
 
         override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> = emptyFlow()
 
+        override fun observeAll(): Flow<Result<List<Entry>>> = emptyFlow()
+
         override fun observeExpected(): Flow<Result<List<Entry>>> = emptyFlow()
 
         override suspend fun getEntry(id: String): Result<Entry?> = Result.success(null)

@@ -31,6 +31,8 @@ class SalaryUseCasesTest {
         override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> =
             flowOf(Result.success(entries.filter { !it.date.isBefore(from) && !it.date.isAfter(to) }))
 
+        override fun observeAll(): Flow<Result<List<Entry>>> = flowOf(Result.success(entries))
+
         override fun observeExpected(): Flow<Result<List<Entry>>> = flowOf(Result.success(entries.filter { it.isExpected }))
 
         override suspend fun getEntry(id: String): Result<Entry?> = Result.success(entries.find { it.id == id })
@@ -58,6 +60,13 @@ class SalaryUseCasesTest {
         }
 
         override suspend fun getPlan(): Result<MoneyPlan?> = Result.success(plan)
+
+        override fun observePlan(): Flow<Result<MoneyPlan?>> = flowOf(Result.success(plan))
+
+        override suspend fun updateSavedAmount(newSavedAmount: Long): Result<Unit> {
+            plan = plan?.copy(goal = plan!!.goal.copy(savedAmount = newSavedAmount))
+            return Result.success(Unit)
+        }
     }
 
     private class FakeAccountRepository : AccountRepository {
