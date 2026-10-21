@@ -28,26 +28,31 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt;
     }
 
-    // users/{uid}/entries/{entryId}: one income or expense on the calendar.
+    // users/{uid}/entries/{entryId}: one income, expense or transfer on the calendar.
     // Amounts are whole rupees (LKR) and always positive; type says which way the money
     // went. date is yyyy-MM-dd. Expenses say whether they were committed or
-    // discretionary; income has no spendingType. status is CONFIRMED for money that
+    // discretionary; income and transfers have no spendingType. status is CONFIRMED for money that
     // moved, EXPECTED for money planned for its date. bonus is the part of a salary's
     // amount that came on top of the base pay; it's 0 for everything else.
+    // Transfers can also include fromAccountId and toAccountId.
     function isValidEntry(data) {
-      let fields = ['status', 'type', 'amount', 'bonus', 'category', 'account', 'date', 'note', 'spendingType', 'createdAt'];
-      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+      let fields = ['status', 'type', 'amount', 'bonus', 'category', 'account', 'date', 'note', 'spendingType', 'createdAt', 'fromAccountId', 'toAccountId'];
+      return data.keys().hasAll(['status', 'type', 'amount', 'bonus', 'category', 'account', 'date', 'note', 'createdAt'])
+        && data.keys().hasOnly(fields)
         && data.status in ['CONFIRMED', 'EXPECTED']
-        && data.type in ['INCOME', 'EXPENSE']
+        && data.type in ['INCOME', 'EXPENSE', 'TRANSFER']
         && data.amount is int && data.amount > 0 && data.amount <= 999999999
         && data.bonus is int && data.bonus >= 0 && data.bonus < data.amount
         && (data.bonus == 0 || (data.type == 'INCOME' && data.category == 'Salary'))
-        && data.category is string && data.category.size() > 0 && data.category.size() <= 50
-        && data.account is string && data.account.size() > 0 && data.account.size() <= 50
+        && data.category is string && data.category.size() <= 50
+        && data.account is string && data.account.size() <= 50
         && data.date is string && data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
         && data.note is string && data.note.size() <= 200
         && ((data.type == 'INCOME' && data.spendingType == null)
-          || (data.type == 'EXPENSE' && data.spendingType in ['COMMITTED', 'DISCRETIONARY']))
+          || (data.type == 'EXPENSE' && data.spendingType in ['COMMITTED', 'DISCRETIONARY'])
+          || (data.type == 'TRANSFER' && data.spendingType == null))
+        && (data.fromAccountId == null || data.fromAccountId is string)
+        && (data.toAccountId == null || data.toAccountId is string)
         && data.createdAt is timestamp;
     }
 
