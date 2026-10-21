@@ -62,6 +62,7 @@ fun AddCategoryDialog(
                 when (fixedType) {
                     EntryType.EXPENSE -> "New expense category"
                     EntryType.INCOME -> "New income category"
+                    EntryType.TRANSFER -> "New transfer category"
                     null -> "New category"
                 }
             )

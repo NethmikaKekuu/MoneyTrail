@@ -302,6 +302,7 @@ private fun categoryKind(category: CustomCategory): String = when (category.type
         SpendingType.COMMITTED -> "Expense · committed"
         else -> "Expense · discretionary"
     }
+    EntryType.TRANSFER -> "Transfer"
 }
 
 @Preview(showBackground = true, heightDp = 1000)

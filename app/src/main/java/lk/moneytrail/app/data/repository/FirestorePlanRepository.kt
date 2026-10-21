@@ -7,6 +7,9 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.model.IncomeSource
@@ -55,6 +58,44 @@ class FirestorePlanRepository @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Loading the plan failed", e)
             Result.failure(AppException(e.toFirestoreMessage(LOAD_FAILED_MESSAGE), e))
+        }
+    }
+
+    override fun observePlan(): Flow<Result<MoneyPlan?>> = callbackFlow {
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            trySend(Result.failure(AppException(SIGNED_OUT_MESSAGE)))
+            close()
+            awaitClose()
+            return@callbackFlow
+        }
+
+        val registration = planOf(uid).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.w(TAG, "Listening to plan failed", error)
+                trySend(Result.failure(AppException(error.toFirestoreMessage(LOAD_FAILED_MESSAGE), error)))
+                close()
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                trySend(Result.success(if (snapshot.exists()) snapshot.toPlan() else null))
+            }
+        }
+        awaitClose { registration.remove() }
+    }
+
+    override suspend fun updateSavedAmount(newSavedAmount: Long): Result<Unit> {
+        val uid = auth.currentUser?.uid
+            ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
+
+        return try {
+            planOf(uid).update("$FIELD_GOAL.$GOAL_SAVED_AMOUNT", newSavedAmount).awaitServerBriefly(TAG)
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Updating goal saved amount failed", e)
+            Result.failure(AppException(e.toFirestoreMessage(SAVE_FAILED_MESSAGE), e))
         }
     }
 

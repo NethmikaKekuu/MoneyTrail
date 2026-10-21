@@ -16,6 +16,9 @@ interface EntryRepository {
      */
     fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>>
 
+    /** Listens to all entries without date filters. Updates live. */
+    fun observeAll(): Flow<Result<List<Entry>>>
+
     /** Every expected entry, whatever its date, oldest first. Updates live. */
     fun observeExpected(): Flow<Result<List<Entry>>>
 

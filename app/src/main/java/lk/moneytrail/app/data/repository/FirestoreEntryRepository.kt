@@ -42,6 +42,9 @@ class FirestoreEntryRepository @Inject constructor(
                 .whereLessThanOrEqualTo(FIELD_DATE, to.toString())
         }
 
+    override fun observeAll(): Flow<Result<List<Entry>>> =
+        observeQuery { entries -> entries }
+
     // One equality filter on one field, so it needs no composite index either. Older
     // entries have no status field and are left out, which is right: they're confirmed.
     override fun observeExpected(): Flow<Result<List<Entry>>> =
@@ -164,7 +167,9 @@ class FirestoreEntryRepository @Inject constructor(
         FIELD_DATE to date.toString(),
         FIELD_NOTE to note,
         FIELD_SPENDING_TYPE to spendingType?.name,
-        FIELD_BONUS to bonus
+        FIELD_BONUS to bonus,
+        FIELD_FROM_ACCOUNT_ID to fromAccountId,
+        FIELD_TO_ACCOUNT_ID to toAccountId
     )
 
     /** Null for a document with missing or unreadable fields, which is skipped rather than crashing the calendar. */
@@ -193,7 +198,9 @@ class FirestoreEntryRepository @Inject constructor(
             status = getString(FIELD_STATUS)?.let { name -> EntryStatus.entries.find { it.name == name } }
                 ?: EntryStatus.CONFIRMED,
             // Entries saved before salary bonuses existed have no bonus.
-            bonus = getLong(FIELD_BONUS) ?: 0L
+            bonus = getLong(FIELD_BONUS) ?: 0L,
+            fromAccountId = getString(FIELD_FROM_ACCOUNT_ID).orEmpty(),
+            toAccountId = getString(FIELD_TO_ACCOUNT_ID).orEmpty()
         )
     }
 
@@ -210,6 +217,8 @@ class FirestoreEntryRepository @Inject constructor(
         const val FIELD_NOTE = "note"
         const val FIELD_SPENDING_TYPE = "spendingType"
         const val FIELD_BONUS = "bonus"
+        const val FIELD_FROM_ACCOUNT_ID = "fromAccountId"
+        const val FIELD_TO_ACCOUNT_ID = "toAccountId"
         const val FIELD_CREATED_AT = "createdAt"
         const val LOAD_FAILED_MESSAGE = "Couldn't load your entries. Please try again."
         const val SAVE_FAILED_MESSAGE = "Couldn't save the entry. Please try again."

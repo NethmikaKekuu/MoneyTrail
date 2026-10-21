@@ -27,6 +27,7 @@ object Categories {
     fun namesFor(type: EntryType): List<String> = when (type) {
         EntryType.EXPENSE -> expense.keys.toList()
         EntryType.INCOME -> income
+        EntryType.TRANSFER -> emptyList()
     }
 
     /** The built-in names for [type] followed by the user's own, without repeats. */
