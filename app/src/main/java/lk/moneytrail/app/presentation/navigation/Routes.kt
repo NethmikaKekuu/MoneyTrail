@@ -12,6 +12,7 @@ object Routes {
     const val ONBOARDING = "onboarding"
     const val DASHBOARD = "dashboard"
     const val SETTINGS = "settings"
+    const val GOAL_PROGRESS = "goal_progress"
 
     /** Optional yyyy-MM-dd day for a new entry to start on, e.g. the day picked on the calendar. */
     const val ADD_ENTRY_DATE_ARG = "date"

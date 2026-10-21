@@ -36,6 +36,7 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 @Composable
 fun MoreScreen(
     onSettingsClick: () -> Unit,
+    onGoalProgressClick: () -> Unit = {},
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MoreViewModel = hiltViewModel()
@@ -46,6 +47,7 @@ fun MoreScreen(
         uiState = uiState,
         onRetry = viewModel::loadProfile,
         onSettingsClick = onSettingsClick,
+        onGoalProgressClick = onGoalProgressClick,
         onSignOutClick = {
             viewModel.signOut()
             onSignedOut()
@@ -59,6 +61,7 @@ private fun MoreContent(
     uiState: MoreState,
     onRetry: () -> Unit,
     onSettingsClick: () -> Unit,
+    onGoalProgressClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -84,6 +87,12 @@ private fun MoreContent(
             )
         }
 
+        MoreRow(
+            icon = MoneyTrailIcons.Card,
+            title = "Goal progress",
+            subtitle = "Track savings for your goal",
+            onClick = onGoalProgressClick
+        )
         MoreRow(
             icon = MoneyTrailIcons.Settings,
             title = "Settings",
@@ -177,6 +186,7 @@ private fun MoreScreenPreview() {
             uiState = MoreState.Ready(name = "Kavindu Silva", email = "kavindu.silva@gmail.com"),
             onRetry = {},
             onSettingsClick = {},
+            onGoalProgressClick = {},
             onSignOutClick = {}
         )
     }

@@ -2,6 +2,7 @@ package lk.moneytrail.app.presentation.insights
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +63,7 @@ import java.util.Locale
 // MoneyTrail-Figma-HTML/10-ExpenseInsights.html
 @Composable
 fun InsightsScreen(
+    onGoalProgressClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: InsightsViewModel = hiltViewModel()
 ) {
@@ -71,6 +73,7 @@ fun InsightsScreen(
         uiState = uiState,
         onTabClick = viewModel::onTabClick,
         onRetryClick = viewModel::onRetryClick,
+        onGoalProgressClick = onGoalProgressClick,
         modifier = modifier
     )
 }
@@ -84,6 +87,7 @@ private fun InsightsContent(
     uiState: InsightsState,
     onTabClick: (InsightsTab) -> Unit,
     onRetryClick: () -> Unit,
+    onGoalProgressClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -106,7 +110,7 @@ private fun InsightsContent(
                 onRetry = onRetryClick
             )
             uiState.isLoading -> LoadingView(message = "Loading your insights…")
-            else -> ExpenseInsights(uiState)
+            else -> ExpenseInsights(uiState = uiState, onGoalProgressClick = onGoalProgressClick)
         }
     }
 }
@@ -145,7 +149,10 @@ private fun InsightsTabs(selected: InsightsTab, onTabClick: (InsightsTab) -> Uni
 }
 
 @Composable
-private fun ExpenseInsights(uiState: InsightsState) {
+private fun ExpenseInsights(
+    uiState: InsightsState,
+    onGoalProgressClick: () -> Unit
+) {
     val colors = MaterialTheme.colorScheme
     val month = uiState.month.format(ShortMonthFormatter)
     val day = uiState.today.dayOfMonth
@@ -205,14 +212,16 @@ private fun ExpenseInsights(uiState: InsightsState) {
             val goal = uiState.goal
             if (days != null && goal != null) {
                 Text(
-                    text = "Coffee and dining out so far = about $days ${if (days == 1) "day" else "days"} of saving for your ${goal.name}.",
+                    text = "Coffee and dining out so far = about $days ${if (days == 1) "day" else "days"} of saving for your ${goal.name}. Tap to view progress ➔",
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Normal,
-                    color = colors.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.primary,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(colors.surfaceContainerLow, RoundedCornerShape(10.dp))
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(colors.primaryContainer)
+                        .clickable(role = Role.Button, onClick = onGoalProgressClick)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
                 )
             }
         }
@@ -458,7 +467,8 @@ private fun InsightsScreenPreview() {
                 goal = SavingsGoal("MacBook Pro M4", 490_000, 11_200, LocalDate.of(2027, 10, 10))
             ),
             onTabClick = {},
-            onRetryClick = {}
+            onRetryClick = {},
+            onGoalProgressClick = {}
         )
     }
 }

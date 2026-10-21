@@ -41,6 +41,7 @@ fun DashboardScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
     onSettingsClick: () -> Unit,
+    onGoalProgressClick: () -> Unit = {},
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -60,15 +61,20 @@ fun DashboardScreen(
             DashboardTab.CALENDAR -> CalendarScreen(
                 onAddEntryClick = onAddEntryClick,
                 onEntryClick = onEntryClick,
+                onGoalProgressClick = onGoalProgressClick,
                 modifier = contentModifier
             )
             DashboardTab.FOLDERS -> FoldersScreen(
                 onAddEntryClick = { onAddEntryClick(LocalDate.now()) },
                 modifier = contentModifier
             )
-            DashboardTab.INSIGHTS -> InsightsScreen(modifier = contentModifier)
+            DashboardTab.INSIGHTS -> InsightsScreen(
+                onGoalProgressClick = onGoalProgressClick,
+                modifier = contentModifier
+            )
             DashboardTab.MORE -> MoreScreen(
                 onSettingsClick = onSettingsClick,
+                onGoalProgressClick = onGoalProgressClick,
                 onSignedOut = onSignedOut,
                 modifier = contentModifier
             )

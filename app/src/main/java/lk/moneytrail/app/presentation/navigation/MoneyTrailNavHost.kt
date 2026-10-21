@@ -15,6 +15,7 @@ import lk.moneytrail.app.presentation.auth.RegisterScreen
 import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
+import lk.moneytrail.app.presentation.goal.GoalProgressScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
 import lk.moneytrail.app.presentation.settings.SettingsScreen
 import lk.moneytrail.app.presentation.splash.SplashScreen
@@ -77,6 +78,7 @@ fun MoneyTrailNavHost(
                     navController.navigate(Routes.editEntry(entryId)) { launchSingleTop = true }
                 },
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
+                onGoalProgressClick = { navController.navigate(Routes.GOAL_PROGRESS) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
             )
         }
@@ -85,6 +87,11 @@ fun MoneyTrailNavHost(
                 onBackClick = { navController.popBackStack(Routes.SETTINGS, inclusive = true) },
                 // Onboarding ends on a fresh dashboard, which then expects the new salary.
                 onSetUpClick = { navController.navigate(Routes.ONBOARDING) { launchSingleTop = true } }
+            )
+        }
+        composable(Routes.GOAL_PROGRESS) {
+            GoalProgressScreen(
+                onBackClick = { navController.popBackStack(Routes.GOAL_PROGRESS, inclusive = true) }
             )
         }
         composable(
