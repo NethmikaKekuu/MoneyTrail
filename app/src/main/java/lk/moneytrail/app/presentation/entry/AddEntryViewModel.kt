@@ -40,7 +40,12 @@ class AddEntryViewModel @Inject constructor(
                 val names = result.getOrNull()?.map { it.name }.orEmpty()
                 if (names.isNotEmpty()) {
                     _uiState.update {
-                        it.copy(accounts = names, account = if (it.account in names) it.account else names.first())
+                        it.copy(
+                            accounts = names,
+                            account = if (it.account in names) it.account else names.first(),
+                            fromAccount = if (it.fromAccount in names) it.fromAccount else names.first(),
+                            toAccount = if (it.toAccount in names) it.toAccount else names.find { name -> name.contains("Savings", ignoreCase = true) } ?: names.last()
+                        )
                     }
                 }
             }
@@ -103,6 +108,14 @@ class AddEntryViewModel @Inject constructor(
         _uiState.update { it.copy(account = account, errorMessage = null) }
     }
 
+    fun onFromAccountChange(account: String) {
+        _uiState.update { it.copy(fromAccount = account, errorMessage = null) }
+    }
+
+    fun onToAccountChange(account: String) {
+        _uiState.update { it.copy(toAccount = account, errorMessage = null) }
+    }
+
     fun onDateChange(date: LocalDate) {
         _uiState.update { it.copy(date = date, errorMessage = null) }
     }
@@ -124,12 +137,14 @@ class AddEntryViewModel @Inject constructor(
             addEntryUseCase(
                 type = state.type,
                 amount = state.amount,
-                category = state.category,
-                account = state.account,
+                category = if (state.type == EntryType.TRANSFER) "Transfer" else state.category,
+                account = if (state.type == EntryType.TRANSFER) state.fromAccount else state.account,
                 date = state.date,
                 note = state.note,
                 isExpected = state.isExpected,
-                spendingType = Categories.defaultSpending(state.category, state.customCategories)
+                spendingType = if (state.type == EntryType.EXPENSE) Categories.defaultSpending(state.category, state.customCategories) else null,
+                fromAccount = if (state.type == EntryType.TRANSFER) state.fromAccount else "",
+                toAccount = if (state.type == EntryType.TRANSFER) state.toAccount else ""
             )
                 .onSuccess { _uiState.update { it.copy(isSaving = false, isSaved = true) } }
                 .onFailure { e -> _uiState.update { it.copy(isSaving = false, errorMessage = e.message) } }

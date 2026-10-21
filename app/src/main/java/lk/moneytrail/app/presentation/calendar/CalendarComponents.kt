@@ -253,10 +253,12 @@ internal fun EntryCard(entry: Entry, onClick: () -> Unit, modifier: Modifier = M
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(18.dp)
     val isIncome = entry.type == EntryType.INCOME
-    val kind = if (entry.isExpected) "Expected" else when (entry.spendingType) {
-        SpendingType.COMMITTED -> "Committed"
-        SpendingType.DISCRETIONARY -> "Discretionary"
-        null -> "Income"
+    val isTransfer = entry.type == EntryType.TRANSFER
+    val kind = if (entry.isExpected) "Expected" else when {
+        isTransfer -> "Transfer"
+        entry.spendingType == SpendingType.COMMITTED -> "Committed"
+        entry.spendingType == SpendingType.DISCRETIONARY -> "Discretionary"
+        else -> "Income"
     }
 
     Column(
@@ -276,31 +278,44 @@ internal fun EntryCard(entry: Entry, onClick: () -> Unit, modifier: Modifier = M
             Box(
                 modifier = Modifier
                     .size(38.dp)
-                    .background(colors.primaryContainer, RoundedCornerShape(12.dp)),
+                    .background(if (isTransfer) colors.tertiaryContainer else colors.primaryContainer, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = entry.category.take(1).uppercase(),
+                    text = if (isTransfer) "⇄" else entry.category.take(1).uppercase(),
                     style = MaterialTheme.typography.titleSmall,
                     fontSize = 15.sp,
-                    color = colors.onPrimaryContainer
+                    color = if (isTransfer) colors.onTertiaryContainer else colors.onPrimaryContainer
                 )
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(entry.category, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = "${entry.account} · $kind" + if (entry.bonus > 0) " · incl. ${formatAmount(entry.bonus)} bonus" else "",
+                    text = if (isTransfer && entry.category.isBlank()) "Transfer" else entry.category,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = if (isTransfer && entry.fromAccountId.isNotBlank() && entry.toAccountId.isNotBlank()) {
+                        "${entry.fromAccountId} → ${entry.toAccountId} · Transfer"
+                    } else {
+                        "${entry.account} · $kind" + if (entry.bonus > 0) " · incl. ${formatAmount(entry.bonus)} bonus" else ""
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Normal,
                     color = colors.outline
                 )
             }
             Text(
-                text = (if (isIncome) "+ " else "$MINUS_SIGN ") + formatAmount(entry.amount),
+                text = when {
+                    isTransfer -> "⇄ " + formatAmount(entry.amount)
+                    isIncome -> "+ " + formatAmount(entry.amount)
+                    else -> "$MINUS_SIGN " + formatAmount(entry.amount)
+                },
                 style = MaterialTheme.typography.titleSmall,
                 fontSize = 15.sp,
                 color = when {
                     entry.isExpected -> colors.outline
+                    isTransfer -> colors.tertiary
                     isIncome -> colors.secondary
                     else -> colors.onSurface
                 },

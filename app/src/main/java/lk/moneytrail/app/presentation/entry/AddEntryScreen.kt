@@ -112,6 +112,8 @@ fun AddEntryScreen(
         onAddCategory = viewModel::onAddCategory,
         onAddCategoryDismiss = viewModel::onAddCategoryDismiss,
         onAccountChange = viewModel::onAccountChange,
+        onFromAccountChange = viewModel::onFromAccountChange,
+        onToAccountChange = viewModel::onToAccountChange,
         onDateChange = viewModel::onDateChange,
         onNoteChange = viewModel::onNoteChange,
         onExpectedChange = viewModel::onExpectedChange,
@@ -134,6 +136,8 @@ private fun AddEntryContent(
     onAddCategory: (String, EntryType, SpendingType?) -> Unit,
     onAddCategoryDismiss: () -> Unit,
     onAccountChange: (String) -> Unit,
+    onFromAccountChange: (String) -> Unit,
+    onToAccountChange: (String) -> Unit,
     onDateChange: (LocalDate) -> Unit,
     onNoteChange: (String) -> Unit,
     onExpectedChange: (Boolean) -> Unit,
@@ -197,31 +201,71 @@ private fun AddEntryContent(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp)
             )
 
-            CategoryChips(
-                categories = uiState.categories,
-                selected = uiState.category,
-                onCategoryChange = onCategoryChange,
-                onAddClick = onAddCategoryClick,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp)
-            )
+            if (uiState.type != EntryType.TRANSFER) {
+                CategoryChips(
+                    categories = uiState.categories,
+                    selected = uiState.category,
+                    onCategoryChange = onCategoryChange,
+                    onAddClick = onAddCategoryClick,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp)
+                )
+            }
 
-            Row(
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AccountPicker(
-                    account = uiState.account,
-                    accounts = uiState.accounts,
-                    onAccountChange = onAccountChange,
-                    modifier = Modifier.weight(1f)
-                )
-                PickerButton(
-                    icon = MoneyTrailIcons.Calendar,
-                    text = uiState.date.format(DateButtonFormatter),
-                    contentDescription = "Date, ${uiState.date.format(DateButtonFormatter)}",
-                    onClick = { isDatePickerOpen = true },
-                    modifier = Modifier.weight(1f)
-                )
+            if (uiState.type == EntryType.TRANSFER) {
+                Column(
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("From", style = MaterialTheme.typography.labelSmall, color = colors.outline)
+                            AccountPicker(
+                                account = uiState.fromAccount,
+                                accounts = uiState.accounts,
+                                onAccountChange = onFromAccountChange,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("To", style = MaterialTheme.typography.labelSmall, color = colors.outline)
+                            AccountPicker(
+                                account = uiState.toAccount,
+                                accounts = uiState.accounts,
+                                onAccountChange = onToAccountChange,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    PickerButton(
+                        icon = MoneyTrailIcons.Calendar,
+                        text = uiState.date.format(DateButtonFormatter),
+                        contentDescription = "Date, ${uiState.date.format(DateButtonFormatter)}",
+                        onClick = { isDatePickerOpen = true },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AccountPicker(
+                        account = uiState.account,
+                        accounts = uiState.accounts,
+                        onAccountChange = onAccountChange,
+                        modifier = Modifier.weight(1f)
+                    )
+                    PickerButton(
+                        icon = MoneyTrailIcons.Calendar,
+                        text = uiState.date.format(DateButtonFormatter),
+                        contentDescription = "Date, ${uiState.date.format(DateButtonFormatter)}",
+                        onClick = { isDatePickerOpen = true },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             Column(
@@ -348,7 +392,7 @@ private fun AddEntryContent(
     }
 }
 
-/** Expense / Income switch at the top. */
+/** Expense / Income / Transfer switch at the top. */
 @Composable
 private fun TypeToggle(
     selected: EntryType,
@@ -366,7 +410,11 @@ private fun TypeToggle(
             .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        listOf(EntryType.EXPENSE to "Expense", EntryType.INCOME to "Income").forEach { (type, label) ->
+        listOf(
+            EntryType.EXPENSE to "Expense",
+            EntryType.INCOME to "Income",
+            EntryType.TRANSFER to "Transfer"
+        ).forEach { (type, label) ->
             val isSelected = type == selected
             Box(
                 modifier = Modifier
@@ -392,6 +440,7 @@ private fun TypeToggle(
 private fun AmountDisplay(type: EntryType, amount: Long, modifier: Modifier = Modifier) {
     val sign = when {
         amount == 0L -> ""
+        type == EntryType.TRANSFER -> "⇄ "
         type == EntryType.EXPENSE -> MINUS_SIGN
         else -> "+"
     }
@@ -590,7 +639,11 @@ private fun FolderHint(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
-    val folder = if (type == EntryType.EXPENSE) "Expenses" else "Income"
+    val folder = when (type) {
+        EntryType.EXPENSE -> "Expenses"
+        EntryType.INCOME -> "Income"
+        EntryType.TRANSFER -> "Transfers"
+    }
     val month = date.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
     Row(
         modifier = modifier
@@ -603,7 +656,9 @@ private fun FolderHint(
         Icon(MoneyTrailIcons.Folder, contentDescription = null, tint = colors.primary, modifier = Modifier.size(18.dp))
         Text(
             text = buildAnnotatedString {
-                if (isExpected) {
+                if (type == EntryType.TRANSFER) {
+                    append("Records an internal transfer between accounts. Does not affect expense totals.")
+                } else if (isExpected) {
                     append("Shows as expected on ")
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(date.format(DateButtonFormatter)) }
                     append(". It counts in $folder once you confirm it.")
@@ -674,6 +729,8 @@ private fun AddEntryScreenPreview() {
             onAddCategory = { _, _, _ -> },
             onAddCategoryDismiss = {},
             onAccountChange = {},
+            onFromAccountChange = {},
+            onToAccountChange = {},
             onDateChange = {},
             onNoteChange = {},
             onExpectedChange = {},

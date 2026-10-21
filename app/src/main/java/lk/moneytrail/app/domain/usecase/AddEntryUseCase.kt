@@ -27,23 +27,28 @@ class AddEntryUseCase @Inject constructor(
         date: LocalDate,
         note: String,
         isExpected: Boolean = false,
-        spendingType: SpendingType? = Categories.expense[category]
+        spendingType: SpendingType? = Categories.expense[category],
+        fromAccount: String = "",
+        toAccount: String = ""
     ): Result<Unit> {
         val trimmedNote = note.trim()
         val error = entryError(type, amount, category, account, trimmedNote)
-            ?: if (type == EntryType.EXPENSE && spendingType == null) "Pick committed or discretionary." else null
+            ?: (if (type == EntryType.EXPENSE && spendingType == null) "Pick committed or discretionary." else null)
+            ?: (if (type == EntryType.TRANSFER && fromAccount.isNotBlank() && fromAccount == toAccount) "Pick two different accounts." else null)
         if (error != null) return Result.failure(AppException(error))
 
         val entry = Entry(
             id = "",
             type = type,
             amount = amount,
-            category = category,
-            account = account,
+            category = if (type == EntryType.TRANSFER) "Transfer" else category,
+            account = if (type == EntryType.TRANSFER && fromAccount.isNotBlank()) fromAccount else account,
             date = date,
             note = trimmedNote,
             spendingType = if (type == EntryType.EXPENSE) spendingType else null,
-            status = if (isExpected) EntryStatus.EXPECTED else EntryStatus.CONFIRMED
+            status = if (isExpected) EntryStatus.EXPECTED else EntryStatus.CONFIRMED,
+            fromAccountId = if (type == EntryType.TRANSFER) fromAccount.ifEmpty { account } else "",
+            toAccountId = if (type == EntryType.TRANSFER) toAccount else ""
         )
         return entryRepository.addEntry(entry)
     }

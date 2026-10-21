@@ -12,6 +12,8 @@ data class AddEntryState(
     val amountDigits: String = "",
     val category: String = Categories.namesFor(EntryType.EXPENSE).first(),
     val account: String = Accounts.defaults.first(),
+    val fromAccount: String = Accounts.defaults.first(),
+    val toAccount: String = Accounts.defaults.getOrElse(3) { "Savings" },
     /** Accounts to pick from: the user's own after onboarding, otherwise the defaults. */
     val accounts: List<String> = Accounts.defaults,
     /** Categories the user added, shown after the built-in ones. */
