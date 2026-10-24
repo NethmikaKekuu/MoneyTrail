@@ -292,7 +292,11 @@ add / edit / delete ──▶ Firestore (queues writes made offline)
 - Only entries are in Room: they grow every day and every main screen reads them. Accounts, categories and the plan are small and stay on Firestore's cache.
 - Room only holds a copy, so after a schema change, raise the version in `MoneyTrailDatabase`; Room drops the table (`fallbackToDestructiveMigration` in `di/DatabaseModule.kt`) and the listeners fill it again.
 - Each row has the user's `uid` and every query filters on it, so another account on the same phone never sees it.
+- **Offline banner.** `AndroidConnectivityRepository` follows Android's `ConnectivityManager`. While the phone has no internet, the dashboard shows "You're offline. Showing what's saved on this phone…" above the tabs, so it's clear the screens are working from Room.
+- **Saving offline doesn't wait.** Online, a save waits up to 3 seconds for the server, so a rules error can still be shown. Offline, no answer can come, so it returns at once and the write syncs later (`awaitServerBriefly` in `data/repository/FirestoreWrites.kt`).
 - To look at the table while the app runs, open **App Inspection → Database Inspector** in Android Studio.
+
+**Trying it offline:** open Calendar, Folders and Insights once while online, then turn on airplane mode. The banner appears, the screens still show your entries after closing and reopening the app, and a new entry shows at once. Turn airplane mode off and the banner goes; the entry reaches the Firestore console within a few seconds.
 
 ### Packages
 
@@ -301,18 +305,19 @@ app/src/main/java/lk/moneytrail/app/
 ├── MainActivity.kt, MoneyTrailApp.kt
 ├── data/
 │   ├── local/            Room: EntryEntity (the entries table), EntryDao, MoneyTrailDatabase
-│   └── repository/       Firebase implementations + shared Firestore error messages and write helper
+│   └── repository/       Firebase implementations + shared Firestore error messages and write helper,
+│                         and AndroidConnectivityRepository (online or offline)
 ├── di/                   Hilt modules: FirebaseModule, DatabaseModule, RepositoryModule
 ├── domain/
 │   ├── model/            Entry, Categories, CustomCategory, Account, MoneyPlan, EntryTotals, FolderTotals, SpendingInsights, UserProfile, AuthUser, AppException
-│   ├── repository/       Auth, User, Entry, Account, Plan and Category repositories (interfaces)
+│   ├── repository/       Auth, User, Entry, Account, Plan, Category and Connectivity repositories (interfaces)
 │   └── usecase/          RegisterUseCase, SignInWithGoogleUseCase, AddEntryUseCase, UpdateEntryUseCase,
 │                         CompleteOnboardingUseCase, AddCategoryUseCase, EnsureMonthlySalaryUseCase, UpdateSalaryUseCase
 └── presentation/
     ├── auth/             Login, Register, Forgot password, Google sign-in helper
     ├── calendar/         Calendar screen, month grid logic
-    ├── components/       Logo, icons (MoneyTrailIcons), money formatting, loading/error/empty views, AddCategoryDialog
-    ├── dashboard/        Bottom-bar home: Calendar, Folders, Insights, More
+    ├── components/       Logo, icons (MoneyTrailIcons), money formatting, loading/error/empty views, OfflineBanner, AddCategoryDialog
+    ├── dashboard/        Bottom-bar home: Calendar, Folders, Insights, More, with the offline banner above them
     ├── entry/            New entry (with keypad) and Edit entry screens
     ├── folders/          Expenses and Income folders by category and month
     ├── insights/         Expense insights (income insights to come)
