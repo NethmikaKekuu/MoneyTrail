@@ -133,8 +133,10 @@ class FirestoreEntryRepository @Inject constructor(
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
 
         return try {
-            // Answered from the offline cache when there's no internet; any entry shown
-            // on the calendar is already there.
+            // Any entry shown on a screen is already in Room.
+            entryDao.getEntry(uid, id)?.toEntry()?.let { return Result.success(it) }
+
+            // Otherwise ask Firestore, which answers from its own cache when offline.
             val snapshot = entriesOf(uid).document(id).get().await()
             Result.success(if (snapshot.exists()) snapshot.toEntry() else null)
         } catch (e: CancellationException) {
