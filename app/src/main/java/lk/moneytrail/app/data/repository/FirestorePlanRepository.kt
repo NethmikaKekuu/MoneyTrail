@@ -12,6 +12,7 @@ import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.model.IncomeSource
 import lk.moneytrail.app.domain.model.MoneyPlan
 import lk.moneytrail.app.domain.model.SavingsGoal
+import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
 import java.time.LocalDate
 import javax.inject.Inject
@@ -24,7 +25,8 @@ import javax.inject.Singleton
 @Singleton
 class FirestorePlanRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val connectivity: ConnectivityRepository
 ) : PlanRepository {
 
     override suspend fun savePlan(plan: MoneyPlan): Result<Unit> {
@@ -32,7 +34,7 @@ class FirestorePlanRepository @Inject constructor(
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
 
         return try {
-            planOf(uid).set(plan.toFirestore()).awaitServerBriefly(TAG)
+            planOf(uid).set(plan.toFirestore()).awaitServerBriefly(TAG, connectivity.isOnlineNow())
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
