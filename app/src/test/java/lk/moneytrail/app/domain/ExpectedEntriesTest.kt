@@ -7,6 +7,7 @@ import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.model.categoryTotals
 import lk.moneytrail.app.domain.model.confirmed
 import lk.moneytrail.app.domain.model.confirmedSalary
+import lk.moneytrail.app.domain.model.confirmedSalaryFromTotal
 import lk.moneytrail.app.domain.model.dueExpected
 import lk.moneytrail.app.domain.model.spendingSplit
 import lk.moneytrail.app.domain.model.totals
@@ -74,6 +75,28 @@ class ExpectedEntriesTest {
         assertEquals(15_000L, confirmed.bonus)
         assertEquals(120_000L, confirmed.baseAmount)
         assertEquals(EntryStatus.CONFIRMED, confirmed.status)
+    }
+
+    @Test
+    fun confirmedSalaryFromTotal_splitsAnythingAboveTheBaseIntoTheBonus() {
+        val salary = Entry("s1", EntryType.INCOME, 120_000, "Salary", "Main bank", LocalDate.of(2026, 10, 25), "", null, EntryStatus.EXPECTED)
+
+        val confirmed = salary.confirmedSalaryFromTotal(total = 132_400, base = 120_000, date = today)
+
+        assertEquals(132_400L, confirmed.amount)
+        assertEquals(12_400L, confirmed.bonus)
+        assertEquals(120_000L, confirmed.baseAmount)
+        assertEquals(EntryStatus.CONFIRMED, confirmed.status)
+    }
+
+    @Test
+    fun confirmedSalaryFromTotal_savesWhatArrivedWhenItIsLessThanTheBase() {
+        val salary = Entry("s1", EntryType.INCOME, 120_000, "Salary", "Main bank", LocalDate.of(2026, 10, 25), "", null, EntryStatus.EXPECTED)
+
+        val confirmed = salary.confirmedSalaryFromTotal(total = 110_000, base = 120_000, date = today)
+
+        assertEquals(110_000L, confirmed.amount)
+        assertEquals(0L, confirmed.bonus)
     }
 
     @Test

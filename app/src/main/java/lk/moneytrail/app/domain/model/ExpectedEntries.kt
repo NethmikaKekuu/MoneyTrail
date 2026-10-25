@@ -17,3 +17,13 @@ fun Entry.confirmed(amount: Long, date: LocalDate): Entry =
 /** A salary once it has arrived: the [base] pay plus this month's [bonus] make up its amount. */
 fun Entry.confirmedSalary(base: Long, bonus: Long, date: LocalDate): Entry =
     confirmed(base + bonus, date).copy(bonus = bonus)
+
+/**
+ * A salary confirmed from the [total] that really arrived. Anything above the usual
+ * [base] pay is the bonus. If less than the base arrived, there's no bonus and the
+ * whole total is the pay, so the entry always matches the bank.
+ */
+fun Entry.confirmedSalaryFromTotal(total: Long, base: Long, date: LocalDate): Entry {
+    val bonus = (total - base).coerceAtLeast(0)
+    return confirmedSalary(base = total - bonus, bonus = bonus, date = date)
+}

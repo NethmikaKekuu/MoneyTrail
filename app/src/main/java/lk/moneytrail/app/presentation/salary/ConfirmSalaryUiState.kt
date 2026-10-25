@@ -6,22 +6,28 @@ data class BonusHistoryItem(
     val isCurrentMonth: Boolean = false
 )
 
+// Every value comes from the user's plan and entries; nothing about a real person is
+// filled in here.
 data class ConfirmSalaryUiState(
-    val paydayText: String = "Payday · Sun 25 Oct",
-    val accountName: String = "Main bank",
-    val baseSalary: Long = 120_000L,
+    val paydayText: String = "",
+    val accountName: String = "",
+    /** The usual pay before bonuses, from Settings. 0 when no salary is set up. */
+    val baseSalary: Long = 0L,
+    /** What arrived minus the base: negative when less than the base arrived. */
     val bonusAmount: Long = 0L,
-    val amountCreditedDigits: String = "120000",
+    val amountCreditedDigits: String = "",
+    /** False when there's no salary in Settings and none on the calendar to confirm. */
+    val hasSalary: Boolean = true,
     val bonusHistory: List<BonusHistoryItem> = emptyList(),
     val averageBonus: Long = 0L,
     val highestBonus: Long = 0L,
     val highestBonusMonth: String = "",
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null
 ) {
     val totalCredited: Long
-        get() = amountCreditedDigits.toLongOrNull() ?: (baseSalary + bonusAmount)
+        get() = amountCreditedDigits.toLongOrNull() ?: 0L
 
     val hasBonusHistory: Boolean
         get() = bonusHistory.any { it.amount > 0 }

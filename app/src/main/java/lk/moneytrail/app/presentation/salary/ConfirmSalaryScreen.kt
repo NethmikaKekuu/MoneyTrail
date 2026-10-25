@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
@@ -87,6 +88,10 @@ fun ConfirmSalaryScreen(
         ) {
             when {
                 uiState.isLoading -> LoadingView(message = "Loading salary info…")
+                !uiState.hasSalary -> EmptyView(
+                    title = "No salary to confirm",
+                    message = "Add your base salary and pay day in Settings, and it will be ready to confirm on pay day."
+                )
                 else -> {
                     ConfirmSalaryContent(
                         state = uiState,
@@ -297,7 +302,7 @@ private fun ConfirmSalaryContent(
             }
 
             Text(
-                text = "Outside 120k–140k is fine; your pay changes and that's okay.",
+                text = "More or less than your base is fine; your pay changes and that's okay.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
                 fontSize = 13.sp
@@ -432,12 +437,20 @@ private fun ConfirmSalaryContent(
     }
 }
 
+// Sample figures for the previews only, from the assignment scenario.
+private val PreviewState = ConfirmSalaryUiState(
+    paydayText = "Payday · Sun 25 Oct",
+    accountName = "Main bank",
+    baseSalary = 120_000L,
+    isLoading = false
+)
+
 @Preview(showBackground = true)
 @Composable
 private fun ConfirmSalaryScreenPreview() {
     MoneyTrailTheme {
         ConfirmSalaryContent(
-            state = ConfirmSalaryUiState(
+            state = PreviewState.copy(
                 bonusHistory = listOf(
                     BonusHistoryItem("May", 10_000L),
                     BonusHistoryItem("Jun", 14_000L),
@@ -464,7 +477,7 @@ private fun ConfirmSalaryScreenPreview() {
 private fun ConfirmSalaryScreenSingleMonthPreview() {
     MoneyTrailTheme {
         ConfirmSalaryContent(
-            state = ConfirmSalaryUiState(
+            state = PreviewState.copy(
                 bonusHistory = listOf(
                     BonusHistoryItem("May", 12_400L, isCurrentMonth = true)
                 ),
@@ -486,7 +499,7 @@ private fun ConfirmSalaryScreenSingleMonthPreview() {
 private fun ConfirmSalaryScreenEmptyHistoryPreview() {
     MoneyTrailTheme {
         ConfirmSalaryContent(
-            state = ConfirmSalaryUiState(
+            state = PreviewState.copy(
                 bonusHistory = emptyList(),
                 bonusAmount = 0L,
                 amountCreditedDigits = "120000"
