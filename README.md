@@ -52,7 +52,7 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | More | Profile, Confirm salary, Settings and sign-out | 12 (first part) |
 | Settings | Change the pay day and base salary (this month's expected salary follows), and list, add or delete your own categories | Not in Figma; follows the onboarding style |
 | Confirm salary | Type what really arrived; anything above the base pay is the bonus, and less than the base is saved as it is. Shows the bonus history of the last six months. Confirming again in the same month corrects the salary instead of adding a second one | 13 |
-| Goal ("Pay yourself first") | A tab with each savings goal's progress ring, the monthly saving needed to reach it on time, and this month's confirmed salary. Add more goals, and share out savings across them (never past a goal's target) | 14 |
+| Goal ("Pay yourself first") | A tab with each goal's progress ring and the monthly saving needed to reach it on time. Once the salary is in, it asks "Move LKR 39,900 to Savings now?" with the three steps; **I've moved it** asks how much went to each goal and adds it (never past a goal's target), and **Remind me tomorrow** snoozes the reminder. Goals can be added, edited and removed (at least one stays), and show when they're reached or past their date | 14 |
 
 **Next, in order:** AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
 
@@ -243,14 +243,19 @@ One document, written at the end of onboarding and changed from Settings. The go
 | `incomeSources` | array of strings | Any of `SALARY`, `FREELANCE`, `ADSENSE`, `CRYPTO`, `OTHER` |
 | `goal.name` | string | 1–60 characters, e.g. `MacBook Pro M4` |
 | `goal.targetAmount` | integer | LKR, 1 to 999,999,999 |
-| `goal.savedAmount` | integer | LKR already saved before using the app; never more than the target |
+| `goal.id` | string | Optional. Keeps goals apart, even two with the same name; a goal saved before ids is `goal-0`, `goal-1`… by its place |
+| `goal.savedAmount` | integer | LKR saved so far: what was put aside before the app plus every "I've moved it"; never more than the target |
 | `goal.targetDate` | string | `yyyy-MM-dd` |
 | `goal.transferDay` | integer | Optional. Day of the month to move savings, 1–31; a new goal offers the pay day |
 | `goal.allowEmergencyWithdrawals` | boolean | Optional |
 | `goals` | array of maps | Optional. Every goal, the same fields as `goal`; `goal` is always the first one, so older screens and plans keep working. At most 20 |
+| `savingsMovedMonth` | string | Optional. `yyyy-MM` of the last "I've moved it", so the reminder stops for the rest of that month |
+| `savingsRemindOn` | string | Optional. `yyyy-MM-dd` set by "Remind me tomorrow"; the reminder stays hidden until then |
 | `updatedAt` | timestamp | Set by the server on every save |
 
 The monthly amount to save is worked out when needed (`SavingsGoal.monthlySavingNeeded`), not stored, so it stays right as the months pass.
+
+**Pay yourself first.** Each month the goals' monthly saving (`MoneyPlan.monthlySavings`, leaving out goals already reached) is due once this month's salary is confirmed or the earliest transfer day has come (`MoneyPlan.isSavingsDue`). Until it's moved or snoozed, the calendar shows a "Pay yourself first" card that opens the Goal tab, and confirming the salary (on the calendar or on Confirm salary) goes straight there. "I've moved it" runs `MoveSavingsUseCase`, which adds what the user moved to each goal and sets `savingsMovedMonth`; "Remind me tomorrow" runs `RemindSavingsLaterUseCase`. Goals are added and edited through `SaveGoalUseCase` and removed through `DeleteGoalUseCase`, with the same checks as the rules.
 
 **Salary as expected income.** When the calendar opens, `EnsureMonthlySalaryUseCase` adds this month's salary as an `EXPECTED` Salary entry on pay day (a pay day of 31 falls on the last day of shorter months). It does nothing if there's no salary, if this month already has a Salary entry, or once pay day has passed, so a salary removed with "Didn't happen" doesn't come back. Changing the salary in Settings (`UpdateSalaryUseCase`) moves a still-expected salary to the new base and day, keeping any bonus already on it. A bonus is added to the salary entry itself: in the "Did it come in?" dialog (`Entry.confirmedSalary`) or later on Edit entry, which shows Base salary and Bonus for a Salary income.
 
@@ -262,7 +267,7 @@ The monthly amount to save is worked out when needed (`SavingsGoal.monthlySaving
 - The profile may only hold `name`, `email` and `createdAt`; `createdAt` must be the server time on create and can't change later.
 - Every entry is checked field by field: allowed keys only, `status`, `type` and `spendingType` from fixed lists, amount range, a `bonus` below the amount and only on a Salary income, `yyyy-MM-dd` date, note length, server `createdAt`.
 - Each account must have a name, a description and a `kind` from a fixed list, with a server `createdAt`.
-- The plan must have a pay day of 1–31, a salary of 0 or more, income sources from a fixed list, and a goal with only the allowed fields whose saved amount is no more than its target. The `goals` list may hold up to 20 goals; rules can't loop over a list, so the app checks each goal before saving (`GoalViewModel`, `NewGoalDialog`).
+- The plan must have a pay day of 1–31, a salary of 0 or more, income sources from a fixed list, and a goal with only the allowed fields whose saved amount is no more than its target. The `goals` list may hold up to 20 goals; rules can't loop over a list, so the app checks each goal before saving (`SaveGoalUseCase.goalError`, `NewGoalDialog`). `savingsMovedMonth` must be `yyyy-MM` and `savingsRemindOn` `yyyy-MM-dd`.
 - Each category must have a 1–30 character name and a `type`; expense categories need a `spendingType`, income ones must have `null`. Categories can be created and deleted, not changed.
 - Any other collection under a user is owner-only. Entries, accounts, settings and categories are excluded from that catch-all, so their checks can't be skipped.
 
@@ -314,10 +319,12 @@ app/src/main/java/lk/moneytrail/app/
 │                         and AndroidConnectivityRepository (online or offline)
 ├── di/                   Hilt modules: FirebaseModule, DatabaseModule, RepositoryModule
 ├── domain/
-│   ├── model/            Entry, Categories, CustomCategory, Account, MoneyPlan, EntryTotals, FolderTotals, SpendingInsights, UserProfile, AuthUser, AppException
+│   ├── model/            Entry, Categories, CustomCategory, Account, MoneyPlan, GoalModel, GoalSavings, EntryTotals, FolderTotals,
+│   │                     SpendingInsights, UserProfile, AuthUser, AppException
 │   ├── repository/       Auth, User, Entry, Account, Plan, Category and Connectivity repositories (interfaces)
 │   └── usecase/          RegisterUseCase, SignInWithGoogleUseCase, AddEntryUseCase, UpdateEntryUseCase,
-│                         CompleteOnboardingUseCase, AddCategoryUseCase, EnsureMonthlySalaryUseCase, UpdateSalaryUseCase
+│                         CompleteOnboardingUseCase, AddCategoryUseCase, EnsureMonthlySalaryUseCase, UpdateSalaryUseCase,
+│                         SaveGoalUseCase, DeleteGoalUseCase, MoveSavingsUseCase, RemindSavingsLaterUseCase
 └── presentation/
     ├── auth/             Login, Register, Forgot password, Google sign-in helper
     ├── calendar/         Calendar screen, month grid logic
@@ -410,7 +417,7 @@ Use `.\gradlew` in Windows PowerShell and `./gradlew` in macOS, Linux or Git Bas
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Before submitting, install it on an **Android 8.0 (API 26)** emulator and check the main flows: sign up, add entries, see them on the calendar, sign out.
 
-Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks (including added places and income), the user's own categories, the monthly salary, salary changes and salary bonuses, the monthly saving needed for the goal, and how entries are saved to and read from Room.
+Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks (including added places and income), the user's own categories, the monthly salary, salary changes and salary bonuses, the monthly saving needed for the goal, Pay yourself first (when it's due, moving savings, the reminder, adding, editing and removing goals), confirming a salary from what arrived, and how entries are saved to and read from Room.
 
 ## Troubleshooting
 
