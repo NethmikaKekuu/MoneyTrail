@@ -67,6 +67,7 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Navigation | Navigation Compose, single activity |
 | Auth | Firebase Authentication: email/password and Google (Credential Manager) |
 | Database | Cloud Firestore with its persistent offline cache |
+| Local cache | Room: a copy of the entries on the phone, kept up to date by Firestore listeners |
 | Min / target SDK | 26 (Android 8.0) / 36; compiled against SDK 37 |
 | Build | Gradle 9.5, Android Gradle Plugin 9.3, Kotlin 2.2, JDK 21 toolchain |
 
@@ -205,7 +206,7 @@ Written once when the account is made: on email sign-up, or the first Google sig
 - **Expected money is kept apart.** Totals, folders and insights count only `CONFIRMED` entries, so planned money never makes the real numbers look better. The calendar finds expected entries with one equality query on `status`, which needs no composite index.
 - **A salary's bonus lives on the salary.** `amount` is always the whole sum, so totals, folders and insights need nothing extra, while `bonus` keeps the base and the extra told apart (`Entry.baseAmount`).
 - **`spendingType` is stored, not worked out each time**, so Edit entry can override the category's default (a Rent payment marked discretionary stays that way).
-- **Live and offline.** The calendar uses a snapshot listener, so new entries appear at once. Firestore's persistent cache is turned on in `di/FirebaseModule.kt`, so the calendar opens and entries save without internet, then sync later.
+- **Live and offline.** Snapshot listeners copy entries into Room, and the screens read Room, so new entries appear at once and the calendar opens without internet. Firestore's persistent cache is turned on in `di/FirebaseModule.kt`, so entries also save without internet and sync later. See [Offline cache](#offline-cache).
 
 ### `users/{uid}/accounts/{accountId}`
 
@@ -276,23 +277,47 @@ Compose screen  →  ViewModel  →  use case (optional)  →  repository interf
 - **Use cases** hold rules that are more than a pass-through, e.g. `AddEntryUseCase` validates the amount and picks committed or discretionary; `RegisterUseCase` makes the account and profile together.
 - **Repositories**: interfaces in `domain/repository`, Firebase code in `data/repository`, bound in `di/RepositoryModule.kt`. They return `Result<T>`; a failure is an `AppException` whose message can be shown to the user as-is.
 
+### Offline cache
+
+```
+add / edit / delete ──▶ Firestore (queues writes made offline)
+                            │ snapshot listener
+                            ▼
+                     Room "entries" table ──Flow──▶ ViewModel ──▶ screen
+```
+
+- Entries are read from **Room** (`data/local/`), the database on the phone, so Calendar, Folders and Insights open at once with the last copy, with or without internet. Room's `Flow` queries emit again whenever the table changes.
+- While a screen is open, a Firestore snapshot listener copies its dates into Room (`EntryDao.replaceBetween`), so entries added, changed or deleted on another phone show up too.
+- Writes still go to Firestore. Its persistent cache applies them on the phone at once and uploads them when the connection is back. The listener sees them straight away, so they reach Room the same way.
+- Only entries are in Room: they grow every day and every main screen reads them. Accounts, categories and the plan are small and stay on Firestore's cache.
+- Room only holds a copy, so after a schema change, raise the version in `MoneyTrailDatabase`; Room drops the table (`fallbackToDestructiveMigration` in `di/DatabaseModule.kt`) and the listeners fill it again.
+- Each row has the user's `uid` and every query filters on it, so another account on the same phone never sees it.
+- **Offline banner.** `AndroidConnectivityRepository` follows Android's `ConnectivityManager`. While the phone has no internet, the dashboard shows "You're offline. Showing what's saved on this phone…" above the tabs, so it's clear the screens are working from Room.
+- **Saving offline doesn't wait.** Online, a save waits up to 3 seconds for the server, so a rules error can still be shown. Offline, no answer can come, so it returns at once and the write syncs later (`awaitServerBriefly` in `data/repository/FirestoreWrites.kt`).
+- To look at the table while the app runs, open **App Inspection → Database Inspector** in Android Studio.
+
+**Trying it offline:** open Calendar, Folders and Insights once while online, then turn on airplane mode. The banner appears, the screens still show your entries after closing and reopening the app, and a new entry shows at once. Turn airplane mode off and the banner goes; the entry reaches the Firestore console within a few seconds.
+
 ### Packages
 
 ```
 app/src/main/java/lk/moneytrail/app/
 ├── MainActivity.kt, MoneyTrailApp.kt
-├── data/repository/      Firebase implementations + shared Firestore error messages and write helper
-├── di/                   Hilt modules: FirebaseModule, RepositoryModule
+├── data/
+│   ├── local/            Room: EntryEntity (the entries table), EntryDao, MoneyTrailDatabase
+│   └── repository/       Firebase implementations + shared Firestore error messages and write helper,
+│                         and AndroidConnectivityRepository (online or offline)
+├── di/                   Hilt modules: FirebaseModule, DatabaseModule, RepositoryModule
 ├── domain/
 │   ├── model/            Entry, Categories, CustomCategory, Account, MoneyPlan, EntryTotals, FolderTotals, SpendingInsights, UserProfile, AuthUser, AppException
-│   ├── repository/       Auth, User, Entry, Account, Plan and Category repositories (interfaces)
+│   ├── repository/       Auth, User, Entry, Account, Plan, Category and Connectivity repositories (interfaces)
 │   └── usecase/          RegisterUseCase, SignInWithGoogleUseCase, AddEntryUseCase, UpdateEntryUseCase,
 │                         CompleteOnboardingUseCase, AddCategoryUseCase, EnsureMonthlySalaryUseCase, UpdateSalaryUseCase
 └── presentation/
     ├── auth/             Login, Register, Forgot password, Google sign-in helper
     ├── calendar/         Calendar screen, month grid logic
-    ├── components/       Logo, icons (MoneyTrailIcons), money formatting, loading/error/empty views, AddCategoryDialog
-    ├── dashboard/        Bottom-bar home: Calendar, Folders, Insights, More
+    ├── components/       Logo, icons (MoneyTrailIcons), money formatting, loading/error/empty views, OfflineBanner, AddCategoryDialog
+    ├── dashboard/        Bottom-bar home: Calendar, Folders, Insights, More, with the offline banner above them
     ├── entry/            New entry (with keypad) and Edit entry screens
     ├── folders/          Expenses and Income folders by category and month
     ├── insights/         Expense insights (income insights to come)
@@ -376,7 +401,7 @@ Use `.\gradlew` in Windows PowerShell and `./gradlew` in macOS, Linux or Git Bas
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Before submitting, install it on an **Android 8.0 (API 26)** emulator and check the main flows: sign up, add entries, see them on the calendar, sign out.
 
-Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks (including added places and income), the user's own categories, the monthly salary, salary changes and salary bonuses, and the monthly saving needed for the goal.
+Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks (including added places and income), the user's own categories, the monthly salary, salary changes and salary bonuses, the monthly saving needed for the goal, and how entries are saved to and read from Room.
 
 ## Troubleshooting
 

@@ -15,6 +15,7 @@ import lk.moneytrail.app.domain.model.AccountKind
 import lk.moneytrail.app.domain.model.AccountTemplates
 import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.repository.AccountRepository
+import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,7 +23,8 @@ import javax.inject.Singleton
 @Singleton
 class FirestoreAccountRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val connectivity: ConnectivityRepository
 ) : AccountRepository {
 
     override fun observeAccounts(): Flow<Result<List<Account>>> = callbackFlow {
@@ -61,7 +63,7 @@ class FirestoreAccountRepository @Inject constructor(
             accounts.forEach { account ->
                 batch.set(accountsOf(uid).document(account.id), account.toFirestore())
             }
-            batch.commit().awaitServerBriefly(TAG)
+            batch.commit().awaitServerBriefly(TAG, connectivity.isOnlineNow())
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e

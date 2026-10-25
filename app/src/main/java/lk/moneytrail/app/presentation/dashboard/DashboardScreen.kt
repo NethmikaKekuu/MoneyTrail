@@ -1,5 +1,6 @@
 package lk.moneytrail.app.presentation.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
@@ -21,8 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.presentation.calendar.CalendarScreen
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
+import lk.moneytrail.app.presentation.components.OfflineBanner
 import lk.moneytrail.app.presentation.folders.FoldersScreen
 import lk.moneytrail.app.presentation.insights.InsightsScreen
 import lk.moneytrail.app.presentation.more.MoreScreen
@@ -35,15 +39,21 @@ private enum class DashboardTab(val label: String, val icon: ImageVector) {
     MORE("More", MoneyTrailIcons.More)
 }
 
-/** The signed-in home: the bottom bar from the Figma screens, with the calendar first. */
+/**
+ * The signed-in home: the bottom bar from the Figma screens, with the calendar first.
+ * While the phone is offline, a banner above the tabs says the app is showing what's
+ * saved on the phone.
+ */
 @Composable
 fun DashboardScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
     onSettingsClick: () -> Unit,
     onSignedOut: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: DashboardViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableStateOf(DashboardTab.CALENDAR) }
 
     Scaffold(
@@ -53,25 +63,33 @@ fun DashboardScreen(
             DashboardNavigationBar(selected = selectedTab, onTabClick = { selectedTab = it })
         }
     ) { innerPadding ->
-        val contentModifier = Modifier
-            .padding(innerPadding)
-            .consumeWindowInsets(innerPadding)
-        when (selectedTab) {
-            DashboardTab.CALENDAR -> CalendarScreen(
-                onAddEntryClick = onAddEntryClick,
-                onEntryClick = onEntryClick,
-                modifier = contentModifier
-            )
-            DashboardTab.FOLDERS -> FoldersScreen(
-                onAddEntryClick = { onAddEntryClick(LocalDate.now()) },
-                modifier = contentModifier
-            )
-            DashboardTab.INSIGHTS -> InsightsScreen(modifier = contentModifier)
-            DashboardTab.MORE -> MoreScreen(
-                onSettingsClick = onSettingsClick,
-                onSignedOut = onSignedOut,
-                modifier = contentModifier
-            )
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+        ) {
+            AnimatedVisibility(visible = uiState.isOffline) {
+                OfflineBanner()
+            }
+
+            val tabModifier = Modifier.weight(1f)
+            when (selectedTab) {
+                DashboardTab.CALENDAR -> CalendarScreen(
+                    onAddEntryClick = onAddEntryClick,
+                    onEntryClick = onEntryClick,
+                    modifier = tabModifier
+                )
+                DashboardTab.FOLDERS -> FoldersScreen(
+                    onAddEntryClick = { onAddEntryClick(LocalDate.now()) },
+                    modifier = tabModifier
+                )
+                DashboardTab.INSIGHTS -> InsightsScreen(modifier = tabModifier)
+                DashboardTab.MORE -> MoreScreen(
+                    onSettingsClick = onSettingsClick,
+                    onSignedOut = onSignedOut,
+                    modifier = tabModifier
+                )
+            }
         }
     }
 }
