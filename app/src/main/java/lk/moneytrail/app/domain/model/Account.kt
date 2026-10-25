@@ -11,9 +11,12 @@ data class Account(
     val name: String,
     val description: String,
     val kind: AccountKind,
-    /** The real balance the user last typed in when balancing it (catch-up), in LKR; null before the first time. */
+    /**
+     * What the account held at the start of [checkedOn], in LKR, worked out from the real
+     * balance the user typed that day (in onboarding or catch-up); null before the first time.
+     */
     val checkedBalance: Long? = null,
-    /** The day [checkedBalance] was typed in. */
+    /** The day the real balance was typed in. */
     val checkedOn: LocalDate? = null
 )
 

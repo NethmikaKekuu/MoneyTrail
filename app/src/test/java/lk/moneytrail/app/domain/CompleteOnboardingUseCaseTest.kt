@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import lk.moneytrail.app.domain.model.Account
+import lk.moneytrail.app.domain.model.AccountKind
 import lk.moneytrail.app.domain.model.AccountTemplates
 import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.model.CustomCategory
@@ -153,5 +154,22 @@ class CompleteOnboardingUseCaseTest {
         )
         assertEquals("Pick a target date in the future.", CompleteOnboardingUseCase.goalError("MacBook", 490_000, 0, today, today))
         assertNull(CompleteOnboardingUseCase.goalError("MacBook Pro M4", 490_000, 11_200, nextYear, today))
+    }
+
+    @Test
+    fun balances_areNeededForEveryPlace_andZeroIsFine() {
+        val mainBank = Account("main-bank", "Main bank", "", AccountKind.BANK)
+        val wallet = Account("cash-wallet", "Cash wallet", "", AccountKind.CASH)
+        val today = LocalDate.of(2026, 10, 25)
+
+        assertEquals(
+            "Enter what each place holds now. Type 0 if it's empty.",
+            CompleteOnboardingUseCase.balancesError(listOf(mainBank.copy(checkedBalance = 48_320, checkedOn = today), wallet))
+        )
+        assertNull(
+            CompleteOnboardingUseCase.balancesError(
+                listOf(mainBank.copy(checkedBalance = 48_320, checkedOn = today), wallet.copy(checkedBalance = 0, checkedOn = today))
+            )
+        )
     }
 }

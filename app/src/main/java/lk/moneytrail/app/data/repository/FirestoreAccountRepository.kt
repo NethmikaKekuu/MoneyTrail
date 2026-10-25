@@ -99,12 +99,15 @@ class FirestoreAccountRepository @Inject constructor(
     private fun onboardingOrder(id: String): Int =
         AccountTemplates.all.indexOfFirst { it.id == id }.let { if (it < 0) Int.MAX_VALUE else it }
 
-    private fun Account.toFirestore(): Map<String, Any> = mapOf(
-        FIELD_NAME to name,
-        FIELD_DESCRIPTION to description,
-        FIELD_KIND to kind.name,
-        FIELD_CREATED_AT to FieldValue.serverTimestamp()
-    )
+    private fun Account.toFirestore(): Map<String, Any> = buildMap {
+        put(FIELD_NAME, name)
+        put(FIELD_DESCRIPTION, description)
+        put(FIELD_KIND, kind.name)
+        // A starting balance typed in onboarding, so the first catch-up can already compare.
+        checkedBalance?.let { put(FIELD_CHECKED_BALANCE, it) }
+        checkedOn?.let { put(FIELD_CHECKED_ON, it.toString()) }
+        put(FIELD_CREATED_AT, FieldValue.serverTimestamp())
+    }
 
     /** Null for a document with missing or unreadable fields, which is skipped. */
     private fun DocumentSnapshot.toAccount(): Account? {

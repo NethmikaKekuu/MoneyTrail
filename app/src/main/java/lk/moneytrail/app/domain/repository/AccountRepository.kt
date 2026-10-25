@@ -14,6 +14,6 @@ interface AccountRepository {
     /** Saves [accounts], replacing any saved before under the same ids. */
     suspend fun saveAccounts(accounts: List<Account>): Result<Unit>
 
-    /** Remembers that the account really held [balance] LKR on [date], the start for the next balancing. */
+    /** Remembers that the account held [balance] LKR at the start of [date], the start for the next balancing. */
     suspend fun saveBalanceCheck(accountId: String, balance: Long, date: LocalDate): Result<Unit>
 }

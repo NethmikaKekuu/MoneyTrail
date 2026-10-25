@@ -1,6 +1,7 @@
 package lk.moneytrail.app.presentation.onboarding
 
 import lk.moneytrail.app.domain.model.Account
+import lk.moneytrail.app.domain.model.AccountKind
 import lk.moneytrail.app.domain.model.AccountTemplates
 import lk.moneytrail.app.domain.model.CustomCategory
 import lk.moneytrail.app.domain.model.IncomeSource
@@ -8,8 +9,8 @@ import lk.moneytrail.app.domain.model.SavingsGoal
 import lk.moneytrail.app.domain.model.monthlySavingNeeded
 import java.time.LocalDate
 
-/** The four onboarding steps, in order. Only the first is in the Figma file; the rest follow its style. */
-enum class OnboardingStep { MONEY_PLACES, SALARY, INCOME_SOURCES, GOAL }
+/** The onboarding steps, in order. Only the first is in the Figma file; the rest follow its style. */
+enum class OnboardingStep { MONEY_PLACES, BALANCES, SALARY, INCOME_SOURCES, GOAL }
 
 data class OnboardingState(
     val today: LocalDate,
@@ -19,6 +20,8 @@ data class OnboardingState(
     val customAccounts: List<Account> = emptyList(),
     /** True while the "Add a place" dialog is open. */
     val isAddingPlace: Boolean = false,
+    /** Digits typed for what each place holds now, by account id. Every ticked place needs one. */
+    val balanceDigits: Map<String, String> = emptyMap(),
     val placeError: String? = null,
     /** Day of the month the salary arrives; null until picked. */
     val payDay: Int? = null,
@@ -55,6 +58,20 @@ data class OnboardingState(
 
     val selectedAccounts: List<Account>
         get() = accountChoices.filter { it.id in selectedAccountIds }
+
+    /** The ticked places, each with the balance typed for it today as its starting balance. */
+    val accountsToSave: List<Account>
+        get() = selectedAccounts.map { account ->
+            balanceDigits[account.id]?.toLongOrNull()
+                ?.let { account.copy(checkedBalance = it, checkedOn = today) }
+                ?: account
+        }
+
+    /** The balance typed for the Savings place, offered as the goal's "already saved". */
+    val savingsBalanceDigits: String
+        get() = selectedAccounts.firstOrNull { it.kind == AccountKind.SAVINGS }
+            ?.let { balanceDigits[it.id] }
+            .orEmpty()
 
     val selectedOwnIncomeList: List<CustomCategory>
         get() = ownIncome.filter { it.name in selectedOwnIncome }
