@@ -67,8 +67,6 @@ class ConfirmSalaryViewModel @Inject constructor(
             val salaryEntry = expectedSalary ?: confirmedThisMonth
             targetEntry = salaryEntry
 
-            val date = salaryEntry?.date ?: today
-            val formatter = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
             val amount = salaryEntry?.amount ?: baseSalary
 
             _uiState.update {
@@ -78,8 +76,9 @@ class ConfirmSalaryViewModel @Inject constructor(
                     // A plan that failed to load isn't the same as a skipped setup.
                     hasPlan = planResult.isFailure || plan != null,
                     payDay = plan?.payDay ?: it.payDay,
-                    baseSalaryDigits = plan?.baseSalary?.toString() ?: it.baseSalaryDigits,
-                    paydayText = "Payday · ${date.format(formatter)}",
+                    monthTitle = "${(salaryEntry?.date ?: today).format(MonthTitleFormatter)} salary",
+                    statusText = statusFor(salaryEntry),
+                    isConfirmed = salaryEntry != null && !salaryEntry.isExpected,
                     accountName = salaryEntry?.account ?: Accounts.defaults.first(),
                     baseSalary = baseSalary,
                     bonusAmount = amount - baseSalary,
@@ -226,13 +225,37 @@ class ConfirmSalaryViewModel @Inject constructor(
         }
     }
 
-    fun onPayDayClick(day: Int) {
-        _uiState.update { it.copy(payDay = day, salarySettingsError = null, isSalarySaved = false) }
+    /** "Due 25 Oct", "Due today", "Overdue", "Not confirmed yet" or "Confirmed". */
+    private fun statusFor(salary: Entry?): String = when {
+        salary == null -> "Not confirmed yet"
+        !salary.isExpected -> "Confirmed"
+        salary.date == today -> "Due today"
+        salary.date.isBefore(today) -> "Overdue"
+        else -> "Due ${salary.date.format(DayFormatter)}"
+    }
+
+    /** Opens "Pay day and base salary" with what's saved now. */
+    fun onEditSalaryClick() {
+        _uiState.update {
+            it.copy(
+                isEditingSalary = true,
+                payDayDigits = it.payDay?.toString().orEmpty(),
+                baseSalaryDigits = it.baseSalary.takeIf { base -> base > 0 }?.toString().orEmpty(),
+                salarySettingsError = null
+            )
+        }
+    }
+
+    fun onEditSalaryDismiss() {
+        _uiState.update { it.copy(isEditingSalary = false, salarySettingsError = null) }
+    }
+
+    fun onPayDayChange(text: String) {
+        _uiState.update { it.copy(payDayDigits = text.filter(Char::isDigit).take(2), salarySettingsError = null) }
     }
 
     fun onBaseSalaryChange(text: String) {
-        val digits = text.filter(Char::isDigit).take(MAX_DIGITS)
-        _uiState.update { it.copy(baseSalaryDigits = digits, salarySettingsError = null, isSalarySaved = false) }
+        _uiState.update { it.copy(baseSalaryDigits = text.filter(Char::isDigit).take(MAX_DIGITS), salarySettingsError = null) }
     }
 
     /** Saves the pay day and base salary; this month's expected salary follows (UpdateSalaryUseCase). */
@@ -240,11 +263,11 @@ class ConfirmSalaryViewModel @Inject constructor(
         val state = _uiState.value
         if (state.isSavingSalary) return
 
-        _uiState.update { it.copy(isSavingSalary = true, salarySettingsError = null, isSalarySaved = false) }
+        _uiState.update { it.copy(isSavingSalary = true, salarySettingsError = null) }
         viewModelScope.launch {
-            updateSalary(state.payDay, state.baseSalaryDigits.toLongOrNull(), today)
+            updateSalary(state.payDayDigits.toIntOrNull(), state.baseSalaryDigits.toLongOrNull(), today)
                 .onSuccess {
-                    _uiState.update { it.copy(isSavingSalary = false, isSalarySaved = true) }
+                    _uiState.update { it.copy(isSavingSalary = false, isEditingSalary = false) }
                     loadData(showLoading = false)
                 }
                 .onFailure { e -> _uiState.update { it.copy(isSavingSalary = false, salarySettingsError = e.message) } }
@@ -254,5 +277,7 @@ class ConfirmSalaryViewModel @Inject constructor(
     private companion object {
         /** LKR 999,999,999 at most, as everywhere else in the app. */
         const val MAX_DIGITS = 9
+        val MonthTitleFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM", Locale.ENGLISH)
+        val DayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)
     }
 }
