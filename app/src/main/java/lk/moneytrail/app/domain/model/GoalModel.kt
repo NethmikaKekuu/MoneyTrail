@@ -16,11 +16,20 @@ data class GoalModel(
     /** In whole rupees (LKR). E.g. 11,200 */
     val savedAmount: Long,
     val targetDate: LocalDate,
-    val today: LocalDate = LocalDate.now()
+    val today: LocalDate = LocalDate.now(),
+    /** The [SavingsGoal.id] it shows. */
+    val id: String = ""
 ) {
     /** Remaining amount in LKR to reach the target amount. */
     val remainingAmount: Long
         get() = (targetAmount - savedAmount).coerceAtLeast(0L)
+
+    val isReached: Boolean
+        get() = savedAmount >= targetAmount
+
+    /** The target date has passed and the goal isn't reached yet. */
+    val isOverdue: Boolean
+        get() = !isReached && YearMonth.from(targetDate).isBefore(YearMonth.from(today))
 
     /** Progress fraction from 0.0 to 1.0. */
     val progressFraction: Float
@@ -64,7 +73,8 @@ data class GoalModel(
                 targetAmount = goal.targetAmount,
                 savedAmount = goal.savedAmount,
                 targetDate = goal.targetDate,
-                today = today
+                today = today,
+                id = goal.id
             )
     }
 }
