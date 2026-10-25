@@ -74,6 +74,9 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
 
+    // WorkManager (daily reminders, even with the app closed)
+    implementation(libs.androidx.work.runtime.ktx)
+
     // Room (offline cache)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

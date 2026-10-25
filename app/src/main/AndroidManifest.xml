@@ -4,6 +4,9 @@
     <!-- Lets the app tell when the phone is offline, to say so on screen. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Daily reminders as system notifications (asked for on Android 13 and later). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Every Android app needs this manifest. All UI is Jetpack Compose; the theme is
          Android's built-in one and the colours and fonts come from MoneyTrailTheme. -->
     <application

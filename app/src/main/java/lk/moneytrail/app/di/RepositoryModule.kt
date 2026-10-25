@@ -5,6 +5,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import lk.moneytrail.app.data.preferences.CatchUpPreferences
+import lk.moneytrail.app.data.reminders.WorkManagerReminderScheduler
 import lk.moneytrail.app.data.repository.AndroidConnectivityRepository
 import lk.moneytrail.app.data.repository.FirebaseAuthRepository
 import lk.moneytrail.app.data.repository.FirestoreAccountRepository
@@ -19,6 +20,7 @@ import lk.moneytrail.app.domain.repository.CategoryRepository
 import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
+import lk.moneytrail.app.domain.repository.ReminderScheduler
 import lk.moneytrail.app.domain.repository.UserRepository
 import javax.inject.Singleton
 
@@ -57,4 +59,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCatchUpRepository(impl: CatchUpPreferences): CatchUpRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReminderScheduler(impl: WorkManagerReminderScheduler): ReminderScheduler
 }

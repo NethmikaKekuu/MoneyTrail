@@ -50,7 +50,8 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Salary on the calendar | Each month the base salary is added as an expected Salary entry on pay day. The salary is a fixed base (changed on Salary) plus a bonus that varies: confirming it asks for the base received and this month's bonus, and opening the salary later lets you add or change the bonus. The calendar shows "incl. 15,000 bonus" | 07, 24 |
 | Expense insights | This month's spending, the committed vs discretionary split, coffee and dining out as days of goal saving, spending by category, and a six-month chart | 10 |
 | More | Profile, Salary, Catch up, Settings and sign-out | 12 (first part) |
-| Settings | The app theme (Light, Dark or the phone's setting), and list, add or delete your own categories | Not in Figma; follows the onboarding style |
+| Settings | The app theme (Light, Dark or the phone's setting), the reminders (with "Check reminders now" and a link to turn notifications on), and list, add or delete your own categories | Not in Figma; follows the onboarding style |
+| Reminders | System notifications every morning at 9:00, even when the app isn't opened: money due ("Salary expected today. Did it come in?"), Pay yourself first once the salary is in, and "It's been 4 days" for catch-up. Each kind at most once a day; tapping one opens the app, where the matching card waits. Asks for the notification permission on Android 13+ | Not in Figma |
 | Salary | The pay day on a calendar grid and the base salary, with Save once either changes (this month's expected salary follows). The salary itself is confirmed on the calendar's "Did it come in?"; bonuses will show in the income insights. Someone who skipped onboarding is offered to set them up | 13 (simplified) |
 | Catch-up | After 3 or more days without logging, the app opens a catch-up: "Welcome back! It's been 9 days", tick off the bills and income that fell due, log what you remember, then type each account's real balance. Whatever wasn't logged is added as "Not logged" so every account matches the bank. "Later" waits until tomorrow; More › Catch up opens it any time | 23, 21 |
 | Goal ("Pay yourself first") | A tab with each goal's progress ring and the monthly saving needed to reach it on time. Once the salary is in, it asks "Move LKR 39,900 to Savings now?" with the three steps; **I've moved it** asks how much went to each goal and adds it (never past a goal's target), and **Remind me tomorrow** snoozes the reminder. Goals can be added, edited and removed (at least one stays), and show when they're reached or past their date | 14 |
@@ -70,6 +71,7 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Navigation | Navigation Compose, single activity |
 | Auth | Firebase Authentication: email/password and Google (Credential Manager) |
 | Database | Cloud Firestore with its persistent offline cache |
+| Background work | WorkManager: the daily reminder check, which runs even when the app is closed |
 | Local cache | Room: a copy of the entries on the phone, kept up to date by Firestore listeners |
 | Min / target SDK | 26 (Android 8.0) / 36; compiled against SDK 37 |
 | Build | Gradle 9.5, Android Gradle Plugin 9.3, Kotlin 2.2, JDK 21 toolchain |
@@ -262,6 +264,8 @@ The monthly amount to save is worked out when needed (`SavingsGoal.monthlySaving
 
 **Catch-up.** When the dashboard opens, `CheckCatchUpUseCase` compares today with the later of the day the last entry was saved (`EntryRepository.lastLoggedDate`, the newest `createdAt`) and the last finished catch-up; 3 or more days opens the catch-up, unless the user said "Later" today. Those two dates are kept on the phone (`CatchUpPreferences`), not in Firestore. `BalanceAccountUseCase` works out each account's balance from its last check and adds the difference to the real balance as a "Not logged" entry (spending counts as discretionary), then saves the start-of-day balance as the next starting point. The first starting balances come from onboarding; an account without one (made before this step existed) gets it at its first catch-up.
 
+**Reminders.** `MoneyTrailApp` books a daily WorkManager check at 9:00 (`WorkManagerReminderScheduler`, kept if already booked). `ReminderWorker` gets `GetRemindersUseCase` through a Hilt entry point and asks it what's due, by the same rules as the cards in the app (`dueExpected`, `isSavingsDue`, `CheckCatchUpUseCase`); `ReminderNotifier` shows each as a system notification in the "Reminders" channel, once a day per kind. Opening the app clears them, as the cards show the same things. "Check reminders now" in Settings runs the check at once.
+
 **Salary as expected income.** When the calendar opens, `EnsureMonthlySalaryUseCase` adds this month's salary as an `EXPECTED` Salary entry on pay day (a pay day of 31 falls on the last day of shorter months). It does nothing if there's no salary, if this month already has a Salary entry, or once pay day has passed, so a salary removed with "Didn't happen" doesn't come back. Changing the salary on Salary (`UpdateSalaryUseCase`) moves a still-expected salary to the new base and day, keeping any bonus already on it. A bonus is added to the salary entry itself: in the "Did it come in?" dialog (`Entry.confirmedSalary`) or later on Edit entry, which shows Base salary and Bonus for a Salary income.
 
 ## Security rules
@@ -320,9 +324,12 @@ app/src/main/java/lk/moneytrail/app/
 ├── MainActivity.kt, MoneyTrailApp.kt
 ├── data/
 │   ├── local/            Room: EntryEntity (the entries table), EntryDao, MoneyTrailDatabase
+│   ├── preferences/      Theme and catch-up dates kept on the phone (SharedPreferences)
+│   ├── reminders/        ReminderWorker (WorkManager), ReminderNotifier (system notifications),
+│   │                     WorkManagerReminderScheduler
 │   └── repository/       Firebase implementations + shared Firestore error messages and write helper,
 │                         and AndroidConnectivityRepository (online or offline)
-├── di/                   Hilt modules: FirebaseModule, DatabaseModule, RepositoryModule
+├── di/                   Hilt modules: FirebaseModule, DatabaseModule, RepositoryModule; ReminderEntryPoint for the worker
 ├── domain/
 │   ├── model/            Entry, Categories, CustomCategory, Account, MoneyPlan, GoalModel, GoalSavings, EntryTotals, FolderTotals,
 │   │                     SpendingInsights, UserProfile, AuthUser, AppException
@@ -375,7 +382,7 @@ Follow these on every change. Reviewers check them in pull requests.
 2. **`domain/` is plain Kotlin.** No Android, Firebase or Compose imports there.
 3. **One folder per feature in `presentation/`**, holding `XScreen.kt`, `XViewModel.kt` and `XState.kt`.
 4. **Screen structure.** `XScreen` gets the ViewModel with `hiltViewModel()` and collects state with `collectAsStateWithLifecycle()`. It calls a private, stateless `XContent(uiState, callbacks…)`, which has a `@Preview`.
-5. **No XML.** Icons are `ImageVector`s in `presentation/components/MoneyTrailIcons.kt`; colours and fonts are in `presentation/theme/`; text is in Kotlin. `AndroidManifest.xml` is the only XML file.
+5. **No XML.** Icons are `ImageVector`s in `presentation/components/MoneyTrailIcons.kt`; colours and fonts are in `presentation/theme/`; text is in Kotlin. `AndroidManifest.xml` is the only XML file. The launcher and notification icons are PNGs (`mipmap-*`, `drawable-*/ic_notification.png`), as Android needs image resources for those.
 6. **Use the theme**, `MaterialTheme.colorScheme` and `MaterialTheme.typography`, not hard-coded colours, so dark mode works.
 7. **Every screen handles loading, empty and error states.** No blank screens on network failure and no crashes on empty data. Reuse `LoadingView`, `ErrorView` and `EmptyView`.
 8. **User-facing errors are `AppException` messages**, written as plain sentences.
@@ -424,7 +431,7 @@ Use `.\gradlew` in Windows PowerShell and `./gradlew` in macOS, Linux or Git Bas
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Before submitting, install it on an **Android 8.0 (API 26)** emulator and check the main flows: sign up, add entries, see them on the calendar, sign out.
 
-Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks (including added places and income), the user's own categories, the monthly salary, salary changes and salary bonuses, the monthly saving needed for the goal, Pay yourself first (when it's due, moving savings, the reminder, adding, editing and removing goals), catch-up (when it's offered, balancing an account and the "Not logged" entry), and how entries are saved to and read from Room.
+Unit tests cover entry totals, adding and editing entries, expected entries, folder totals, spending insights, the calendar month grid, the keypad rules, the onboarding checks (including added places and income), the user's own categories, the monthly salary, salary changes and salary bonuses, the monthly saving needed for the goal, Pay yourself first (when it's due, moving savings, the reminder, adding, editing and removing goals), catch-up (when it's offered, balancing an account and the "Not logged" entry), and how entries are saved to and read from Room, which reminders are sent (money due, Pay yourself first, catch-up) and when the daily check runs.
 
 ## Troubleshooting
 

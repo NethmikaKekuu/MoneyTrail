@@ -13,6 +13,7 @@ import lk.moneytrail.app.data.preferences.ThemePreferences
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.CategoryRepository
+import lk.moneytrail.app.domain.repository.ReminderScheduler
 import lk.moneytrail.app.domain.usecase.AddCategoryUseCase
 import javax.inject.Inject
 
@@ -21,7 +22,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository,
     private val addCategory: AddCategoryUseCase,
-    private val themePreferences: ThemePreferences
+    private val themePreferences: ThemePreferences,
+    private val reminderScheduler: ReminderScheduler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsState())
@@ -38,6 +40,11 @@ class SettingsViewModel @Inject constructor(
                     .onFailure { e -> _uiState.update { it.copy(categoriesError = e.message) } }
             }
         }
+    }
+
+    /** Runs the reminder check now, so its notifications can be seen without waiting for 9:00. */
+    fun onCheckRemindersClick() {
+        reminderScheduler.checkNow()
     }
 
     /** Saved on the phone, so the app opens in the chosen theme next time too. */
