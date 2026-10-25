@@ -36,6 +36,8 @@ import lk.moneytrail.app.domain.model.monthlySavingNeeded
 import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.temporal.ChronoUnit
 
 // The limits the Firestore rules check on a goal.
 private const val MAX_NAME_LENGTH = 60
@@ -60,7 +62,13 @@ fun NewGoalDialog(
     var name by remember { mutableStateOf(initialGoal?.name.orEmpty()) }
     var targetDigits by remember { mutableStateOf(initialGoal?.targetAmount?.toString().orEmpty()) }
     var savedDigits by remember { mutableStateOf(initialGoal?.savedAmount?.toString().orEmpty()) }
-    var monthsDigits by remember { mutableStateOf("12") }
+    // Editing starts from the goal's own deadline; a new goal from a year away.
+    var monthsDigits by remember {
+        mutableStateOf(
+            initialGoal?.let { ChronoUnit.MONTHS.between(YearMonth.now(), YearMonth.from(it.targetDate)).coerceAtLeast(1) }
+                ?.toString() ?: "12"
+        )
+    }
     var transferDayDigits by remember {
         mutableStateOf((initialGoal?.transferDay ?: defaultTransferDay)?.toString().orEmpty())
     }
