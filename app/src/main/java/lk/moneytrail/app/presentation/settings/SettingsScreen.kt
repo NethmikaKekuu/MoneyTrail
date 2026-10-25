@@ -52,7 +52,7 @@ import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
 // Not in the Figma file; follows the style of the onboarding and edit entry screens.
-// The app theme and the user's own categories. The salary and pay day are on Confirm salary.
+// The app theme and the user's own categories. The salary and pay day are on Salary.
 @Composable
 fun SettingsScreen(
     onBackClick: () -> Unit,

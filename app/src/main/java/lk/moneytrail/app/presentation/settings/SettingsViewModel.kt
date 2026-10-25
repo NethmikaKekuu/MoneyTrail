@@ -16,7 +16,7 @@ import lk.moneytrail.app.domain.repository.CategoryRepository
 import lk.moneytrail.app.domain.usecase.AddCategoryUseCase
 import javax.inject.Inject
 
-/** The app theme and the user's own categories. The salary lives on Confirm salary. */
+/** The app theme and the user's own categories. The salary lives on Salary. */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository,
