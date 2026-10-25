@@ -14,6 +14,7 @@ hilt = "2.60.1"
 ksp = "2.3.12"
 androidxHilt = "1.4.0"
 room = "2.8.5"
+work = "2.11.2"
 navigationCompose = "2.9.8"
 coroutinesPlayServices = "1.10.2"
 credentials = "1.6.0"
@@ -55,6 +56,9 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+
+# WorkManager (daily reminders, even with the app closed)
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 
 # Room (offline cache)
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
