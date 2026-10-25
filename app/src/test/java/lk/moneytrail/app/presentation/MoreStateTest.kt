@@ -6,14 +6,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class MoreViewModelTest {
+class MoreStateTest {
 
     @Test
     fun moreStateReady_holdsProfileAndThemeMode() {
         val state = MoreState.Ready(
             name = "Kavindu Silva",
             email = "kavindu.silva@gmail.com",
-            goalProgressBadge = "2.3%",
+            salaryBadge = "Due 25 Oct",
             themeMode = ThemeMode.DARK,
             isThemeDialogOpen = false
         )
@@ -21,7 +21,7 @@ class MoreViewModelTest {
         assertTrue(state is MoreState.Ready)
         assertEquals("Kavindu Silva", state.name)
         assertEquals("kavindu.silva@gmail.com", state.email)
-        assertEquals("2.3%", state.goalProgressBadge)
+        assertEquals("Due 25 Oct", state.salaryBadge)
         assertEquals(ThemeMode.DARK, state.themeMode)
     }
 

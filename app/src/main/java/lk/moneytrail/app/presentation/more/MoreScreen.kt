@@ -107,6 +107,7 @@ private fun MoreContent(
             icon = MoneyTrailIcons.Check,
             title = "Confirm Salary",
             subtitle = "Confirm payday arrival & bonus",
+            badgeText = (uiState as? MoreState.Ready)?.salaryBadge,
             onClick = onConfirmSalaryClick
         )
 
@@ -323,7 +324,7 @@ private fun MoreScreenPreview() {
             uiState = MoreState.Ready(
                 name = "Kavindu Silva",
                 email = "kavindu.silva@gmail.com",
-                goalProgressBadge = "2.3%",
+                salaryBadge = "Due 25 Oct",
                 themeMode = ThemeMode.SYSTEM
             ),
             onRetry = {},

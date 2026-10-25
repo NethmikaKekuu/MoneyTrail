@@ -9,11 +9,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.moneytrail.app.domain.model.Accounts
 import lk.moneytrail.app.domain.model.Categories
 import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
-import lk.moneytrail.app.domain.model.confirmedSalary
+import lk.moneytrail.app.domain.model.confirmedSalaryFromTotal
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
 import java.time.LocalDate
@@ -43,31 +44,31 @@ class ConfirmSalaryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val plan = planRepository.getPlan().getOrNull()
-            val baseSalary = plan?.baseSalary?.takeIf { it > 0 } ?: 120_000L
+            val baseSalary = planRepository.getPlan().getOrNull()?.baseSalary ?: 0L
 
-            val expectedEntries = entryRepository.observeExpected().first().getOrDefault(emptyList())
-            val salaryEntry = expectedEntries.find { it.type == EntryType.INCOME && it.category == Categories.SALARY }
+            // The salary to confirm: an expected one (this month's, or an older one never
+            // checked), or else this month's if it's already confirmed, so confirming again
+            // corrects it instead of adding a second salary.
+            val expectedSalary = entryRepository.observeExpected().first().getOrDefault(emptyList())
+                .firstOrNull { it.isSalary }
+            val confirmedThisMonth = entryRepository.observeMonth(currentMonth).first().getOrDefault(emptyList())
+                .lastOrNull { it.isSalary && !it.isExpected }
+            val salaryEntry = expectedSalary ?: confirmedThisMonth
             targetEntry = salaryEntry
 
             val date = salaryEntry?.date ?: today
             val formatter = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
-            val paydayText = "Payday · ${date.format(formatter)}"
-            val accountName = salaryEntry?.account?.ifEmpty { "Main bank" } ?: "Main bank"
-
-            val initialBonus = salaryEntry?.bonus?.takeIf { it > 0 } ?: 12_400L
-            val initialTotal = salaryEntry?.amount?.takeIf { it > 0 } ?: (baseSalary + initialBonus)
-            val initialDigits = initialTotal.toString()
-            val bonusAmount = initialTotal - baseSalary
+            val amount = salaryEntry?.amount ?: baseSalary
 
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    paydayText = paydayText,
-                    accountName = accountName,
+                    hasSalary = baseSalary > 0 || salaryEntry != null,
+                    paydayText = "Payday · ${date.format(formatter)}",
+                    accountName = salaryEntry?.account ?: Accounts.defaults.first(),
                     baseSalary = baseSalary,
-                    bonusAmount = bonusAmount,
-                    amountCreditedDigits = initialDigits
+                    bonusAmount = amount - baseSalary,
+                    amountCreditedDigits = amount.takeIf { amount > 0 }?.toString().orEmpty()
                 )
             }
 
@@ -137,7 +138,7 @@ class ConfirmSalaryViewModel @Inject constructor(
     }
 
     fun onAmountCreditedChange(input: String) {
-        val digits = input.filter(Char::isDigit).take(8)
+        val digits = input.filter(Char::isDigit).trimStart('0').take(MAX_DIGITS)
         val newTotal = digits.toLongOrNull() ?: 0L
         val base = _uiState.value.baseSalary
         val newBonus = newTotal - base
@@ -162,8 +163,6 @@ class ConfirmSalaryViewModel @Inject constructor(
 
         viewModelScope.launch {
             val total = state.totalCredited
-            val base = state.baseSalary
-            val bonus = state.bonusAmount.coerceAtLeast(0L)
 
             val entryToSave = targetEntry ?: Entry(
                 id = "",
@@ -173,16 +172,12 @@ class ConfirmSalaryViewModel @Inject constructor(
                 account = state.accountName,
                 date = today,
                 note = "",
-                spendingType = null,
-                status = EntryStatus.CONFIRMED,
-                bonus = bonus
+                spendingType = null
             )
 
-            val confirmedEntry = entryToSave.confirmedSalary(
-                base = base,
-                bonus = bonus,
-                date = today
-            )
+            // Saves exactly what arrived; anything above the base is this month's bonus.
+            val confirmedEntry = entryToSave.confirmedSalaryFromTotal(total = total, base = state.baseSalary, date = today)
+            val bonus = confirmedEntry.bonus
 
             val result = if (entryToSave.id.isEmpty()) {
                 entryRepository.addEntry(confirmedEntry)
@@ -213,5 +208,10 @@ class ConfirmSalaryViewModel @Inject constructor(
                 _uiState.update { it.copy(isSubmitting = false, errorMessage = error.message ?: "Failed to confirm salary") }
             }
         }
+    }
+
+    private companion object {
+        /** LKR 999,999,999 at most, as everywhere else in the app. */
+        const val MAX_DIGITS = 9
     }
 }

@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -39,6 +38,10 @@ import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 import java.time.LocalDate
 
+/**
+ * "I've moved it": how much really went to each goal not yet reached (LKR by goal id),
+ * starting from this month's saving for it. What the user types is what's added.
+ */
 @Composable
 fun GoalAllocationDialog(
     totalPoolAmount: Long,
@@ -47,11 +50,11 @@ fun GoalAllocationDialog(
     onConfirmAllocation: (allocations: Map<String, Long>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Distribute suggested default equally or by recommended monthly saving
+    val openGoals = goals.filterNot { it.isReached }
     val allocations = remember(goals, totalPoolAmount) {
         mutableStateMapOf<String, String>().apply {
-            goals.forEach { goal ->
-                this[goal.name] = goal.monthlySavingNeeded.toString()
+            openGoals.forEach { goal ->
+                this[goal.id] = goal.monthlySavingNeeded.toString()
             }
         }
     }
@@ -64,12 +67,12 @@ fun GoalAllocationDialog(
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Distribute Salary to Goals",
+                    text = "How much did you move?",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Allocate your confirmed salary savings across active goals.",
+                    text = "Enter what you moved to your savings account for each goal.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -95,7 +98,7 @@ fun GoalAllocationDialog(
                     ) {
                         Column {
                             Text(
-                                text = "Allocation Pool",
+                                text = "This month's saving",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -109,7 +112,7 @@ fun GoalAllocationDialog(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "Unallocated",
+                                text = "Still to move",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -117,21 +120,21 @@ fun GoalAllocationDialog(
                                 text = "LKR ${formatAmount(unallocatedRemaining)}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (unallocatedRemaining >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                                color = if (unallocatedRemaining >= 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error
                             )
                         }
                     }
                 }
 
-                // List of Goal Allocation Inputs
-                goals.forEach { goal ->
-                    val currentInput = allocations[goal.name].orEmpty()
+                // One amount per goal not yet reached
+                openGoals.forEach { goal ->
+                    val currentInput = allocations[goal.id].orEmpty()
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFFFFF8F5))
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
@@ -156,10 +159,10 @@ fun GoalAllocationDialog(
                             value = currentInput,
                             onValueChange = { input ->
                                 if (input.all { it.isDigit() }) {
-                                    allocations[goal.name] = input
+                                    allocations[goal.id] = input.take(9)
                                 }
                             },
-                            label = { Text("Amount for ${goal.name} (LKR)") },
+                            label = { Text("Moved for ${goal.name} (LKR)") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(),
@@ -187,7 +190,7 @@ fun GoalAllocationDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Allocate & Save")
+                Text("Save")
             }
         },
         dismissButton = {
@@ -208,8 +211,8 @@ private fun GoalAllocationDialogPreview() {
         GoalAllocationDialog(
             totalPoolAmount = 39900L,
             goals = listOf(
-                GoalModel("MacBook Pro M4", 490000L, 11200L, LocalDate.of(2027, 10, 19)),
-                GoalModel("Emergency Fund", 200000L, 50000L, LocalDate.of(2027, 6, 1))
+                GoalModel("MacBook Pro M4", 490000L, 11200L, LocalDate.of(2027, 10, 19), id = "mac"),
+                GoalModel("Emergency Fund", 200000L, 50000L, LocalDate.of(2027, 6, 1), id = "fund")
             ),
             isSubmitting = false,
             onConfirmAllocation = {},

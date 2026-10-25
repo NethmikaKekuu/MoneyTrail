@@ -22,7 +22,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
@@ -87,6 +86,10 @@ fun ConfirmSalaryScreen(
         ) {
             when {
                 uiState.isLoading -> LoadingView(message = "Loading salary info…")
+                !uiState.hasSalary -> EmptyView(
+                    title = "No salary to confirm",
+                    message = "Add your base salary and pay day in Settings, and it will be ready to confirm on pay day."
+                )
                 else -> {
                     ConfirmSalaryContent(
                         state = uiState,
@@ -117,7 +120,7 @@ private fun ConfirmSalaryTopBar(onBackClick: () -> Unit) {
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 .clickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
@@ -159,7 +162,8 @@ private fun ConfirmSalaryContent(
         // Payday Status Banner (Top Orange Card)
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = Color(0xFFFA5E00),
+            color = MaterialTheme.colorScheme.tertiary,
+            contentColor = MaterialTheme.colorScheme.onTertiary,
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(
@@ -175,18 +179,18 @@ private fun ConfirmSalaryContent(
                         text = state.paydayText,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onTertiary
                     )
 
                     Surface(
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onTertiary,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
                             text = "Ready to confirm",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFA5E00),
+                            color = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
@@ -195,7 +199,7 @@ private fun ConfirmSalaryContent(
                 Text(
                     text = "Salary into ${state.accountName}. Check your banking app and enter exactly what arrived.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.95f),
+                    color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.95f),
                     lineHeight = 20.sp
                 )
             }
@@ -210,9 +214,9 @@ private fun ConfirmSalaryContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .border(1.dp, Color(0xFFEBEBEB), RoundedCornerShape(18.dp)),
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp)),
                 shape = RoundedCornerShape(18.dp),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -236,9 +240,9 @@ private fun ConfirmSalaryContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .border(1.dp, Color(0xFFEBEBEB), RoundedCornerShape(18.dp)),
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp)),
                 shape = RoundedCornerShape(18.dp),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -253,7 +257,7 @@ private fun ConfirmSalaryContent(
                         text = formatNet(state.bonusAmount),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = if (state.bonusAmount >= 0) Color(0xFFC83803) else MaterialTheme.colorScheme.error
+                        color = if (state.bonusAmount >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -275,8 +279,8 @@ private fun ConfirmSalaryContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFFFFF8F5))
-                    .border(2.dp, Color(0xFFFA5E00), RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .border(2.dp, MaterialTheme.colorScheme.tertiary, RoundedCornerShape(20.dp))
                     .padding(horizontal = 20.dp, vertical = 18.dp)
             ) {
                 val formattedDisplay = state.amountCreditedDigits.toLongOrNull()?.let { formatAmount(it) }
@@ -297,7 +301,7 @@ private fun ConfirmSalaryContent(
             }
 
             Text(
-                text = "Outside 120k–140k is fine; your pay changes and that's okay.",
+                text = "More or less than your base is fine; your pay changes and that's okay.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
                 fontSize = 13.sp
@@ -308,9 +312,9 @@ private fun ConfirmSalaryContent(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(22.dp)),
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(22.dp)),
             shape = RoundedCornerShape(22.dp),
-            color = Color.White
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -359,7 +363,7 @@ private fun ConfirmSalaryContent(
                                         .fillMaxHeight(barHeightFraction)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(
-                                            if (item.isCurrentMonth) Color(0xFFC83803) else Color(0xFFFCBD85)
+                                            if (item.isCurrentMonth) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f)
                                         )
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -399,23 +403,19 @@ private fun ConfirmSalaryContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC83803)
-                )
+                shape = RoundedCornerShape(28.dp)
             ) {
                 if (state.isSubmitting) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         strokeWidth = 2.dp
                     )
                 } else {
                     Text(
                         text = "Confirm salary",
                         fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -425,19 +425,27 @@ private fun ConfirmSalaryContent(
                     text = "Not yet, remind me later",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFC83803)
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
     }
 }
 
+// Sample figures for the previews only, from the assignment scenario.
+private val PreviewState = ConfirmSalaryUiState(
+    paydayText = "Payday · Sun 25 Oct",
+    accountName = "Main bank",
+    baseSalary = 120_000L,
+    isLoading = false
+)
+
 @Preview(showBackground = true)
 @Composable
 private fun ConfirmSalaryScreenPreview() {
     MoneyTrailTheme {
         ConfirmSalaryContent(
-            state = ConfirmSalaryUiState(
+            state = PreviewState.copy(
                 bonusHistory = listOf(
                     BonusHistoryItem("May", 10_000L),
                     BonusHistoryItem("Jun", 14_000L),
@@ -464,7 +472,7 @@ private fun ConfirmSalaryScreenPreview() {
 private fun ConfirmSalaryScreenSingleMonthPreview() {
     MoneyTrailTheme {
         ConfirmSalaryContent(
-            state = ConfirmSalaryUiState(
+            state = PreviewState.copy(
                 bonusHistory = listOf(
                     BonusHistoryItem("May", 12_400L, isCurrentMonth = true)
                 ),
@@ -486,7 +494,7 @@ private fun ConfirmSalaryScreenSingleMonthPreview() {
 private fun ConfirmSalaryScreenEmptyHistoryPreview() {
     MoneyTrailTheme {
         ConfirmSalaryContent(
-            state = ConfirmSalaryUiState(
+            state = PreviewState.copy(
                 bonusHistory = emptyList(),
                 bonusAmount = 0L,
                 amountCreditedDigits = "120000"

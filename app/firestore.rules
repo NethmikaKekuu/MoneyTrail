@@ -83,10 +83,12 @@ service cloud.firestore {
     // users/{uid}/settings/plan: pay day, base salary (whole LKR, 0 when there is no
     // salary), income sources and the savings goal(s), written at the end of onboarding.
     // What's already saved can't be more than the goal; dates are yyyy-MM-dd.
-    // Optional transferDay (1-31) and allowEmergencyWithdrawals (bool) fields.
+    // Optional id, transferDay (1-31) and allowEmergencyWithdrawals (bool) fields.
     function isValidGoal(goal) {
       return goal is map
         && goal.keys().hasAll(['name', 'targetAmount', 'savedAmount', 'targetDate'])
+        && goal.keys().hasOnly(['id', 'name', 'targetAmount', 'savedAmount', 'targetDate', 'transferDay', 'allowEmergencyWithdrawals'])
+        && (!('id' in goal) || (goal.id is string && goal.id.size() > 0 && goal.id.size() <= 40))
         && goal.name is string && goal.name.size() > 0 && goal.name.size() <= 60
         && goal.targetAmount is int && goal.targetAmount > 0 && goal.targetAmount <= 999999999
         && goal.savedAmount is int && goal.savedAmount >= 0 && goal.savedAmount <= goal.targetAmount
@@ -97,13 +99,17 @@ service cloud.firestore {
 
     function isValidPlan(data) {
       return data.keys().hasAll(['payDay', 'baseSalary', 'incomeSources', 'goal', 'updatedAt'])
-        && data.keys().hasOnly(['payDay', 'baseSalary', 'incomeSources', 'goal', 'goals', 'updatedAt'])
+        && data.keys().hasOnly(['payDay', 'baseSalary', 'incomeSources', 'goal', 'goals',
+                                'savingsMovedMonth', 'savingsRemindOn', 'updatedAt'])
         && data.payDay is int && data.payDay >= 1 && data.payDay <= 31
         && data.baseSalary is int && data.baseSalary >= 0 && data.baseSalary <= 999999999
         && data.incomeSources is list && data.incomeSources.size() <= 5
         && data.incomeSources.hasOnly(['SALARY', 'FREELANCE', 'ADSENSE', 'CRYPTO', 'OTHER'])
         && isValidGoal(data.goal)
         && (!('goals' in data) || (data.goals is list && data.goals.size() <= 20))
+        // Pay yourself first: the month savings were last moved (yyyy-MM) and "Remind me tomorrow".
+        && (!('savingsMovedMonth' in data) || (data.savingsMovedMonth is string && data.savingsMovedMonth.matches('[0-9]{4}-[0-9]{2}')))
+        && (!('savingsRemindOn' in data) || (data.savingsRemindOn is string && data.savingsRemindOn.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
         && data.updatedAt == request.time;
     }
 

@@ -10,26 +10,33 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.moneytrail.app.data.preferences.ThemeMode
 import lk.moneytrail.app.data.preferences.ThemePreferences
-import lk.moneytrail.app.domain.model.GoalModel
+import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.repository.AuthRepository
-import lk.moneytrail.app.domain.repository.PlanRepository
+import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.UserRepository
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
 class MoreViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-    private val planRepository: PlanRepository,
+    private val entryRepository: EntryRepository,
     private val themePreferences: ThemePreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<MoreState>(MoreState.Loading)
     val uiState: StateFlow<MoreState> = _uiState.asStateFlow()
 
+    /** The Confirm salary badge, kept so a profile loaded later still shows it. */
+    private var salaryBadge: String? = null
+
     init {
         loadProfile()
+        listenToSalary()
         observeThemeMode()
     }
 
@@ -54,17 +61,12 @@ class MoreViewModel @Inject constructor(
 
         _uiState.value = MoreState.Loading
         viewModelScope.launch {
-            val plan = planRepository.getPlan().getOrNull()
-            val goalBadge = plan?.goal?.let { goal ->
-                GoalModel.fromSavingsGoal(goal, LocalDate.now()).percentageText
-            } ?: "2.3%"
-
             userRepository.getProfile(uid)
                 .onSuccess { profile ->
                     _uiState.value = MoreState.Ready(
                         name = profile?.name,
                         email = profile?.email ?: authRepository.currentUserEmail,
-                        goalProgressBadge = goalBadge,
+                        salaryBadge = salaryBadge,
                         themeMode = themePreferences.getThemeMode()
                     )
                 }
@@ -103,5 +105,32 @@ class MoreViewModel @Inject constructor(
 
     fun signOut() {
         authRepository.signOut()
+    }
+
+    /** This month's salary, for the badge on Confirm salary, as in the Figma More screen. */
+    private fun listenToSalary() {
+        viewModelScope.launch {
+            val today = LocalDate.now()
+            entryRepository.observeMonth(YearMonth.from(today)).collect { result ->
+                // Only the badge depends on this, so a failure just leaves it out.
+                result.onSuccess { entries ->
+                    salaryBadge = entries.lastOrNull { it.isSalary }?.let { salaryBadgeFor(it, today) }
+                    _uiState.update { state ->
+                        if (state is MoreState.Ready) state.copy(salaryBadge = salaryBadge) else state
+                    }
+                }
+            }
+        }
+    }
+
+    private fun salaryBadgeFor(salary: Entry, today: LocalDate): String = when {
+        !salary.isExpected -> "Confirmed"
+        salary.date == today -> "Due today"
+        salary.date.isBefore(today) -> "Overdue"
+        else -> "Due ${salary.date.format(BadgeFormatter)}"
+    }
+
+    private companion object {
+        val BadgeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)
     }
 }

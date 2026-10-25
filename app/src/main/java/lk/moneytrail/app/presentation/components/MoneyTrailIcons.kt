@@ -94,6 +94,9 @@ object MoneyTrailIcons {
 
     val Trash = lineIcon("Trash", 2f, "M4,7h16M10,11v6M14,11v6M6,7l1,13h10l1,-13M9,7V4h6v3")
 
+    /** A pencil, for editing a goal. */
+    val Edit = lineIcon("Edit", 2f, "M4,20h4l10.5,-10.5a2.8,2.8 0,0 0,-4 -4L4,16z", "M13.5,6.5l4,4")
+
     /** Two sliders, for Settings. */
     val Settings = lineIcon(
         "Settings", 2f,
