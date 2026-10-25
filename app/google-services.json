@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "531615769377-atg35avlenk0fuj6g8uh89si00ok0721.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "lk.moneytrail.app",
+            "certificate_hash": "6fa7df1afb256a3fa8d1e7e680af7a55440cd213"
+          }
+        },
+        {
           "client_id": "531615769377-t190h0clvvp8aa024issq5fq2mljc0o0.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

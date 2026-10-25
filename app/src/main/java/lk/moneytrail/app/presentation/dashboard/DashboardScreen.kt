@@ -1,9 +1,12 @@
 package lk.moneytrail.app.presentation.dashboard
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -17,13 +20,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import lk.moneytrail.app.presentation.calendar.CalendarScreen
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.folders.FoldersScreen
+import lk.moneytrail.app.presentation.goal.GoalScreen
 import lk.moneytrail.app.presentation.insights.InsightsScreen
 import lk.moneytrail.app.presentation.more.MoreScreen
 import java.time.LocalDate
@@ -31,18 +38,21 @@ import java.time.LocalDate
 private enum class DashboardTab(val label: String, val icon: ImageVector) {
     CALENDAR("Calendar", MoneyTrailIcons.Calendar),
     FOLDERS("Folders", MoneyTrailIcons.Folder),
+    GOAL("Goal", MoneyTrailIcons.Goal),
     INSIGHTS("Insights", MoneyTrailIcons.Insights),
     MORE("More", MoneyTrailIcons.More)
 }
 
-/** The signed-in home: the bottom bar from the Figma screens, with the calendar first. */
+/** The signed-in home: bottom bar with Calendar, Folders, Goal, Insights, and More. */
 @Composable
 fun DashboardScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
     onSettingsClick: () -> Unit,
+    onConfirmSalaryClick: () -> Unit,
     onSignedOut: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onGoalClick: (() -> Unit)? = null
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(DashboardTab.CALENDAR) }
 
@@ -50,7 +60,10 @@ fun DashboardScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            DashboardNavigationBar(selected = selectedTab, onTabClick = { selectedTab = it })
+            DashboardNavigationBar(
+                selected = selectedTab,
+                onTabClick = { selectedTab = it }
+            )
         }
     ) { innerPadding ->
         val contentModifier = Modifier
@@ -66,9 +79,14 @@ fun DashboardScreen(
                 onAddEntryClick = { onAddEntryClick(LocalDate.now()) },
                 modifier = contentModifier
             )
+            DashboardTab.GOAL -> GoalScreen(
+                onBackClick = { selectedTab = DashboardTab.CALENDAR },
+                modifier = contentModifier
+            )
             DashboardTab.INSIGHTS -> InsightsScreen(modifier = contentModifier)
             DashboardTab.MORE -> MoreScreen(
                 onSettingsClick = onSettingsClick,
+                onConfirmSalaryClick = onConfirmSalaryClick,
                 onSignedOut = onSignedOut,
                 modifier = contentModifier
             )
@@ -87,6 +105,7 @@ private fun DashboardNavigationBar(
         NavigationBar(containerColor = colors.surface, tonalElevation = 0.dp) {
             DashboardTab.entries.forEach { tab ->
                 val isSelected = tab == selected
+
                 NavigationBarItem(
                     selected = isSelected,
                     onClick = { onTabClick(tab) },
@@ -108,5 +127,16 @@ private fun DashboardNavigationBar(
                 )
             }
         }
+    }
+}
+
+@Composable
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+private fun DashboardScreenPreview() {
+    lk.moneytrail.app.presentation.theme.MoneyTrailTheme {
+        DashboardNavigationBar(
+            selected = DashboardTab.CALENDAR,
+            onTabClick = {}
+        )
     }
 }

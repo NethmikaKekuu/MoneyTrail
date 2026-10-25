@@ -58,6 +58,8 @@ class SalaryUseCasesTest {
         }
 
         override suspend fun getPlan(): Result<MoneyPlan?> = Result.success(plan)
+
+        override fun observePlan(): Flow<Result<MoneyPlan?>> = flowOf(Result.success(plan))
     }
 
     private class FakeAccountRepository : AccountRepository {
