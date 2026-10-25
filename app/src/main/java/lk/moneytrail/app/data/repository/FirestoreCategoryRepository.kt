@@ -16,6 +16,7 @@ import lk.moneytrail.app.domain.model.CustomCategory
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.CategoryRepository
+import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,7 +24,8 @@ import javax.inject.Singleton
 @Singleton
 class FirestoreCategoryRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val connectivity: ConnectivityRepository
 ) : CategoryRepository {
 
     override fun observeCategories(): Flow<Result<List<CustomCategory>>> = callbackFlow {
@@ -72,7 +74,7 @@ class FirestoreCategoryRepository @Inject constructor(
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
 
         return try {
-            write(uid).awaitServerBriefly(TAG)
+            write(uid).awaitServerBriefly(TAG, connectivity.isOnlineNow())
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e

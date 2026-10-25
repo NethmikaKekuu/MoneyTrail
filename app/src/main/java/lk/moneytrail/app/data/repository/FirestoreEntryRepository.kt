@@ -27,6 +27,7 @@ import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import java.time.LocalDate
 import javax.inject.Inject
@@ -45,7 +46,8 @@ import javax.inject.Singleton
 class FirestoreEntryRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
-    private val entryDao: EntryDao
+    private val entryDao: EntryDao,
+    private val connectivity: ConnectivityRepository
 ) : EntryRepository {
 
     override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> {
@@ -152,7 +154,7 @@ class FirestoreEntryRepository @Inject constructor(
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
 
         return try {
-            entriesOf(uid).document().set(entry.toFirestore()).awaitServerBriefly(TAG)
+            entriesOf(uid).document().set(entry.toFirestore()).awaitServerBriefly(TAG, connectivity.isOnlineNow())
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -180,7 +182,7 @@ class FirestoreEntryRepository @Inject constructor(
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
 
         return try {
-            write(uid).awaitServerBriefly(TAG)
+            write(uid).awaitServerBriefly(TAG, connectivity.isOnlineNow())
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
