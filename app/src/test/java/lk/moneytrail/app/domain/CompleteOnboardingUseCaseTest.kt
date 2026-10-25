@@ -35,6 +35,9 @@ class CompleteOnboardingUseCaseTest {
             saved += accounts
             return Result.success(Unit)
         }
+
+        override suspend fun saveBalanceCheck(accountId: String, balance: Long, date: LocalDate): Result<Unit> =
+            Result.success(Unit)
     }
 
     private class FakePlanRepository : PlanRepository {

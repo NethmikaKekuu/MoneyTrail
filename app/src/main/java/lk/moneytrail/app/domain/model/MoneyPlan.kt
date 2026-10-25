@@ -10,12 +10,22 @@ data class SavingsGoal(
     val name: String,
     /** In whole rupees (LKR). */
     val targetAmount: Long,
-    /** Already put aside before using the app, in LKR. */
+    /** Saved so far in LKR: what was put aside before the app, plus every "I've moved it". */
     val savedAmount: Long,
     val targetDate: LocalDate,
-    val transferDay: Int = 25,
-    val allowEmergencyWithdrawals: Boolean = true
-)
+    /** Day of the month to move savings into it, 1 to 31; onboarding and new goals use the pay day. */
+    val transferDay: Int = 1,
+    val allowEmergencyWithdrawals: Boolean = true,
+    /** Keeps goals apart inside the plan, even two with the same name. Empty until first saved. */
+    val id: String = ""
+) {
+    /** LKR still to save; 0 once the goal is reached. */
+    val remaining: Long
+        get() = (targetAmount - savedAmount).coerceAtLeast(0)
+
+    val isReached: Boolean
+        get() = savedAmount >= targetAmount
+}
 
 /**
  * What the user told onboarding about their money: the users/{uid}/settings/plan
@@ -27,7 +37,11 @@ data class MoneyPlan(
     /** The fixed part of the salary before bonuses, in LKR. 0 when there is no salary. */
     val baseSalary: Long,
     val incomeSources: Set<IncomeSource>,
-    val goals: List<SavingsGoal>
+    val goals: List<SavingsGoal>,
+    /** The month savings were last moved to the goals ("I've moved it"); null before the first time. */
+    val savingsMovedMonth: YearMonth? = null,
+    /** "Remind me tomorrow": the Pay yourself first reminder stays hidden until this day. */
+    val savingsRemindOn: LocalDate? = null
 ) {
     /** Primary goal for backwards compatibility */
     val goal: SavingsGoal

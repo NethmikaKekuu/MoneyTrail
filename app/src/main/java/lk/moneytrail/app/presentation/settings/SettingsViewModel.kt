@@ -8,28 +8,29 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.moneytrail.app.data.preferences.ThemeMode
+import lk.moneytrail.app.data.preferences.ThemePreferences
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.CategoryRepository
-import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.usecase.AddCategoryUseCase
-import lk.moneytrail.app.domain.usecase.UpdateSalaryUseCase
-import java.time.LocalDate
 import javax.inject.Inject
 
+/** The app theme and the user's own categories. The salary lives on Salary. */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val planRepository: PlanRepository,
     private val categoryRepository: CategoryRepository,
-    private val updateSalary: UpdateSalaryUseCase,
-    private val addCategory: AddCategoryUseCase
+    private val addCategory: AddCategoryUseCase,
+    private val themePreferences: ThemePreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsState())
     val uiState: StateFlow<SettingsState> = _uiState.asStateFlow()
 
     init {
-        loadPlan()
+        viewModelScope.launch {
+            themePreferences.themeMode.collect { mode -> _uiState.update { it.copy(themeMode = mode) } }
+        }
         viewModelScope.launch {
             categoryRepository.observeCategories().collect { result ->
                 result
@@ -39,45 +40,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun loadPlan() {
-        _uiState.update { it.copy(isLoading = true, loadError = null) }
-        viewModelScope.launch {
-            planRepository.getPlan()
-                .onSuccess { plan ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            hasPlan = plan != null,
-                            payDay = plan?.payDay,
-                            baseSalaryDigits = plan?.baseSalary?.toString().orEmpty()
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, loadError = e.message ?: "Couldn't load your settings.") }
-                }
-        }
-    }
-
-    fun onPayDayClick(day: Int) {
-        _uiState.update { it.copy(payDay = day, salaryError = null, isSalarySaved = false) }
-    }
-
-    fun onBaseSalaryChange(text: String) {
-        val digits = text.filter(Char::isDigit).take(MAX_DIGITS)
-        _uiState.update { it.copy(baseSalaryDigits = digits, salaryError = null, isSalarySaved = false) }
-    }
-
-    fun onSaveSalaryClick() {
-        val state = _uiState.value
-        if (state.isSavingSalary) return
-
-        _uiState.update { it.copy(isSavingSalary = true, salaryError = null, isSalarySaved = false) }
-        viewModelScope.launch {
-            updateSalary(state.payDay, state.baseSalary, LocalDate.now())
-                .onSuccess { _uiState.update { it.copy(isSavingSalary = false, isSalarySaved = true) } }
-                .onFailure { e -> _uiState.update { it.copy(isSavingSalary = false, salaryError = e.message) } }
-        }
+    /** Saved on the phone, so the app opens in the chosen theme next time too. */
+    fun onThemeModeClick(mode: ThemeMode) {
+        themePreferences.setThemeMode(mode)
     }
 
     fun onAddCategoryClick() {
@@ -115,10 +80,5 @@ class SettingsViewModel @Inject constructor(
             categoryRepository.deleteCategory(category.id)
                 .onFailure { e -> _uiState.update { it.copy(categoriesError = e.message) } }
         }
-    }
-
-    private companion object {
-        /** LKR 999,999,999 at most, as everywhere else in the app. */
-        const val MAX_DIGITS = 9
     }
 }

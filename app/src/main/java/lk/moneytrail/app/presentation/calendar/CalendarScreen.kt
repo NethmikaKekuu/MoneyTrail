@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -47,10 +48,20 @@ import java.util.Locale
 fun CalendarScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
+    onPayYourselfFirstClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // The salary was just confirmed: go on to Pay yourself first.
+    LaunchedEffect(uiState.openGoal) {
+        if (uiState.openGoal) {
+            viewModel.onGoalOpened()
+            onPayYourselfFirstClick()
+        }
+    }
+
     val checkActions = remember(viewModel) {
         ExpectedCheckActions(
             onAmountChange = viewModel::onCheckAmountChange,
@@ -74,6 +85,7 @@ fun CalendarScreen(
         onAddEntryClick = { onAddEntryClick(uiState.selectedDate) },
         onEntryClick = onEntryClick,
         onCheckDueClick = viewModel::onCheckDueClick,
+        onPayYourselfFirstClick = onPayYourselfFirstClick,
         checkActions = checkActions,
         modifier = modifier
     )
@@ -92,6 +104,7 @@ private fun CalendarContent(
     onAddEntryClick: () -> Unit,
     onEntryClick: (String) -> Unit,
     onCheckDueClick: () -> Unit,
+    onPayYourselfFirstClick: () -> Unit,
     checkActions: ExpectedCheckActions,
     modifier: Modifier = Modifier
 ) {
@@ -126,6 +139,14 @@ private fun CalendarContent(
                     due = uiState.dueExpected,
                     today = uiState.today,
                     onCheckClick = onCheckDueClick,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp)
+                )
+            }
+
+            uiState.savingsDue?.let { amount ->
+                SavingsDueBanner(
+                    amount = amount,
+                    onOpenClick = onPayYourselfFirstClick,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp)
                 )
             }
@@ -255,6 +276,7 @@ private fun CalendarScreenPreview() {
             onAddEntryClick = {},
             onEntryClick = {},
             onCheckDueClick = {},
+            onPayYourselfFirstClick = {},
             checkActions = ExpectedCheckActions({}, {}, {}, {}, {}, {}, {}, {}, {})
         )
     }

@@ -9,11 +9,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.moneytrail.app.domain.repository.ConnectivityRepository
+import lk.moneytrail.app.domain.usecase.CheckCatchUpUseCase
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    private val connectivityRepository: ConnectivityRepository
+    private val connectivityRepository: ConnectivityRepository,
+    private val checkCatchUp: CheckCatchUpUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardState())
@@ -21,9 +24,20 @@ class DashboardViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // Back after a few days away: offer the catch-up as the app opens.
+            if (checkCatchUp(LocalDate.now()) != null) {
+                _uiState.update { it.copy(openCatchUp = true) }
+            }
+        }
+        viewModelScope.launch {
             connectivityRepository.isOnline.collect { isOnline ->
                 _uiState.update { it.copy(isOffline = !isOnline) }
             }
         }
+    }
+
+    /** The catch-up has opened, so it isn't opened again while the app stays open. */
+    fun onCatchUpOpened() {
+        _uiState.update { it.copy(openCatchUp = false) }
     }
 }

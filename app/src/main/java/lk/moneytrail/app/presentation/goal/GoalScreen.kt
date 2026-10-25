@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,21 +65,16 @@ import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
+// One colour per goal, so several goals are easy to tell apart on light and dark backgrounds.
 private val GoalColors = listOf(
     Color(0xFFD84315), // Terracotta Orange
     Color(0xFF00897B), // Deep Teal
     Color(0xFF3F51B5), // Indigo
     Color(0xFF7B1FA2), // Purple
     Color(0xFF689F38)  // Olive Green
-)
-
-private val GoalTrackColors = listOf(
-    Color(0xFFFDE8DC),
-    Color(0xFFE0F2F1),
-    Color(0xFFE8EAF6),
-    Color(0xFFF3E5F5),
-    Color(0xFFF1F8E9)
 )
 
 @Composable
@@ -95,6 +91,15 @@ fun GoalScreen(
         if (bannerMessage != null) {
             snackbarHostState.showSnackbar(bannerMessage)
             viewModel.onDismissBanner()
+        }
+    }
+
+    // "Remind me tomorrow" is saved: leave, and the calendar asks again tomorrow.
+    val isReminderSet = (uiState as? GoalUiState.Success)?.isReminderSet == true
+    LaunchedEffect(isReminderSet) {
+        if (isReminderSet) {
+            viewModel.onReminderHandled()
+            onBackClick()
         }
     }
 
@@ -116,11 +121,10 @@ fun GoalScreen(
         ) {
             when (val state = uiState) {
                 GoalUiState.Loading -> LoadingView(message = "Loading goal progress…")
+                // Goals live in the money plan, so without one there's nowhere to add a goal yet.
                 GoalUiState.Empty -> EmptyView(
                     title = "No Savings Goal Set",
-                    message = "Set up your target goal in settings or tap below to create a new goal.",
-                    actionLabel = "Create Goal",
-                    onAction = viewModel::onOpenNewGoalDialog
+                    message = "Set up your salary and goal from More › Salary, and your progress will show here."
                 )
                 is GoalUiState.Error -> ErrorView(
                     message = state.message,
@@ -129,17 +133,40 @@ fun GoalScreen(
                 is GoalUiState.Success -> {
                     GoalContent(
                         state = state,
-                        onOpenAllocationDialog = viewModel::onOpenAllocationDialog,
+                        onMovedItClick = viewModel::onOpenAllocationDialog,
+                        onRemindTomorrowClick = viewModel::onRemindTomorrowClick,
                         onOpenNewGoalDialog = viewModel::onOpenNewGoalDialog,
-                        onDeleteGoal = viewModel::onDeleteGoal,
-                        onBackClick = onBackClick,
+                        onEditGoal = viewModel::onEditGoalClick,
+                        onDeleteGoal = viewModel::onDeleteGoalClick,
                         modifier = Modifier.fillMaxSize()
                     )
 
                     if (state.isNewGoalDialogOpen) {
-                        NewGoalDialog(
-                            onSaveGoal = viewModel::onSaveNewGoal,
-                            onDismiss = viewModel::onDismissNewGoalDialog
+                        // The key gives the dialog fresh fields for each goal it opens with.
+                        key(state.editingGoal?.id) {
+                            NewGoalDialog(
+                                defaultTransferDay = state.payDay,
+                                initialGoal = state.editingGoal,
+                                onSaveGoal = viewModel::onSaveNewGoal,
+                                onDismiss = viewModel::onDismissNewGoalDialog
+                            )
+                        }
+                    }
+
+                    if (state.deletingGoalId != null) {
+                        val name = state.goals.find { it.id == state.deletingGoalId }?.name.orEmpty()
+                        AlertDialog(
+                            onDismissRequest = viewModel::onDeleteGoalDismiss,
+                            title = { Text("Remove $name?") },
+                            text = { Text("Its progress goes too. Money already in your savings account isn't touched.") },
+                            confirmButton = {
+                                TextButton(onClick = viewModel::onDeleteGoalConfirm) {
+                                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = viewModel::onDeleteGoalDismiss) { Text("Keep") }
+                            }
                         )
                     }
 
@@ -164,7 +191,7 @@ private fun SalaryConfirmedBanner(text: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        color = Color(0xFFFFF5EE),
+        color = MaterialTheme.colorScheme.primaryContainer,
         shape = RoundedCornerShape(18.dp)
     ) {
         Row(
@@ -175,16 +202,17 @@ private fun SalaryConfirmedBanner(text: String, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = MoneyTrailIcons.Check,
                 contentDescription = null,
-                tint = Color(0xFFB03A00),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(20.dp)
             )
+            val textColor = MaterialTheme.colorScheme.onPrimaryContainer
             val annotatedText = buildAnnotatedString {
                 if (text.contains("Salary confirmed:")) {
                     append("Salary confirmed: ")
                     val remaining = text.substringAfter("Salary confirmed: ")
                     val amountPart = remaining.substringBefore(" (")
                     val bonusPart = if (remaining.contains(" (")) " (" + remaining.substringAfter(" (") else ""
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF331A0F))) {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = textColor)) {
                         append(amountPart)
                     }
                     if (bonusPart.isNotEmpty()) {
@@ -197,7 +225,7 @@ private fun SalaryConfirmedBanner(text: String, modifier: Modifier = Modifier) {
             Text(
                 text = annotatedText,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF5A2C1A)
+                color = textColor
             )
         }
     }
@@ -220,7 +248,7 @@ private fun GoalTopBar(
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 .clickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
@@ -243,7 +271,7 @@ private fun GoalTopBar(
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 .clickable(onClick = onOpenNewGoalDialog),
             contentAlignment = Alignment.Center
         ) {
@@ -259,10 +287,11 @@ private fun GoalTopBar(
 @Composable
 private fun GoalContent(
     state: GoalUiState.Success,
-    onOpenAllocationDialog: () -> Unit,
+    onMovedItClick: () -> Unit,
+    onRemindTomorrowClick: () -> Unit,
     onOpenNewGoalDialog: () -> Unit,
+    onEditGoal: (String) -> Unit,
     onDeleteGoal: (String) -> Unit,
-    onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -272,21 +301,21 @@ private fun GoalContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Salary Confirmed Banner
-        SalaryConfirmedBanner(text = state.salaryConfirmedText)
+        // Shown once this month's salary has been confirmed
+        state.salaryConfirmedText?.let { SalaryConfirmedBanner(text = it) }
 
-        // Render Distinct Progress Chart Card for EACH Goal
+        // One progress card for each goal
         state.goals.forEachIndexed { index, goal ->
             val colorIndex = index % GoalColors.size
             SingleGoalCard(
                 goal = goal,
                 progressColor = GoalColors[colorIndex],
-                trackColor = GoalTrackColors[colorIndex],
-                onDelete = { onDeleteGoal(goal.name) }
+                trackColor = GoalColors[colorIndex].copy(alpha = 0.18f),
+                onEdit = { onEditGoal(goal.id) },
+                onDelete = { onDeleteGoal(goal.id) }
             )
         }
 
-        // Action Buttons
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -294,31 +323,48 @@ private fun GoalContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Button(
-                onClick = onOpenAllocationDialog,
-                enabled = !state.isTransferring,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC83803)
-                )
-            ) {
-                if (state.isTransferring) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(
-                        text = "Distribute Salary Across Goals",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+            when {
+                state.isSavingsToDo -> {
+                    MoveSavingsCard(amount = state.totalAllocationPool, fromAccount = state.fromAccount)
+
+                    Button(
+                        onClick = onMovedItClick,
+                        enabled = !state.isTransferring,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(28.dp)
+                    ) {
+                        if (state.isTransferring) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(text = "I’ve moved it", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    TextButton(onClick = onRemindTomorrowClick, enabled = !state.isTransferring) {
+                        Text(
+                            text = "Remind me tomorrow",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
+                state.areAllGoalsReached -> StatusCard(
+                    title = "Every goal is reached",
+                    message = "Well done. Add a new goal to keep paying yourself first."
+                )
+                state.isSavingsMovedThisMonth -> StatusCard(
+                    title = "Done for ${LocalDate.now().format(MonthFormatter)}",
+                    message = state.nextSavingsDate
+                        ?.let { "Next saving is due on ${it.format(DayFormatter)}, once your salary is in." }
+                        ?: "Next saving is due next month."
+                )
             }
 
             OutlinedButton(
@@ -333,15 +379,89 @@ private fun GoalContent(
                     fontWeight = FontWeight.Bold
                 )
             }
+        }
+    }
+}
 
-            TextButton(
-                onClick = onBackClick
-            ) {
+private val MonthFormatter = DateTimeFormatter.ofPattern("MMMM", Locale.ENGLISH)
+private val DayFormatter = DateTimeFormatter.ofPattern("d MMMM", Locale.ENGLISH)
+
+/** "Move LKR 39,900 to Savings now?" with the three steps from the Figma screen. */
+@Composable
+private fun MoveSavingsCard(amount: Long, fromAccount: String?) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Move LKR ${formatAmount(amount)} to Savings now?",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            val from = fromAccount?.let { " from $it" }.orEmpty()
+            listOf(
+                "Open your banking app",
+                "Transfer ${formatAmount(amount)}$from to Savings",
+                "Come back and tap the button below"
+            ).forEachIndexed { index, step -> SavingsStep(number = index + 1, text = step) }
+        }
+    }
+}
+
+@Composable
+private fun SavingsStep(number: Int, text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clip(RoundedCornerShape(13.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = number.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/** A short note in place of the move card: done for the month, or every goal reached. */
+@Composable
+private fun StatusCard(title: String, message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(MoneyTrailIcons.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = "Remind me tomorrow",
-                    fontSize = 15.sp,
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFC83803)
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         }
@@ -353,15 +473,16 @@ private fun SingleGoalCard(
     goal: GoalModel,
     progressColor: Color,
     trackColor: Color,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
-            .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(24.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        color = Color.White
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -372,14 +493,20 @@ private fun SingleGoalCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(24.dp)
-                ) {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = MoneyTrailIcons.Edit,
+                        contentDescription = "Edit ${goal.name}",
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                IconButton(onClick = onDelete) {
                     Icon(
                         imageVector = MoneyTrailIcons.Trash,
-                        contentDescription = "Remove Goal",
-                        tint = MaterialTheme.colorScheme.outline
+                        contentDescription = "Remove ${goal.name}",
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -410,13 +537,32 @@ private fun SingleGoalCard(
                 )
             }
 
+            if (goal.isReached) {
+                Text(
+                    text = "Goal reached. Well done!",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                return@Column
+            }
+
+            if (goal.isOverdue) {
+                Text(
+                    text = "The target date has passed. Edit the goal to pick a new one; until then the whole rest is due now.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+            }
+
             // Timeline Context & Recommended Monthly Savings Box
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFFFF8F5))
-                    .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
                     .padding(16.dp)
             ) {
                 Column(
@@ -431,7 +577,7 @@ private fun SingleGoalCard(
                             text = "Monthly Salary Target",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFC83803)
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = "${goal.monthsRemaining} mo left",
@@ -458,7 +604,7 @@ private fun SingleGoalCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White)
+                            .background(MaterialTheme.colorScheme.surface)
                             .padding(10.dp)
                     ) {
                         Text(
@@ -479,8 +625,8 @@ private fun GoalProgressGauge(
     progressFraction: Float,
     percentageText: String,
     modifier: Modifier = Modifier,
-    trackColor: Color = Color(0xFFFDE8DC),
-    progressColor: Color = Color(0xFFD84315),
+    trackColor: Color,
+    progressColor: Color,
     strokeWidth: Dp = 18.dp
 ) {
     val animatedProgress by animateFloatAsState(
@@ -561,12 +707,15 @@ private fun GoalScreenPreview() {
                         targetDate = LocalDate.of(2027, 6, 1)
                     )
                 ),
-                salaryConfirmedText = "Salary confirmed: LKR 132,400 (bonus 12,400)"
+                salaryConfirmedText = "Salary confirmed: LKR 132,400 (bonus 12,400)",
+                fromAccount = "Main bank",
+                totalAllocationPool = 39_900L
             ),
-            onOpenAllocationDialog = {},
+            onMovedItClick = {},
+            onRemindTomorrowClick = {},
             onOpenNewGoalDialog = {},
-            onDeleteGoal = {},
-            onBackClick = {}
+            onEditGoal = {},
+            onDeleteGoal = {}
         )
     }
 }
