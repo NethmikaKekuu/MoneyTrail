@@ -12,6 +12,8 @@ import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.IncomeSource
 import lk.moneytrail.app.domain.model.MoneyPlan
 import lk.moneytrail.app.domain.model.SavingsGoal
+import lk.moneytrail.app.domain.model.confirmed
+import lk.moneytrail.app.domain.model.confirmedSalary
 import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
@@ -201,5 +203,53 @@ class SalaryUseCasesTest {
         assertEquals("Pick the day your salary usually arrives.", noDay.exceptionOrNull()?.message)
         assertEquals(kavinduPlan, plans.plan)
         assertEquals(UpdateSalaryUseCase.NO_PLAN_MESSAGE, noPlan.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun confirmSalary_withBaseAndBonus_createsConfirmedIncomeEntryWithCorrectTotal() = runBlocking {
+        val expectedSalary = salary(EntryStatus.EXPECTED, LocalDate.of(2026, 10, 25))
+        val confirmed = expectedSalary.confirmedSalary(base = 120_000, bonus = 12_400, date = today)
+
+        assertEquals(132_400L, confirmed.amount)
+        assertEquals(12_400L, confirmed.bonus)
+        assertEquals(120_000L, confirmed.baseAmount)
+        assertEquals(EntryStatus.CONFIRMED, confirmed.status)
+        assertEquals(EntryType.INCOME, confirmed.type)
+        assertEquals(Categories.SALARY, confirmed.category)
+        assertTrue(confirmed.isSalary)
+    }
+
+    @Test
+    fun confirmSalary_withZeroBonus_createsConfirmedIncomeEntryWithBaseAmountOnly() = runBlocking {
+        val expectedSalary = salary(EntryStatus.EXPECTED, LocalDate.of(2026, 10, 25))
+        val confirmed = expectedSalary.confirmedSalary(base = 120_000, bonus = 0, date = today)
+
+        assertEquals(120_000L, confirmed.amount)
+        assertEquals(0L, confirmed.bonus)
+        assertEquals(120_000L, confirmed.baseAmount)
+        assertEquals(EntryStatus.CONFIRMED, confirmed.status)
+    }
+
+    @Test
+    fun confirmIncome_otherSources_createsConfirmedIncomeEntryWithoutBonus() = runBlocking {
+        val freelanceIncome = Entry(
+            id = "i1",
+            type = EntryType.INCOME,
+            amount = 45_000,
+            category = "Freelance",
+            account = "Main bank",
+            date = LocalDate.of(2026, 10, 20),
+            note = "Project milestone",
+            spendingType = null,
+            status = EntryStatus.EXPECTED
+        )
+
+        val confirmed = freelanceIncome.confirmed(amount = 50_000, date = today)
+
+        assertEquals(50_000L, confirmed.amount)
+        assertEquals(0L, confirmed.bonus)
+        assertEquals(EntryStatus.CONFIRMED, confirmed.status)
+        assertEquals(EntryType.INCOME, confirmed.type)
+        assertEquals("Freelance", confirmed.category)
     }
 }
