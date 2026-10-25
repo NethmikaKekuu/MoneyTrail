@@ -22,6 +22,12 @@ object Categories {
     /** A salary's bonus is kept on the salary entry itself ([Entry.bonus]), not as a category. */
     const val SALARY = "Salary"
 
+    /**
+     * Money found when balancing an account during catch-up: spent or received but never
+     * logged. Not offered on the new entry screen, as nobody picks it by hand.
+     */
+    const val NOT_LOGGED = "Not logged"
+
     val income: List<String> = listOf(SALARY, "Freelance", "AdSense", "Crypto", "Other")
 
     fun namesFor(type: EntryType): List<String> = when (type) {

@@ -12,6 +12,7 @@ import androidx.navigation.navArgument
 import lk.moneytrail.app.presentation.auth.ForgotPasswordScreen
 import lk.moneytrail.app.presentation.auth.LoginScreen
 import lk.moneytrail.app.presentation.auth.RegisterScreen
+import lk.moneytrail.app.presentation.catchup.CatchUpScreen
 import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
@@ -21,6 +22,7 @@ import lk.moneytrail.app.presentation.salary.ConfirmSalaryScreen
 import lk.moneytrail.app.presentation.settings.SettingsScreen
 import lk.moneytrail.app.presentation.splash.SplashScreen
 import lk.moneytrail.app.presentation.welcome.WelcomeScreen
+import java.time.LocalDate
 
 @Composable
 fun MoneyTrailNavHost(
@@ -80,12 +82,19 @@ fun MoneyTrailNavHost(
                 },
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                 onConfirmSalaryClick = { navController.navigate(Routes.CONFIRM_SALARY) { launchSingleTop = true } },
+                onCatchUpClick = { navController.navigate(Routes.CATCH_UP) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
             )
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 onBackClick = { navController.popBackStack(Routes.SETTINGS, inclusive = true) }
+            )
+        }
+        composable(Routes.CATCH_UP) {
+            CatchUpScreen(
+                onAddEntryClick = { navController.navigate(Routes.addEntry(LocalDate.now())) { launchSingleTop = true } },
+                onFinished = { navController.popBackStack(Routes.CATCH_UP, inclusive = true) }
             )
         }
         composable(Routes.GOAL) {

@@ -30,6 +30,7 @@ import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -194,6 +195,29 @@ class FirestoreEntryRepository @Inject constructor(
                 e.toFirestoreMessage(SAVE_FAILED_MESSAGE)
             }
             Result.failure(AppException(message, e))
+        }
+    }
+
+    override suspend fun lastLoggedDate(): Result<LocalDate?> {
+        val uid = auth.currentUser?.uid
+            ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
+
+        return try {
+            // The newest entry by when it was saved. Sorting on one field needs no composite
+            // index, and offline Firestore answers from its cache.
+            val snapshot = entriesOf(uid)
+                .orderBy(FIELD_CREATED_AT, Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .await()
+            val createdAt = snapshot.documents.firstOrNull()
+                ?.getTimestamp(FIELD_CREATED_AT, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+            Result.success(createdAt?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Finding the last entry failed", e)
+            Result.failure(AppException(e.toFirestoreMessage(LOAD_FAILED_MESSAGE), e))
         }
     }
 

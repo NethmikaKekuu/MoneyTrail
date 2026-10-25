@@ -14,6 +14,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -54,11 +55,20 @@ fun DashboardScreen(
     onEntryClick: (entryId: String) -> Unit,
     onSettingsClick: () -> Unit,
     onConfirmSalaryClick: () -> Unit,
+    onCatchUpClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Back after a break: start with the catch-up.
+    LaunchedEffect(uiState.openCatchUp) {
+        if (uiState.openCatchUp) {
+            viewModel.onCatchUpOpened()
+            onCatchUpClick()
+        }
+    }
     var selectedTab by rememberSaveable { mutableStateOf(DashboardTab.CALENDAR) }
 
     Scaffold(
@@ -97,6 +107,7 @@ fun DashboardScreen(
                 DashboardTab.MORE -> MoreScreen(
                     onSettingsClick = onSettingsClick,
                     onConfirmSalaryClick = onConfirmSalaryClick,
+                    onCatchUpClick = onCatchUpClick,
                     onSignedOut = onSignedOut,
                     modifier = tabModifier
                 )
