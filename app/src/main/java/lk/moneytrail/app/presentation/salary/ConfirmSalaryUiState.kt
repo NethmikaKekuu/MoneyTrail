@@ -16,8 +16,17 @@ data class ConfirmSalaryUiState(
     /** What arrived minus the base: negative when less than the base arrived. */
     val bonusAmount: Long = 0L,
     val amountCreditedDigits: String = "",
-    /** False when there's no salary in Settings and none on the calendar to confirm. */
+    /** False when there's no base salary and none on the calendar to confirm. */
     val hasSalary: Boolean = true,
+    /** False for someone who skipped onboarding: there's no salary or goal to change yet. */
+    val hasPlan: Boolean = true,
+    /** The pay day and base salary being edited in "Your pay day and base salary". */
+    val payDay: Int? = null,
+    val baseSalaryDigits: String = "",
+    val isSavingSalary: Boolean = false,
+    val salarySettingsError: String? = null,
+    /** True after the salary is saved, until it's changed again. */
+    val isSalarySaved: Boolean = false,
     val bonusHistory: List<BonusHistoryItem> = emptyList(),
     val averageBonus: Long = 0L,
     val highestBonus: Long = 0L,

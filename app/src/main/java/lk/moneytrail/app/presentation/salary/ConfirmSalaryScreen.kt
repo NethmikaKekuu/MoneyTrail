@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -58,6 +59,7 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 fun ConfirmSalaryScreen(
     onBackClick: () -> Unit,
     onConfirmedNavigate: () -> Unit,
+    onSetUpClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ConfirmSalaryViewModel = hiltViewModel()
 ) {
@@ -84,12 +86,38 @@ fun ConfirmSalaryScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            val salarySettings: @Composable () -> Unit = {
+                SalarySettingsSection(
+                    state = uiState,
+                    onPayDayClick = viewModel::onPayDayClick,
+                    onBaseSalaryChange = viewModel::onBaseSalaryChange,
+                    onSaveSalaryClick = viewModel::onSaveSalaryClick
+                )
+            }
             when {
                 uiState.isLoading -> LoadingView(message = "Loading salary info…")
-                !uiState.hasSalary -> EmptyView(
-                    title = "No salary to confirm",
-                    message = "Add your base salary and pay day in Settings, and it will be ready to confirm on pay day."
+                !uiState.hasPlan -> EmptyView(
+                    title = "No salary set up",
+                    message = "You skipped setup, so there's no salary or savings goal yet.",
+                    actionLabel = "Set up salary and goal",
+                    onAction = onSetUpClick
                 )
+                // No salary yet: only the pay day and base salary, to set one up.
+                !uiState.hasSalary -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 12.dp, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
+                    Text(
+                        text = "No salary to confirm yet. Add your base salary below, and it will be ready to confirm on pay day.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    salarySettings()
+                }
                 else -> {
                     ConfirmSalaryContent(
                         state = uiState,
@@ -98,6 +126,7 @@ fun ConfirmSalaryScreen(
                             viewModel.onConfirmSalary(onConfirmed = onConfirmedNavigate)
                         },
                         onBackClick = onBackClick,
+                        salarySettings = salarySettings,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -149,7 +178,9 @@ private fun ConfirmSalaryContent(
     onAmountChange: (String) -> Unit,
     onConfirmSalary: () -> Unit,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** "Your pay day and base salary", under the confirm buttons. */
+    salarySettings: @Composable () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -223,7 +254,7 @@ private fun ConfirmSalaryContent(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Base (from profile)",
+                        text = "Base salary",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -429,6 +460,9 @@ private fun ConfirmSalaryContent(
                 )
             }
         }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        salarySettings()
     }
 }
 

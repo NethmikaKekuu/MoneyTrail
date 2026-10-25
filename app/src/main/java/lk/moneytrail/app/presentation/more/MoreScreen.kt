@@ -12,13 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,14 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import lk.moneytrail.app.data.preferences.ThemeMode
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
@@ -55,9 +49,6 @@ fun MoreScreen(
         onRetry = viewModel::loadProfile,
         onSettingsClick = onSettingsClick,
         onConfirmSalaryClick = onConfirmSalaryClick,
-        onOpenThemeDialog = viewModel::onOpenThemeDialog,
-        onSelectThemeMode = viewModel::onSelectThemeMode,
-        onDismissThemeDialog = viewModel::onDismissThemeDialog,
         onSignOutClick = {
             viewModel.signOut()
             onSignedOut()
@@ -72,9 +63,6 @@ private fun MoreContent(
     onRetry: () -> Unit,
     onSettingsClick: () -> Unit,
     onConfirmSalaryClick: () -> Unit,
-    onOpenThemeDialog: () -> Unit,
-    onSelectThemeMode: (ThemeMode) -> Unit,
-    onDismissThemeDialog: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -106,24 +94,15 @@ private fun MoreContent(
         MoreRow(
             icon = MoneyTrailIcons.Check,
             title = "Confirm Salary",
-            subtitle = "Confirm payday arrival & bonus",
+            subtitle = "Pay day, base salary and this month's salary",
             badgeText = (uiState as? MoreState.Ready)?.salaryBadge,
             onClick = onConfirmSalaryClick
-        )
-
-        val currentThemeMode = (uiState as? MoreState.Ready)?.themeMode ?: ThemeMode.SYSTEM
-        MoreRow(
-            icon = MoneyTrailIcons.Circle,
-            title = "App Theme",
-            subtitle = "Light, Dark, or System Default",
-            badgeText = currentThemeMode.label,
-            onClick = onOpenThemeDialog
         )
 
         MoreRow(
             icon = MoneyTrailIcons.Settings,
             title = "Settings",
-            subtitle = "Salary, pay day and your categories",
+            subtitle = "Theme and your categories",
             onClick = onSettingsClick
         )
 
@@ -136,71 +115,6 @@ private fun MoreContent(
             onClick = onSignOutClick
         )
     }
-
-    if ((uiState as? MoreState.Ready)?.isThemeDialogOpen == true) {
-        val readyState = uiState as MoreState.Ready
-        ThemeSelectionDialog(
-            selectedMode = readyState.themeMode,
-            onSelectMode = onSelectThemeMode,
-            onDismiss = onDismissThemeDialog
-        )
-    }
-}
-
-@Composable
-private fun ThemeSelectionDialog(
-    selectedMode: ThemeMode,
-    onSelectMode: (ThemeMode) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Select App Theme",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier.selectableGroup(),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                ThemeMode.entries.forEach { mode ->
-                    val isSelected = mode == selectedMode
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .selectable(
-                                selected = isSelected,
-                                role = Role.RadioButton,
-                                onClick = { onSelectMode(mode) }
-                            )
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = null
-                        )
-                        Text(
-                            text = mode.label,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        }
-    )
 }
 
 @Composable
@@ -324,15 +238,11 @@ private fun MoreScreenPreview() {
             uiState = MoreState.Ready(
                 name = "Kavindu Silva",
                 email = "kavindu.silva@gmail.com",
-                salaryBadge = "Due 25 Oct",
-                themeMode = ThemeMode.SYSTEM
+                salaryBadge = "Due 25 Oct"
             ),
             onRetry = {},
             onSettingsClick = {},
             onConfirmSalaryClick = {},
-            onOpenThemeDialog = {},
-            onSelectThemeMode = {},
-            onDismissThemeDialog = {},
             onSignOutClick = {}
         )
     }

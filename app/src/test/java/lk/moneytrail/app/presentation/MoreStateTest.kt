@@ -1,6 +1,5 @@
 package lk.moneytrail.app.presentation
 
-import lk.moneytrail.app.data.preferences.ThemeMode
 import lk.moneytrail.app.presentation.more.MoreState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -9,20 +8,17 @@ import org.junit.Test
 class MoreStateTest {
 
     @Test
-    fun moreStateReady_holdsProfileAndThemeMode() {
+    fun moreStateReady_holdsProfileAndSalaryBadge() {
         val state = MoreState.Ready(
             name = "Kavindu Silva",
             email = "kavindu.silva@gmail.com",
-            salaryBadge = "Due 25 Oct",
-            themeMode = ThemeMode.DARK,
-            isThemeDialogOpen = false
+            salaryBadge = "Due 25 Oct"
         )
 
         assertTrue(state is MoreState.Ready)
         assertEquals("Kavindu Silva", state.name)
         assertEquals("kavindu.silva@gmail.com", state.email)
         assertEquals("Due 25 Oct", state.salaryBadge)
-        assertEquals(ThemeMode.DARK, state.themeMode)
     }
 
     @Test

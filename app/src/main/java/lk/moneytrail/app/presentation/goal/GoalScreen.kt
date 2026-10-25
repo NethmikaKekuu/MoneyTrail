@@ -124,7 +124,7 @@ fun GoalScreen(
                 // Goals live in the money plan, so without one there's nowhere to add a goal yet.
                 GoalUiState.Empty -> EmptyView(
                     title = "No Savings Goal Set",
-                    message = "Set up your salary and goal from More › Settings, and your progress will show here."
+                    message = "Set up your salary and goal from More › Confirm salary, and your progress will show here."
                 )
                 is GoalUiState.Error -> ErrorView(
                     message = state.message,

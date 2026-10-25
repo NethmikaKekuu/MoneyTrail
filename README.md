@@ -47,11 +47,11 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Edit entry | Tap an entry to change its amount, category, account, committed or discretionary, date and note, or delete it after a confirm dialog | 24 |
 | Folders | Expenses and Income for a month, each category's total with a bar against the biggest, and the six earlier months to switch to; updated live | 09 |
 | Expected entries | Plan income or bills for a date (e.g. a freelance payment due on the 14th). On the day, the calendar asks "Did it come in?": confirm with the real amount, move it with Not yet, or remove it. Overdue ones keep showing until checked | 07, 08, 09 |
-| Salary on the calendar | Each month the base salary is added as an expected Salary entry on pay day. The salary is a fixed base (changed in Settings) plus a bonus that varies: confirming it asks for the base received and this month's bonus, and opening the salary later lets you add or change the bonus. The calendar shows "incl. 15,000 bonus" | 07, 24 |
+| Salary on the calendar | Each month the base salary is added as an expected Salary entry on pay day. The salary is a fixed base (changed on Confirm salary) plus a bonus that varies: confirming it asks for the base received and this month's bonus, and opening the salary later lets you add or change the bonus. The calendar shows "incl. 15,000 bonus" | 07, 24 |
 | Expense insights | This month's spending, the committed vs discretionary split, coffee and dining out as days of goal saving, spending by category, and a six-month chart | 10 |
-| More | Profile, Confirm salary, Settings and sign-out | 12 (first part) |
-| Settings | Change the pay day and base salary (this month's expected salary follows), and list, add or delete your own categories | Not in Figma; follows the onboarding style |
-| Confirm salary | Type what really arrived; anything above the base pay is the bonus, and less than the base is saved as it is. Shows the bonus history of the last six months. Confirming again in the same month corrects the salary instead of adding a second one | 13 |
+| More | Profile, Confirm salary (with when it's due), Settings and sign-out | 12 (first part) |
+| Settings | The app theme (Light, Dark or the phone's setting), and list, add or delete your own categories | Not in Figma; follows the onboarding style |
+| Confirm salary | Everything about the salary in one place. Type what really arrived; anything above the base pay is the bonus, and less than the base is saved as it is. Shows the bonus history of the last six months. Confirming again in the same month corrects the salary instead of adding a second one. Below it, change the pay day and base salary (this month's expected salary follows); someone who skipped onboarding is offered to set them up | 13 |
 | Goal ("Pay yourself first") | A tab with each goal's progress ring and the monthly saving needed to reach it on time. Once the salary is in, it asks "Move LKR 39,900 to Savings now?" with the three steps; **I've moved it** asks how much went to each goal and adds it (never past a goal's target), and **Remind me tomorrow** snoozes the reminder. Goals can be added, edited and removed (at least one stays), and show when they're reached or past their date | 14 |
 
 **Next, in order:** AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects, monthly close and crypto import if time allows.
@@ -257,7 +257,7 @@ The monthly amount to save is worked out when needed (`SavingsGoal.monthlySaving
 
 **Pay yourself first.** Each month the goals' monthly saving (`MoneyPlan.monthlySavings`, leaving out goals already reached) is due once this month's salary is confirmed or the earliest transfer day has come (`MoneyPlan.isSavingsDue`). Until it's moved or snoozed, the calendar shows a "Pay yourself first" card that opens the Goal tab, and confirming the salary (on the calendar or on Confirm salary) goes straight there. "I've moved it" runs `MoveSavingsUseCase`, which adds what the user moved to each goal and sets `savingsMovedMonth`; "Remind me tomorrow" runs `RemindSavingsLaterUseCase`. Goals are added and edited through `SaveGoalUseCase` and removed through `DeleteGoalUseCase`, with the same checks as the rules.
 
-**Salary as expected income.** When the calendar opens, `EnsureMonthlySalaryUseCase` adds this month's salary as an `EXPECTED` Salary entry on pay day (a pay day of 31 falls on the last day of shorter months). It does nothing if there's no salary, if this month already has a Salary entry, or once pay day has passed, so a salary removed with "Didn't happen" doesn't come back. Changing the salary in Settings (`UpdateSalaryUseCase`) moves a still-expected salary to the new base and day, keeping any bonus already on it. A bonus is added to the salary entry itself: in the "Did it come in?" dialog (`Entry.confirmedSalary`) or later on Edit entry, which shows Base salary and Bonus for a Salary income.
+**Salary as expected income.** When the calendar opens, `EnsureMonthlySalaryUseCase` adds this month's salary as an `EXPECTED` Salary entry on pay day (a pay day of 31 falls on the last day of shorter months). It does nothing if there's no salary, if this month already has a Salary entry, or once pay day has passed, so a salary removed with "Didn't happen" doesn't come back. Changing the salary on Confirm salary (`UpdateSalaryUseCase`) moves a still-expected salary to the new base and day, keeping any bonus already on it. A bonus is added to the salary entry itself: in the "Did it come in?" dialog (`Entry.confirmedSalary`) or later on Edit entry, which shows Base salary and Bonus for a Salary income.
 
 ## Security rules
 
@@ -337,8 +337,8 @@ app/src/main/java/lk/moneytrail/app/
     ├── more/             Profile, Confirm salary and Settings links, sign-out
     ├── navigation/       Routes and the NavHost
     ├── onboarding/       Four-step onboarding: money places, salary, income sources, goal
-    ├── salary/           Confirm salary with bonus history
-    ├── settings/         Salary and pay day, the user's own categories
+    ├── salary/           Confirm salary with bonus history, pay day and base salary
+    ├── settings/         App theme, the user's own categories
     ├── splash/, welcome/
     └── theme/            Colours, Sora and DM Sans typography, MoneyTrailTheme
 ```
@@ -354,8 +354,8 @@ app/src/main/java/lk/moneytrail/app/
 | `dashboard` | Bottom-bar home (calendar first) |
 | `add_entry?date={yyyy-MM-dd}` | New entry, starting on the given day |
 | `edit_entry/{entryId}` | Edit or delete one entry, opened by tapping it on the calendar |
-| `settings` | Salary and categories, opened from More. For someone who skipped onboarding it links to `onboarding` |
-| `confirm_salary` | Confirm salary, opened from More; once confirmed it goes on to `goal` |
+| `settings` | Theme and categories, opened from More |
+| `confirm_salary` | Confirm salary, pay day and base salary, opened from More; once confirmed it goes on to `goal`. For someone who skipped onboarding it links to `onboarding` |
 | `goal` | Goal progress after confirming the salary (the same screen as the Goal tab) |
 
 Signing in or out clears the back stack, so Back can't cross between signed-in and signed-out screens.
