@@ -44,6 +44,15 @@ class GoalModelTest {
     }
 
     @Test
+    fun goalModel_pastItsTargetDate_isOverdueUntilReached() {
+        val late = GoalModel("Bike", 100_000L, 40_000L, LocalDate.of(2026, 9, 30), today = today)
+
+        assertEquals(true, late.isOverdue)
+        assertEquals(60_000L, late.monthlySavingNeeded)
+        assertEquals(false, late.copy(savedAmount = 100_000L).isOverdue)
+    }
+
+    @Test
     fun goalModel_fullySaved_needsZeroMonthlySaving() {
         val model = GoalModel(
             name = "MacBook Pro M4",

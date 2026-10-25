@@ -7,7 +7,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ConfirmSalaryViewModelTest {
+class ConfirmSalaryStateTest {
 
     @Test
     fun confirmSalaryUiState_calculatesTotalCredited() {
@@ -22,17 +22,10 @@ class ConfirmSalaryViewModelTest {
     }
 
     @Test
-    fun confirmSalaryUiState_dynamicBonusCalculation() {
-        val base = 120_000L
+    fun confirmSalaryUiState_emptyAmount_isZeroSoItCantBeConfirmed() {
+        val state = ConfirmSalaryUiState(baseSalary = 120_000L, amountCreditedDigits = "")
 
-        val positiveBonus = 132_400L - base
-        assertEquals(12_400L, positiveBonus)
-
-        val zeroBonus = 120_000L - base
-        assertEquals(0L, zeroBonus)
-
-        val negativeBonus = 115_000L - base
-        assertEquals(-5_000L, negativeBonus)
+        assertEquals(0L, state.totalCredited)
     }
 
     @Test
