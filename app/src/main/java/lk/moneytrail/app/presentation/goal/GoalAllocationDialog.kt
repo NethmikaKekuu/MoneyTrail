@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -117,7 +116,7 @@ fun GoalAllocationDialog(
                                 text = "LKR ${formatAmount(unallocatedRemaining)}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (unallocatedRemaining >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                                color = if (unallocatedRemaining >= 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error
                             )
                         }
                     }
@@ -131,7 +130,7 @@ fun GoalAllocationDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFFFFF8F5))
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {

@@ -21,7 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -65,20 +64,13 @@ import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 import java.time.LocalDate
 
+// One colour per goal, so several goals are easy to tell apart on light and dark backgrounds.
 private val GoalColors = listOf(
     Color(0xFFD84315), // Terracotta Orange
     Color(0xFF00897B), // Deep Teal
     Color(0xFF3F51B5), // Indigo
     Color(0xFF7B1FA2), // Purple
     Color(0xFF689F38)  // Olive Green
-)
-
-private val GoalTrackColors = listOf(
-    Color(0xFFFDE8DC),
-    Color(0xFFE0F2F1),
-    Color(0xFFE8EAF6),
-    Color(0xFFF3E5F5),
-    Color(0xFFF1F8E9)
 )
 
 @Composable
@@ -164,7 +156,7 @@ private fun SalaryConfirmedBanner(text: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        color = Color(0xFFFFF5EE),
+        color = MaterialTheme.colorScheme.primaryContainer,
         shape = RoundedCornerShape(18.dp)
     ) {
         Row(
@@ -175,16 +167,17 @@ private fun SalaryConfirmedBanner(text: String, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = MoneyTrailIcons.Check,
                 contentDescription = null,
-                tint = Color(0xFFB03A00),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(20.dp)
             )
+            val textColor = MaterialTheme.colorScheme.onPrimaryContainer
             val annotatedText = buildAnnotatedString {
                 if (text.contains("Salary confirmed:")) {
                     append("Salary confirmed: ")
                     val remaining = text.substringAfter("Salary confirmed: ")
                     val amountPart = remaining.substringBefore(" (")
                     val bonusPart = if (remaining.contains(" (")) " (" + remaining.substringAfter(" (") else ""
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF331A0F))) {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = textColor)) {
                         append(amountPart)
                     }
                     if (bonusPart.isNotEmpty()) {
@@ -197,7 +190,7 @@ private fun SalaryConfirmedBanner(text: String, modifier: Modifier = Modifier) {
             Text(
                 text = annotatedText,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF5A2C1A)
+                color = textColor
             )
         }
     }
@@ -220,7 +213,7 @@ private fun GoalTopBar(
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 .clickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
@@ -243,7 +236,7 @@ private fun GoalTopBar(
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 .clickable(onClick = onOpenNewGoalDialog),
             contentAlignment = Alignment.Center
         ) {
@@ -281,7 +274,7 @@ private fun GoalContent(
             SingleGoalCard(
                 goal = goal,
                 progressColor = GoalColors[colorIndex],
-                trackColor = GoalTrackColors[colorIndex],
+                trackColor = GoalColors[colorIndex].copy(alpha = 0.18f),
                 onDelete = { onDeleteGoal(goal.name) }
             )
         }
@@ -300,23 +293,19 @@ private fun GoalContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC83803)
-                )
+                shape = RoundedCornerShape(28.dp)
             ) {
                 if (state.isTransferring) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         strokeWidth = 2.dp
                     )
                 } else {
                     Text(
                         text = "Distribute Salary Across Goals",
                         fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -341,7 +330,7 @@ private fun GoalContent(
                     text = "Remind me tomorrow",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFC83803)
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -359,9 +348,9 @@ private fun SingleGoalCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
-            .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(24.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        color = Color.White
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -415,8 +404,8 @@ private fun SingleGoalCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFFFF8F5))
-                    .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
                     .padding(16.dp)
             ) {
                 Column(
@@ -431,7 +420,7 @@ private fun SingleGoalCard(
                             text = "Monthly Salary Target",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFC83803)
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = "${goal.monthsRemaining} mo left",
@@ -458,7 +447,7 @@ private fun SingleGoalCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White)
+                            .background(MaterialTheme.colorScheme.surface)
                             .padding(10.dp)
                     ) {
                         Text(
@@ -479,8 +468,8 @@ private fun GoalProgressGauge(
     progressFraction: Float,
     percentageText: String,
     modifier: Modifier = Modifier,
-    trackColor: Color = Color(0xFFFDE8DC),
-    progressColor: Color = Color(0xFFD84315),
+    trackColor: Color,
+    progressColor: Color,
     strokeWidth: Dp = 18.dp
 ) {
     val animatedProgress by animateFloatAsState(
