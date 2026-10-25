@@ -12,14 +12,17 @@ import kotlinx.coroutines.launch
 import lk.moneytrail.app.domain.model.GoalModel
 import lk.moneytrail.app.domain.model.MoneyPlan
 import lk.moneytrail.app.domain.model.SavingsGoal
+import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.presentation.components.formatAmount
 import java.time.LocalDate
+import java.time.YearMonth
 import javax.inject.Inject
 
 @HiltViewModel
 class GoalViewModel @Inject constructor(
-    private val planRepository: PlanRepository
+    private val planRepository: PlanRepository,
+    private val entryRepository: EntryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<GoalUiState>(GoalUiState.Loading)
@@ -27,13 +30,38 @@ class GoalViewModel @Inject constructor(
 
     private var currentPlan: MoneyPlan? = null
     private var observeJob: Job? = null
+    private var salaryJob: Job? = null
+
+    /** "Salary confirmed: …" for this month's confirmed salary; null until it's confirmed. */
+    private var salaryConfirmedText: String? = null
 
     init {
         observeGoalProgress()
+        observeThisMonthsSalary()
     }
 
     fun onRetry() {
         observeGoalProgress()
+        observeThisMonthsSalary()
+    }
+
+    /** Follows this month's entries, so the banner shows the salary as it really arrived. */
+    private fun observeThisMonthsSalary() {
+        salaryJob?.cancel()
+        salaryJob = viewModelScope.launch {
+            entryRepository.observeMonth(YearMonth.now()).collect { result ->
+                // Only the banner depends on this, so a failure just leaves it out.
+                result.onSuccess { entries ->
+                    salaryConfirmedText = entries.lastOrNull { it.isSalary && !it.isExpected }?.let { salary ->
+                        val bonus = if (salary.bonus > 0) " (bonus ${formatAmount(salary.bonus)})" else ""
+                        "Salary confirmed: LKR ${formatAmount(salary.amount)}$bonus"
+                    }
+                    _uiState.update { state ->
+                        if (state is GoalUiState.Success) state.copy(salaryConfirmedText = salaryConfirmedText) else state
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -56,25 +84,21 @@ class GoalViewModel @Inject constructor(
                             val goalModels = plan.goals.map { GoalModel.fromSavingsGoal(it, today) }
                             val totalMonthlySaving = goalModels.sumOf { it.monthlySavingNeeded }
 
-                            val salaryText = if (plan.baseSalary > 0) {
-                                "Salary confirmed: LKR ${formatAmount(plan.baseSalary + 12400L)} (bonus 12,400)"
-                            } else {
-                                "Salary confirmed: LKR 132,400 (bonus 12,400)"
-                            }
-
                             val previousState = _uiState.value
 
                             if (previousState is GoalUiState.Success) {
                                 _uiState.value = previousState.copy(
                                     goals = goalModels,
-                                    salaryConfirmedText = salaryText,
-                                    totalAllocationPool = totalMonthlySaving
+                                    salaryConfirmedText = salaryConfirmedText,
+                                    totalAllocationPool = totalMonthlySaving,
+                                    payDay = plan.payDay
                                 )
                             } else {
                                 _uiState.value = GoalUiState.Success(
                                     goals = goalModels,
-                                    salaryConfirmedText = salaryText,
-                                    totalAllocationPool = totalMonthlySaving
+                                    salaryConfirmedText = salaryConfirmedText,
+                                    totalAllocationPool = totalMonthlySaving,
+                                    payDay = plan.payDay
                                 )
                             }
                         }

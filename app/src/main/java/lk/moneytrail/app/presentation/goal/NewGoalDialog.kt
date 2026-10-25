@@ -37,6 +37,8 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
 @Composable
 fun NewGoalDialog(
+    /** The plan's pay day, offered as the transfer day; null for someone with no salary set up. */
+    defaultTransferDay: Int?,
     initialGoal: SavingsGoal? = null,
     onSaveGoal: (
         name: String,
@@ -48,17 +50,20 @@ fun NewGoalDialog(
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var name by remember { mutableStateOf(initialGoal?.name ?: "MacBook Pro M4") }
-    var targetDigits by remember { mutableStateOf(initialGoal?.targetAmount?.toString() ?: "490000") }
-    var savedDigits by remember { mutableStateOf(initialGoal?.savedAmount?.toString() ?: "11200") }
+    // A new goal starts empty: the user types their own goal, not the scenario's.
+    var name by remember { mutableStateOf(initialGoal?.name.orEmpty()) }
+    var targetDigits by remember { mutableStateOf(initialGoal?.targetAmount?.toString().orEmpty()) }
+    var savedDigits by remember { mutableStateOf(initialGoal?.savedAmount?.toString().orEmpty()) }
     var monthsDigits by remember { mutableStateOf("12") }
-    var transferDayDigits by remember { mutableStateOf(initialGoal?.transferDay?.toString() ?: "25") }
+    var transferDayDigits by remember {
+        mutableStateOf((initialGoal?.transferDay ?: defaultTransferDay)?.toString().orEmpty())
+    }
     var allowEmergency by remember { mutableStateOf(initialGoal?.allowEmergencyWithdrawals ?: true) }
 
     val targetAmount = targetDigits.toLongOrNull() ?: 0L
     val savedAmount = savedDigits.toLongOrNull() ?: 0L
     val months = (monthsDigits.toIntOrNull() ?: 12).coerceAtLeast(1)
-    val transferDay = (transferDayDigits.toIntOrNull() ?: 25).coerceIn(1, 28)
+    val transferDay = (transferDayDigits.toIntOrNull() ?: defaultTransferDay ?: 1).coerceIn(1, 28)
 
     val remainingShortfall = (targetAmount - savedAmount).coerceAtLeast(0L)
     val monthlySavingNeeded = if (remainingShortfall > 0) {
@@ -203,6 +208,7 @@ fun NewGoalDialog(
 private fun NewGoalDialogPreview() {
     MoneyTrailTheme {
         NewGoalDialog(
+            defaultTransferDay = 25,
             onSaveGoal = { _, _, _, _, _, _ -> },
             onDismiss = {}
         )

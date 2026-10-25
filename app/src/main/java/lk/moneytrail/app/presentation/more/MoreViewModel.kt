@@ -37,10 +37,11 @@ class MoreViewModel @Inject constructor(
 
         _uiState.value = MoreState.Loading
         viewModelScope.launch {
+            // The user's own progress, or no badge for someone without a goal.
             val plan = planRepository.getPlan().getOrNull()
             val goalBadge = plan?.goal?.let { goal ->
                 GoalModel.fromSavingsGoal(goal, LocalDate.now()).percentageText
-            } ?: "2.3%"
+            }
 
             userRepository.getProfile(uid)
                 .onSuccess { profile ->

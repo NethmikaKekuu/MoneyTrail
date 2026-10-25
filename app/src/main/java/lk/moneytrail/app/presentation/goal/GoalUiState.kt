@@ -14,10 +14,11 @@ sealed interface GoalUiState {
 
     data class Success(
         val goals: List<GoalModel>,
-        val salaryConfirmedText: String = "Salary confirmed: LKR 132,400 (bonus 12,400)",
-        val fromAccount: String = "Main bank",
-        val toAccount: String = "Savings",
-        val totalAllocationPool: Long = 39_900L,
+        /** This month's confirmed salary, e.g. "Salary confirmed: LKR 132,400 (bonus 12,400)"; null until then. */
+        val salaryConfirmedText: String? = null,
+        val totalAllocationPool: Long = 0L,
+        /** The plan's pay day, offered as the transfer day for a new goal. */
+        val payDay: Int? = null,
         val isTransferring: Boolean = false,
         val isNewGoalDialogOpen: Boolean = false,
         val isAllocationDialogOpen: Boolean = false,

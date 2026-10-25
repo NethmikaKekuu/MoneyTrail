@@ -138,6 +138,7 @@ fun GoalScreen(
 
                     if (state.isNewGoalDialogOpen) {
                         NewGoalDialog(
+                            defaultTransferDay = state.payDay,
                             onSaveGoal = viewModel::onSaveNewGoal,
                             onDismiss = viewModel::onDismissNewGoalDialog
                         )
@@ -272,8 +273,8 @@ private fun GoalContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Salary Confirmed Banner
-        SalaryConfirmedBanner(text = state.salaryConfirmedText)
+        // Shown once this month's salary has been confirmed
+        state.salaryConfirmedText?.let { SalaryConfirmedBanner(text = it) }
 
         // Render Distinct Progress Chart Card for EACH Goal
         state.goals.forEachIndexed { index, goal ->
