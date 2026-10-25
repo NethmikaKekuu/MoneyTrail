@@ -18,7 +18,7 @@ import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
 import lk.moneytrail.app.presentation.goal.GoalScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
-import lk.moneytrail.app.presentation.salary.ConfirmSalaryScreen
+import lk.moneytrail.app.presentation.salary.SalaryScreen
 import lk.moneytrail.app.presentation.settings.SettingsScreen
 import lk.moneytrail.app.presentation.splash.SplashScreen
 import lk.moneytrail.app.presentation.welcome.WelcomeScreen
@@ -81,7 +81,7 @@ fun MoneyTrailNavHost(
                     navController.navigate(Routes.editEntry(entryId)) { launchSingleTop = true }
                 },
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
-                onConfirmSalaryClick = { navController.navigate(Routes.CONFIRM_SALARY) { launchSingleTop = true } },
+                onSalaryClick = { navController.navigate(Routes.SALARY) { launchSingleTop = true } },
                 onCatchUpClick = { navController.navigate(Routes.CATCH_UP) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
             )
@@ -102,15 +102,9 @@ fun MoneyTrailNavHost(
                 onBackClick = { navController.popBackStack(Routes.GOAL, inclusive = true) }
             )
         }
-        composable(Routes.CONFIRM_SALARY) {
-            ConfirmSalaryScreen(
-                onBackClick = { navController.popBackStack() },
-                onConfirmedNavigate = {
-                    navController.navigate(Routes.GOAL) {
-                        popUpTo(Routes.CONFIRM_SALARY) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
+        composable(Routes.SALARY) {
+            SalaryScreen(
+                onBackClick = { navController.popBackStack(Routes.SALARY, inclusive = true) },
                 // Onboarding ends on a fresh dashboard, which then expects the new salary.
                 onSetUpClick = { navController.navigate(Routes.ONBOARDING) { launchSingleTop = true } }
             )

@@ -37,7 +37,7 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 @Composable
 fun MoreScreen(
     onSettingsClick: () -> Unit,
-    onConfirmSalaryClick: () -> Unit,
+    onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -49,7 +49,7 @@ fun MoreScreen(
         uiState = uiState,
         onRetry = viewModel::loadProfile,
         onSettingsClick = onSettingsClick,
-        onConfirmSalaryClick = onConfirmSalaryClick,
+        onSalaryClick = onSalaryClick,
         onCatchUpClick = onCatchUpClick,
         onSignOutClick = {
             viewModel.signOut()
@@ -64,7 +64,7 @@ private fun MoreContent(
     uiState: MoreState,
     onRetry: () -> Unit,
     onSettingsClick: () -> Unit,
-    onConfirmSalaryClick: () -> Unit,
+    onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -96,10 +96,9 @@ private fun MoreContent(
         // Core Actionable Rows
         MoreRow(
             icon = MoneyTrailIcons.Check,
-            title = "Confirm Salary",
-            subtitle = "Pay day, base salary and this month's salary",
-            badgeText = (uiState as? MoreState.Ready)?.salaryBadge,
-            onClick = onConfirmSalaryClick
+            title = "Salary",
+            subtitle = "Pay day and base salary",
+            onClick = onSalaryClick
         )
 
         MoreRow(
@@ -247,12 +246,11 @@ private fun MoreScreenPreview() {
         MoreContent(
             uiState = MoreState.Ready(
                 name = "Kavindu Silva",
-                email = "kavindu.silva@gmail.com",
-                salaryBadge = "Due 25 Oct"
+                email = "kavindu.silva@gmail.com"
             ),
             onRetry = {},
             onSettingsClick = {},
-            onConfirmSalaryClick = {},
+            onSalaryClick = {},
             onCatchUpClick = {},
             onSignOutClick = {}
         )

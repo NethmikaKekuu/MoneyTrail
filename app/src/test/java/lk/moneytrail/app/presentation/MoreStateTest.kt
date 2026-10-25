@@ -8,17 +8,15 @@ import org.junit.Test
 class MoreStateTest {
 
     @Test
-    fun moreStateReady_holdsProfileAndSalaryBadge() {
+    fun moreStateReady_holdsTheProfile() {
         val state = MoreState.Ready(
             name = "Kavindu Silva",
-            email = "kavindu.silva@gmail.com",
-            salaryBadge = "Due 25 Oct"
+            email = "kavindu.silva@gmail.com"
         )
 
         assertTrue(state is MoreState.Ready)
         assertEquals("Kavindu Silva", state.name)
         assertEquals("kavindu.silva@gmail.com", state.email)
-        assertEquals("Due 25 Oct", state.salaryBadge)
     }
 
     @Test

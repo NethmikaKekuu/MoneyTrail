@@ -54,7 +54,7 @@ fun DashboardScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
     onSettingsClick: () -> Unit,
-    onConfirmSalaryClick: () -> Unit,
+    onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -106,7 +106,7 @@ fun DashboardScreen(
                 DashboardTab.INSIGHTS -> InsightsScreen(modifier = tabModifier)
                 DashboardTab.MORE -> MoreScreen(
                     onSettingsClick = onSettingsClick,
-                    onConfirmSalaryClick = onConfirmSalaryClick,
+                    onSalaryClick = onSalaryClick,
                     onCatchUpClick = onCatchUpClick,
                     onSignedOut = onSignedOut,
                     modifier = tabModifier
