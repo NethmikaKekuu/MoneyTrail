@@ -12,13 +12,13 @@ class MoreViewModelTest {
         val state = MoreState.Ready(
             name = "Kavindu Silva",
             email = "kavindu.silva@gmail.com",
-            goalProgressBadge = "2.3%"
+            salaryBadge = "Due 25 Oct"
         )
 
         assertTrue(state is MoreState.Ready)
         assertEquals("Kavindu Silva", state.name)
         assertEquals("kavindu.silva@gmail.com", state.email)
-        assertEquals("2.3%", state.goalProgressBadge)
+        assertEquals("Due 25 Oct", state.salaryBadge)
     }
 
     @Test
