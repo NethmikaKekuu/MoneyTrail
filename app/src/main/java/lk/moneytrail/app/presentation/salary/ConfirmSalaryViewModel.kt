@@ -3,6 +3,7 @@ package lk.moneytrail.app.presentation.salary
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,16 +18,22 @@ import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.confirmedSalaryFromTotal
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
+import lk.moneytrail.app.domain.usecase.UpdateSalaryUseCase
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 
+/**
+ * Everything about the salary in one place: confirming what arrived this month, the
+ * bonus history, and the pay day and base salary that onboarding set.
+ */
 @HiltViewModel
 class ConfirmSalaryViewModel @Inject constructor(
     private val planRepository: PlanRepository,
-    private val entryRepository: EntryRepository
+    private val entryRepository: EntryRepository,
+    private val updateSalary: UpdateSalaryUseCase
 ) : ViewModel() {
 
     private val today = LocalDate.now()
@@ -35,16 +42,20 @@ class ConfirmSalaryViewModel @Inject constructor(
     val uiState: StateFlow<ConfirmSalaryUiState> = _uiState.asStateFlow()
 
     private var targetEntry: Entry? = null
+    private var bonusJob: Job? = null
 
     init {
         loadData()
     }
 
-    private fun loadData() {
+    /** Loads the plan and this month's salary; after saving the salary it reloads without the spinner. */
+    private fun loadData(showLoading: Boolean = true) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            if (showLoading) _uiState.update { it.copy(isLoading = true) }
 
-            val baseSalary = planRepository.getPlan().getOrNull()?.baseSalary ?: 0L
+            val planResult = planRepository.getPlan()
+            val plan = planResult.getOrNull()
+            val baseSalary = plan?.baseSalary ?: 0L
 
             // The salary to confirm: an expected one (this month's, or an older one never
             // checked), or else this month's if it's already confirmed, so confirming again
@@ -64,6 +75,10 @@ class ConfirmSalaryViewModel @Inject constructor(
                 it.copy(
                     isLoading = false,
                     hasSalary = baseSalary > 0 || salaryEntry != null,
+                    // A plan that failed to load isn't the same as a skipped setup.
+                    hasPlan = planResult.isFailure || plan != null,
+                    payDay = plan?.payDay ?: it.payDay,
+                    baseSalaryDigits = plan?.baseSalary?.toString() ?: it.baseSalaryDigits,
                     paydayText = "Payday · ${date.format(formatter)}",
                     accountName = salaryEntry?.account ?: Accounts.defaults.first(),
                     baseSalary = baseSalary,
@@ -77,7 +92,8 @@ class ConfirmSalaryViewModel @Inject constructor(
     }
 
     private fun loadBonusHistory() {
-        viewModelScope.launch {
+        bonusJob?.cancel()
+        bonusJob = viewModelScope.launch {
             val fromDate = today.minusMonths(5).withDayOfMonth(1)
             entryRepository.observeBetween(fromDate, today).collect { result ->
                 result.onSuccess { entries ->
@@ -207,6 +223,31 @@ class ConfirmSalaryViewModel @Inject constructor(
             }.onFailure { error ->
                 _uiState.update { it.copy(isSubmitting = false, errorMessage = error.message ?: "Failed to confirm salary") }
             }
+        }
+    }
+
+    fun onPayDayClick(day: Int) {
+        _uiState.update { it.copy(payDay = day, salarySettingsError = null, isSalarySaved = false) }
+    }
+
+    fun onBaseSalaryChange(text: String) {
+        val digits = text.filter(Char::isDigit).take(MAX_DIGITS)
+        _uiState.update { it.copy(baseSalaryDigits = digits, salarySettingsError = null, isSalarySaved = false) }
+    }
+
+    /** Saves the pay day and base salary; this month's expected salary follows (UpdateSalaryUseCase). */
+    fun onSaveSalaryClick() {
+        val state = _uiState.value
+        if (state.isSavingSalary) return
+
+        _uiState.update { it.copy(isSavingSalary = true, salarySettingsError = null, isSalarySaved = false) }
+        viewModelScope.launch {
+            updateSalary(state.payDay, state.baseSalaryDigits.toLongOrNull(), today)
+                .onSuccess {
+                    _uiState.update { it.copy(isSavingSalary = false, isSalarySaved = true) }
+                    loadData(showLoading = false)
+                }
+                .onFailure { e -> _uiState.update { it.copy(isSavingSalary = false, salarySettingsError = e.message) } }
         }
     }
 

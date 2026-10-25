@@ -85,9 +85,7 @@ fun MoneyTrailNavHost(
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(
-                onBackClick = { navController.popBackStack(Routes.SETTINGS, inclusive = true) },
-                // Onboarding ends on a fresh dashboard, which then expects the new salary.
-                onSetUpClick = { navController.navigate(Routes.ONBOARDING) { launchSingleTop = true } }
+                onBackClick = { navController.popBackStack(Routes.SETTINGS, inclusive = true) }
             )
         }
         composable(Routes.GOAL) {
@@ -103,7 +101,9 @@ fun MoneyTrailNavHost(
                         popUpTo(Routes.CONFIRM_SALARY) { inclusive = true }
                         launchSingleTop = true
                     }
-                }
+                },
+                // Onboarding ends on a fresh dashboard, which then expects the new salary.
+                onSetUpClick = { navController.navigate(Routes.ONBOARDING) { launchSingleTop = true } }
             )
         }
         composable(

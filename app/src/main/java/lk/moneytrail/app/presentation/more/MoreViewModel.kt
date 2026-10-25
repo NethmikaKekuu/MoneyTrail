@@ -8,8 +8,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import lk.moneytrail.app.data.preferences.ThemeMode
-import lk.moneytrail.app.data.preferences.ThemePreferences
 import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.repository.AuthRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
@@ -24,8 +22,7 @@ import javax.inject.Inject
 class MoreViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-    private val entryRepository: EntryRepository,
-    private val themePreferences: ThemePreferences
+    private val entryRepository: EntryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<MoreState>(MoreState.Loading)
@@ -37,19 +34,6 @@ class MoreViewModel @Inject constructor(
     init {
         loadProfile()
         listenToSalary()
-        observeThemeMode()
-    }
-
-    private fun observeThemeMode() {
-        viewModelScope.launch {
-            themePreferences.themeMode.collect { mode ->
-                _uiState.update { state ->
-                    if (state is MoreState.Ready) {
-                        state.copy(themeMode = mode)
-                    } else state
-                }
-            }
-        }
     }
 
     fun loadProfile() {
@@ -66,8 +50,7 @@ class MoreViewModel @Inject constructor(
                     _uiState.value = MoreState.Ready(
                         name = profile?.name,
                         email = profile?.email ?: authRepository.currentUserEmail,
-                        salaryBadge = salaryBadge,
-                        themeMode = themePreferences.getThemeMode()
+                        salaryBadge = salaryBadge
                     )
                 }
                 .onFailure { e ->
@@ -75,31 +58,6 @@ class MoreViewModel @Inject constructor(
                         e.message ?: "Couldn't load your profile."
                     )
                 }
-        }
-    }
-
-    fun onOpenThemeDialog() {
-        _uiState.update {
-            if (it is MoreState.Ready) {
-                it.copy(isThemeDialogOpen = true)
-            } else it
-        }
-    }
-
-    fun onDismissThemeDialog() {
-        _uiState.update {
-            if (it is MoreState.Ready) {
-                it.copy(isThemeDialogOpen = false)
-            } else it
-        }
-    }
-
-    fun onSelectThemeMode(mode: ThemeMode) {
-        themePreferences.setThemeMode(mode)
-        _uiState.update {
-            if (it is MoreState.Ready) {
-                it.copy(isThemeDialogOpen = false, themeMode = mode)
-            } else it
         }
     }
 
