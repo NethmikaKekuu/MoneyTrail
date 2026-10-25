@@ -4,6 +4,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import lk.moneytrail.app.data.preferences.CatchUpPreferences
 import lk.moneytrail.app.data.repository.AndroidConnectivityRepository
 import lk.moneytrail.app.data.repository.FirebaseAuthRepository
 import lk.moneytrail.app.data.repository.FirestoreAccountRepository
@@ -13,6 +14,7 @@ import lk.moneytrail.app.data.repository.FirestorePlanRepository
 import lk.moneytrail.app.data.repository.FirestoreUserRepository
 import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.repository.AuthRepository
+import lk.moneytrail.app.domain.repository.CatchUpRepository
 import lk.moneytrail.app.domain.repository.CategoryRepository
 import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
@@ -51,4 +53,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindConnectivityRepository(impl: AndroidConnectivityRepository): ConnectivityRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCatchUpRepository(impl: CatchUpPreferences): CatchUpRepository
 }

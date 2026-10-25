@@ -38,6 +38,7 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 fun MoreScreen(
     onSettingsClick: () -> Unit,
     onConfirmSalaryClick: () -> Unit,
+    onCatchUpClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MoreViewModel = hiltViewModel()
@@ -49,6 +50,7 @@ fun MoreScreen(
         onRetry = viewModel::loadProfile,
         onSettingsClick = onSettingsClick,
         onConfirmSalaryClick = onConfirmSalaryClick,
+        onCatchUpClick = onCatchUpClick,
         onSignOutClick = {
             viewModel.signOut()
             onSignedOut()
@@ -63,6 +65,7 @@ private fun MoreContent(
     onRetry: () -> Unit,
     onSettingsClick: () -> Unit,
     onConfirmSalaryClick: () -> Unit,
+    onCatchUpClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -97,6 +100,13 @@ private fun MoreContent(
             subtitle = "Pay day, base salary and this month's salary",
             badgeText = (uiState as? MoreState.Ready)?.salaryBadge,
             onClick = onConfirmSalaryClick
+        )
+
+        MoreRow(
+            icon = MoneyTrailIcons.Calendar,
+            title = "Catch up",
+            subtitle = "Back after a break? Get current and balance your accounts",
+            onClick = onCatchUpClick
         )
 
         MoreRow(
@@ -243,6 +253,7 @@ private fun MoreScreenPreview() {
             onRetry = {},
             onSettingsClick = {},
             onConfirmSalaryClick = {},
+            onCatchUpClick = {},
             onSignOutClick = {}
         )
     }

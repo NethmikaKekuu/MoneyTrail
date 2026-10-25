@@ -55,6 +55,8 @@ class SalaryUseCasesTest {
             entries.removeAll { it.id == id }
             return Result.success(Unit)
         }
+
+        override suspend fun lastLoggedDate(): Result<LocalDate?> = Result.success(null)
     }
 
     private class FakePlanRepository(var plan: MoneyPlan?) : PlanRepository {
@@ -74,6 +76,9 @@ class SalaryUseCasesTest {
             flowOf(Result.success(listOf(Account("main-bank", "Main bank", "Card and salary account", AccountKind.BANK))))
 
         override suspend fun saveAccounts(accounts: List<Account>): Result<Unit> = Result.success(Unit)
+
+        override suspend fun saveBalanceCheck(accountId: String, balance: Long, date: LocalDate): Result<Unit> =
+            Result.success(Unit)
     }
 
     private val today = LocalDate.of(2026, 10, 20)

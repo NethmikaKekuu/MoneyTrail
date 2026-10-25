@@ -35,6 +35,8 @@ class AddEntryUseCaseTest {
         override suspend fun updateEntry(entry: Entry): Result<Unit> = Result.success(Unit)
 
         override suspend fun deleteEntry(id: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun lastLoggedDate(): Result<LocalDate?> = Result.success(null)
     }
 
     private val repository = FakeEntryRepository()

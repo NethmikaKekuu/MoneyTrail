@@ -1,21 +1,17 @@
 package lk.moneytrail.app.presentation.salary
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -23,9 +19,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -39,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,9 +50,11 @@ import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
-import lk.moneytrail.app.presentation.components.formatNet
+import lk.moneytrail.app.presentation.onboarding.PayDayGrid
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
+// MoneyTrail-Figma-HTML/13-SalaryConfirm.html, kept minimal: this month's salary on top,
+// and the pay day and base salary under it.
 @Composable
 fun ConfirmSalaryScreen(
     onBackClick: () -> Unit,
@@ -75,9 +75,7 @@ fun ConfirmSalaryScreen(
 
     Scaffold(
         modifier = modifier,
-        topBar = {
-            ConfirmSalaryTopBar(onBackClick = onBackClick)
-        },
+        topBar = { ConfirmSalaryTopBar(onBackClick = onBackClick) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -86,14 +84,6 @@ fun ConfirmSalaryScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            val salarySettings: @Composable () -> Unit = {
-                SalarySettingsSection(
-                    state = uiState,
-                    onPayDayClick = viewModel::onPayDayClick,
-                    onBaseSalaryChange = viewModel::onBaseSalaryChange,
-                    onSaveSalaryClick = viewModel::onSaveSalaryClick
-                )
-            }
             when {
                 uiState.isLoading -> LoadingView(message = "Loading salary info…")
                 !uiState.hasPlan -> EmptyView(
@@ -102,34 +92,16 @@ fun ConfirmSalaryScreen(
                     actionLabel = "Set up salary and goal",
                     onAction = onSetUpClick
                 )
-                // No salary yet: only the pay day and base salary, to set one up.
-                !uiState.hasSalary -> Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 12.dp, bottom = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
-                    Text(
-                        text = "No salary to confirm yet. Add your base salary below, and it will be ready to confirm on pay day.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    salarySettings()
-                }
-                else -> {
-                    ConfirmSalaryContent(
-                        state = uiState,
-                        onAmountChange = viewModel::onAmountCreditedChange,
-                        onConfirmSalary = {
-                            viewModel.onConfirmSalary(onConfirmed = onConfirmedNavigate)
-                        },
-                        onBackClick = onBackClick,
-                        salarySettings = salarySettings,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                else -> ConfirmSalaryContent(
+                    state = uiState,
+                    onAmountChange = viewModel::onAmountCreditedChange,
+                    onConfirmSalary = { viewModel.onConfirmSalary(onConfirmed = onConfirmedNavigate) },
+                    onNotYetClick = onBackClick,
+                    onPayDayClick = viewModel::onPayDayClick,
+                    onBaseSalaryChange = viewModel::onBaseSalaryChange,
+                    onSaveSalaryClick = viewModel::onSaveSalaryClick,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
@@ -177,257 +149,22 @@ private fun ConfirmSalaryContent(
     state: ConfirmSalaryUiState,
     onAmountChange: (String) -> Unit,
     onConfirmSalary: () -> Unit,
-    onBackClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    /** "Your pay day and base salary", under the confirm buttons. */
-    salarySettings: @Composable () -> Unit = {}
+    onNotYetClick: () -> Unit,
+    onPayDayClick: (Int) -> Unit,
+    onBaseSalaryChange: (String) -> Unit,
+    onSaveSalaryClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
-            .padding(top = 12.dp, bottom = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+            .padding(top = 8.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Payday Status Banner (Top Orange Card)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.tertiary,
-            contentColor = MaterialTheme.colorScheme.onTertiary,
-            shape = RoundedCornerShape(20.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = state.paydayText,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onTertiary
-                    )
+        if (state.hasSalary) {
+            SalaryCard(state = state, onAmountChange = onAmountChange)
 
-                    Surface(
-                        color = MaterialTheme.colorScheme.onTertiary,
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            text = "Ready to confirm",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-
-                Text(
-                    text = "Salary into ${state.accountName}. Check your banking app and enter exactly what arrived.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.95f),
-                    lineHeight = 20.sp
-                )
-            }
-        }
-
-        // Base & Bonus Summary Cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // Left Card: Base
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp)),
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Base salary",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-                        text = formatAmount(state.baseSalary),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            // Right Card: Bonus
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp)),
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Bonus this month",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-                        text = formatNet(state.bonusAmount),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (state.bonusAmount >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
-
-        // Amount Actually Credited Field
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Amount actually credited (LKR)",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                    .border(2.dp, MaterialTheme.colorScheme.tertiary, RoundedCornerShape(20.dp))
-                    .padding(horizontal = 20.dp, vertical = 18.dp)
-            ) {
-                val formattedDisplay = state.amountCreditedDigits.toLongOrNull()?.let { formatAmount(it) }
-                    ?: state.amountCreditedDigits
-
-                BasicTextField(
-                    value = formattedDisplay,
-                    onValueChange = onAmountChange,
-                    textStyle = TextStyle(
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            Text(
-                text = "More or less than your base is fine; your pay changes and that's okay.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
-                fontSize = 13.sp
-            )
-        }
-
-        // Bonus History Section
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(22.dp)),
-            shape = RoundedCornerShape(22.dp),
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "Bonus history",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                if (!state.hasBonusHistory) {
-                    Text(
-                        text = "No past bonus history available yet. Your history will appear here after your first few months.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline,
-                        lineHeight = 20.sp,
-                        modifier = Modifier.padding(vertical = 6.dp)
-                    )
-                } else {
-                    // Bar Chart
-                    val maxAmount = (state.bonusHistory.maxOfOrNull { it.amount } ?: 1L).coerceAtLeast(1L)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(130.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        state.bonusHistory.forEach { item ->
-                            val barHeightFraction = if (maxAmount > 0) {
-                                (item.amount.toFloat() / maxAmount.toFloat()).coerceIn(0.2f, 1f)
-                            } else 0.2f
-
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Bottom,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(36.dp)
-                                        .fillMaxHeight(barHeightFraction)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(
-                                            if (item.isCurrentMonth) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f)
-                                        )
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = item.monthLabel,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (item.isCurrentMonth) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (item.isCurrentMonth) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
-                                )
-                            }
-                        }
-                    }
-
-                    if (state.averageBonus > 0 || state.highestBonus > 0) {
-                        Text(
-                            text = "Average bonus: ${formatAmount(state.averageBonus)} · Highest: ${formatAmount(state.highestBonus)} (${state.highestBonusMonth})",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Action Buttons at Bottom
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
             Button(
                 onClick = onConfirmSalary,
                 enabled = !state.isSubmitting && state.totalCredited > 0,
@@ -444,33 +181,172 @@ private fun ConfirmSalaryContent(
                     )
                 } else {
                     Text(
-                        text = "Confirm salary",
+                        text = if (state.isConfirmed) "Update salary" else "Confirm salary",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            TextButton(onClick = onBackClick) {
-                Text(
-                    text = "Not yet, remind me later",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            if (!state.isConfirmed) {
+                TextButton(onClick = onNotYetClick, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text("Not yet, remind me later", fontWeight = FontWeight.Bold)
+                }
             }
+        } else {
+            Text(
+                text = "No salary to confirm yet. Pick your pay day and base salary below, and it will be ready to confirm on pay day.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        salarySettings()
+        SalarySettings(
+            state = state,
+            onPayDayClick = onPayDayClick,
+            onBaseSalaryChange = onBaseSalaryChange,
+            onSaveClick = onSaveSalaryClick
+        )
+    }
+}
+
+/** This month's salary: what arrived, already filled in with the usual amount. */
+@Composable
+private fun SalaryCard(state: ConfirmSalaryUiState, onAmountChange: (String) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = colors.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = state.monthTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (state.isConfirmed) colors.primaryContainer else colors.tertiary
+                ) {
+                    Text(
+                        text = state.statusText,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (state.isConfirmed) colors.onPrimaryContainer else colors.onTertiary,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = "How much arrived in ${state.accountName}? Check your banking app.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurfaceVariant
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(2.dp, colors.tertiary, RoundedCornerShape(16.dp))
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text("LKR", style = MaterialTheme.typography.titleMedium, color = colors.outline)
+                BasicTextField(
+                    value = state.amountCreditedDigits.toLongOrNull()?.let { formatAmount(it) } ?: state.amountCreditedDigits,
+                    onValueChange = onAmountChange,
+                    textStyle = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, color = colors.onSurface),
+                    cursorBrush = SolidColor(colors.primary),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Text(
+                text = breakdown(state),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (state.bonusAmount < 0 && state.baseSalary > 0) colors.error else colors.outline
+            )
+        }
+    }
+}
+
+/** How the amount splits into the base pay and this month's bonus. */
+private fun breakdown(state: ConfirmSalaryUiState): String {
+    val base = state.baseSalary
+    val bonus = state.bonusAmount
+    return when {
+        state.totalCredited == 0L -> "Type the amount your bank shows."
+        base == 0L -> "All of it counts as this month's salary."
+        bonus > 0 -> "Base ${formatAmount(base)} + bonus ${formatAmount(bonus)}"
+        bonus == 0L -> "Your usual base salary, no bonus this month."
+        else -> "${formatAmount(-bonus)} less than your base. It's saved as it is."
+    }
+}
+
+/** The pay day on the calendar grid and the base salary, with Save once either changes. */
+@Composable
+private fun SalarySettings(
+    state: ConfirmSalaryUiState,
+    onPayDayClick: (Int) -> Unit,
+    onBaseSalaryChange: (String) -> Unit,
+    onSaveClick: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Pay day", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        PayDayGrid(selectedDay = state.selectedPayDay, onDayClick = onPayDayClick)
+        OutlinedTextField(
+            value = state.baseSalaryDigits,
+            onValueChange = onBaseSalaryChange,
+            label = { Text("Base salary (LKR)") },
+            supportingText = { Text("Before bonuses. Enter 0 if you don't get a salary.") },
+            singleLine = true,
+            enabled = !state.isSavingSalary,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+        state.salarySettingsError?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        if (state.isSalaryChanged) {
+            OutlinedButton(
+                onClick = onSaveClick,
+                enabled = !state.isSavingSalary,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                if (state.isSavingSalary) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Save pay day and salary", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
 
 // Sample figures for the previews only, from the assignment scenario.
 private val PreviewState = ConfirmSalaryUiState(
-    paydayText = "Payday · Sun 25 Oct",
+    monthTitle = "October salary",
+    statusText = "Due 25 Oct",
     accountName = "Main bank",
     baseSalary = 120_000L,
+    bonusAmount = 12_400L,
+    amountCreditedDigits = "132400",
+    payDay = 25,
+    selectedPayDay = 25,
+    baseSalaryDigits = "120000",
     isLoading = false
 )
 
@@ -479,63 +355,29 @@ private val PreviewState = ConfirmSalaryUiState(
 private fun ConfirmSalaryScreenPreview() {
     MoneyTrailTheme {
         ConfirmSalaryContent(
-            state = PreviewState.copy(
-                bonusHistory = listOf(
-                    BonusHistoryItem("May", 10_000L),
-                    BonusHistoryItem("Jun", 14_000L),
-                    BonusHistoryItem("Jul", 8_000L),
-                    BonusHistoryItem("Aug", 18_200L),
-                    BonusHistoryItem("Sep", 15_000L),
-                    BonusHistoryItem("Oct", 12_400L, isCurrentMonth = true)
-                ),
-                bonusAmount = 12_400L,
-                amountCreditedDigits = "132400",
-                averageBonus = 11_400L,
-                highestBonus = 18_200L,
-                highestBonusMonth = "Aug"
-            ),
+            state = PreviewState,
             onAmountChange = {},
             onConfirmSalary = {},
-            onBackClick = {}
+            onNotYetClick = {},
+            onPayDayClick = {},
+            onBaseSalaryChange = {},
+            onSaveSalaryClick = {}
         )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun ConfirmSalaryScreenSingleMonthPreview() {
+private fun ConfirmSalaryScreenNoSalaryPreview() {
     MoneyTrailTheme {
         ConfirmSalaryContent(
-            state = PreviewState.copy(
-                bonusHistory = listOf(
-                    BonusHistoryItem("May", 12_400L, isCurrentMonth = true)
-                ),
-                bonusAmount = 12_400L,
-                amountCreditedDigits = "132400",
-                averageBonus = 12_400L,
-                highestBonus = 12_400L,
-                highestBonusMonth = "May"
-            ),
+            state = ConfirmSalaryUiState(hasSalary = false, isLoading = false),
             onAmountChange = {},
             onConfirmSalary = {},
-            onBackClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun ConfirmSalaryScreenEmptyHistoryPreview() {
-    MoneyTrailTheme {
-        ConfirmSalaryContent(
-            state = PreviewState.copy(
-                bonusHistory = emptyList(),
-                bonusAmount = 0L,
-                amountCreditedDigits = "120000"
-            ),
-            onAmountChange = {},
-            onConfirmSalary = {},
-            onBackClick = {}
+            onNotYetClick = {},
+            onPayDayClick = {},
+            onBaseSalaryChange = {},
+            onSaveSalaryClick = {}
         )
     }
 }

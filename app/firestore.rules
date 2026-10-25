@@ -62,22 +62,30 @@ service cloud.firestore {
     }
 
     // users/{uid}/accounts/{accountId}: a place the user keeps money, picked during
-    // onboarding. The id is a short slug such as "main-bank".
+    // onboarding. The id is a short slug such as "main-bank". checkedBalance (whole LKR)
+    // and checkedOn (yyyy-MM-dd) are the real balance typed in when it was last balanced.
     function isValidAccount(data) {
-      let fields = ['name', 'description', 'kind', 'createdAt'];
-      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+      return data.keys().hasAll(['name', 'description', 'kind', 'createdAt'])
+        && data.keys().hasOnly(['name', 'description', 'kind', 'createdAt', 'checkedBalance', 'checkedOn'])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 50
         && data.description is string && data.description.size() <= 100
         && data.kind in ['BANK', 'CASH', 'SAVINGS', 'CRYPTO']
+        && (!('checkedBalance' in data) || (data.checkedBalance is int && data.checkedBalance >= -999999999 && data.checkedBalance <= 999999999))
+        && (!('checkedOn' in data) || (data.checkedOn is string && data.checkedOn.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
         && data.createdAt is timestamp;
     }
 
+    // Onboarding saves each account whole with a new createdAt; balancing it keeps createdAt.
     match /users/{uid}/accounts/{accountId} {
       allow read, delete: if isOwner(uid);
-      allow create, update: if isOwner(uid)
+      allow create: if isOwner(uid)
         && accountId.size() <= 50
         && isValidAccount(request.resource.data)
         && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid)
+        && isValidAccount(request.resource.data)
+        && (request.resource.data.createdAt == request.time
+          || request.resource.data.createdAt == resource.data.createdAt);
     }
 
     // users/{uid}/settings/plan: pay day, base salary (whole LKR, 0 when there is no
