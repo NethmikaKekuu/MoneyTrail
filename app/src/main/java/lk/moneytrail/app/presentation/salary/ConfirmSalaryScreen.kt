@@ -21,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -48,10 +50,11 @@ import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
+import lk.moneytrail.app.presentation.onboarding.PayDayGrid
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
-// MoneyTrail-Figma-HTML/13-SalaryConfirm.html, kept to one task at a time: this month's
-// salary on top, everything else one line each under it.
+// MoneyTrail-Figma-HTML/13-SalaryConfirm.html, kept minimal: this month's salary on top,
+// and the pay day and base salary under it.
 @Composable
 fun ConfirmSalaryScreen(
     onBackClick: () -> Unit,
@@ -94,21 +97,13 @@ fun ConfirmSalaryScreen(
                     onAmountChange = viewModel::onAmountCreditedChange,
                     onConfirmSalary = { viewModel.onConfirmSalary(onConfirmed = onConfirmedNavigate) },
                     onNotYetClick = onBackClick,
-                    onEditSalaryClick = viewModel::onEditSalaryClick,
+                    onPayDayClick = viewModel::onPayDayClick,
+                    onBaseSalaryChange = viewModel::onBaseSalaryChange,
+                    onSaveSalaryClick = viewModel::onSaveSalaryClick,
                     modifier = Modifier.fillMaxSize()
                 )
             }
         }
-    }
-
-    if (uiState.isEditingSalary) {
-        EditSalaryDialog(
-            state = uiState,
-            onPayDayChange = viewModel::onPayDayChange,
-            onBaseSalaryChange = viewModel::onBaseSalaryChange,
-            onSave = viewModel::onSaveSalaryClick,
-            onDismiss = viewModel::onEditSalaryDismiss
-        )
     }
 }
 
@@ -155,7 +150,9 @@ private fun ConfirmSalaryContent(
     onAmountChange: (String) -> Unit,
     onConfirmSalary: () -> Unit,
     onNotYetClick: () -> Unit,
-    onEditSalaryClick: () -> Unit,
+    onPayDayClick: (Int) -> Unit,
+    onBaseSalaryChange: (String) -> Unit,
+    onSaveSalaryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -196,24 +193,20 @@ private fun ConfirmSalaryContent(
                     Text("Not yet, remind me later", fontWeight = FontWeight.Bold)
                 }
             }
-
-            if (state.hasBonusHistory) {
-                Text(
-                    text = "Bonus over the last months: average LKR ${formatAmount(state.averageBonus)}, " +
-                        "highest LKR ${formatAmount(state.highestBonus)} in ${state.highestBonusMonth}.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            }
         } else {
             Text(
-                text = "No salary to confirm yet. Set your pay day and base salary below, and it will be ready to confirm on pay day.",
+                text = "No salary to confirm yet. Pick your pay day and base salary below, and it will be ready to confirm on pay day.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
-        SalarySettingsRow(state = state, onEditClick = onEditSalaryClick)
+        SalarySettings(
+            state = state,
+            onPayDayClick = onPayDayClick,
+            onBaseSalaryChange = onBaseSalaryChange,
+            onSaveClick = onSaveSalaryClick
+        )
     }
 }
 
@@ -300,52 +293,47 @@ private fun breakdown(state: ConfirmSalaryUiState): String {
     }
 }
 
-/** "Pay day and base salary · 25th of the month · LKR 120,000" with Change. */
+/** The pay day on the calendar grid and the base salary, with Save once either changes. */
 @Composable
-private fun SalarySettingsRow(state: ConfirmSalaryUiState, onEditClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    Surface(
-        onClick = onEditClick,
-        shape = RoundedCornerShape(16.dp),
-        color = colors.surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, colors.outlineVariant, RoundedCornerShape(16.dp))
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Pay day and base salary", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = if (state.baseSalary > 0 && state.payDay != null) {
-                        "${ordinal(state.payDay)} of the month · LKR ${formatAmount(state.baseSalary)}"
-                    } else {
-                        "Not set up yet"
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.outline
-                )
+private fun SalarySettings(
+    state: ConfirmSalaryUiState,
+    onPayDayClick: (Int) -> Unit,
+    onBaseSalaryChange: (String) -> Unit,
+    onSaveClick: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Pay day", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        PayDayGrid(selectedDay = state.selectedPayDay, onDayClick = onPayDayClick)
+        OutlinedTextField(
+            value = state.baseSalaryDigits,
+            onValueChange = onBaseSalaryChange,
+            label = { Text("Base salary (LKR)") },
+            supportingText = { Text("Before bonuses. Enter 0 if you don't get a salary.") },
+            singleLine = true,
+            enabled = !state.isSavingSalary,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+        state.salarySettingsError?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        if (state.isSalaryChanged) {
+            OutlinedButton(
+                onClick = onSaveClick,
+                enabled = !state.isSavingSalary,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+            ) {
+                if (state.isSavingSalary) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Save pay day and salary", fontWeight = FontWeight.Bold)
+                }
             }
-            Text(
-                text = if (state.baseSalary > 0) "Change" else "Set up",
-                style = MaterialTheme.typography.labelLarge,
-                color = colors.primary
-            )
         }
     }
-}
-
-/** 1st, 2nd, 3rd, 4th … 21st, 22nd, 23rd, 31st. */
-private fun ordinal(day: Int): String {
-    val suffix = if (day in 11..13) "th" else when (day % 10) {
-        1 -> "st"
-        2 -> "nd"
-        3 -> "rd"
-        else -> "th"
-    }
-    return "$day$suffix"
 }
 
 // Sample figures for the previews only, from the assignment scenario.
@@ -357,10 +345,8 @@ private val PreviewState = ConfirmSalaryUiState(
     bonusAmount = 12_400L,
     amountCreditedDigits = "132400",
     payDay = 25,
-    bonusHistory = listOf(BonusHistoryItem("Aug", 18_200L), BonusHistoryItem("Oct", 12_400L, isCurrentMonth = true)),
-    averageBonus = 15_300L,
-    highestBonus = 18_200L,
-    highestBonusMonth = "Aug",
+    selectedPayDay = 25,
+    baseSalaryDigits = "120000",
     isLoading = false
 )
 
@@ -373,7 +359,9 @@ private fun ConfirmSalaryScreenPreview() {
             onAmountChange = {},
             onConfirmSalary = {},
             onNotYetClick = {},
-            onEditSalaryClick = {}
+            onPayDayClick = {},
+            onBaseSalaryChange = {},
+            onSaveSalaryClick = {}
         )
     }
 }
@@ -387,7 +375,9 @@ private fun ConfirmSalaryScreenNoSalaryPreview() {
             onAmountChange = {},
             onConfirmSalary = {},
             onNotYetClick = {},
-            onEditSalaryClick = {}
+            onPayDayClick = {},
+            onBaseSalaryChange = {},
+            onSaveSalaryClick = {}
         )
     }
 }

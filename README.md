@@ -51,7 +51,7 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Expense insights | This month's spending, the committed vs discretionary split, coffee and dining out as days of goal saving, spending by category, and a six-month chart | 10 |
 | More | Profile, Confirm salary (with when it's due), Settings and sign-out | 12 (first part) |
 | Settings | The app theme (Light, Dark or the phone's setting), and list, add or delete your own categories | Not in Figma; follows the onboarding style |
-| Confirm salary | One card for this month's salary: the amount that arrived is filled in with the usual pay, a line shows base + bonus, and a chip says Due, Overdue or Confirmed. Anything above the base is the bonus, and less than the base is saved as it is. Confirming again in the same month corrects the salary. A one-line bonus summary, and "Pay day and base salary" opens a small dialog to change them (this month's expected salary follows); someone who skipped onboarding is offered to set them up | 13 |
+| Confirm salary | Kept minimal. One card for this month's salary: the amount that arrived is filled in with the usual pay, a line shows base + bonus, and a chip says Due, Overdue or Confirmed. Anything above the base is the bonus, and less than the base is saved as it is; confirming again in the same month corrects the salary. Under it, the pay day on a calendar grid and the base salary, with Save once either changes (this month's expected salary follows). Someone who skipped onboarding is offered to set them up | 13 |
 | Catch-up | After 3 or more days without logging, the app opens a catch-up: "Welcome back! It's been 9 days", tick off the bills and income that fell due, log what you remember, then type each account's real balance. Whatever wasn't logged is added as "Not logged" so every account matches the bank. "Later" waits until tomorrow; More › Catch up opens it any time | 23, 21 |
 | Goal ("Pay yourself first") | A tab with each goal's progress ring and the monthly saving needed to reach it on time. Once the salary is in, it asks "Move LKR 39,900 to Savings now?" with the three steps; **I've moved it** asks how much went to each goal and adds it (never past a goal's target), and **Remind me tomorrow** snoozes the reminder. Goals can be added, edited and removed (at least one stays), and show when they're reached or past their date | 14 |
 
@@ -343,7 +343,7 @@ app/src/main/java/lk/moneytrail/app/
     ├── more/             Profile, Confirm salary and Settings links, sign-out
     ├── navigation/       Routes and the NavHost
     ├── onboarding/       Four-step onboarding: money places, salary, income sources, goal
-    ├── salary/           Confirm salary with bonus history, pay day and base salary
+    ├── salary/           Confirm salary, pay day and base salary
     ├── settings/         App theme, the user's own categories
     ├── splash/, welcome/
     └── theme/            Colours, Sora and DM Sans typography, MoneyTrailTheme
