@@ -179,7 +179,9 @@ class OnboardingViewModel @Inject constructor(
                 name = state.goalName.trim(),
                 targetAmount = goalTarget,
                 savedAmount = state.goalSaved,
-                targetDate = state.goalDate
+                targetDate = state.goalDate,
+                // Savings are moved once the salary is in, so the pay day is the transfer day.
+                transferDay = payDay
             )
         )
 
