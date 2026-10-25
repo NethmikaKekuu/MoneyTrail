@@ -26,7 +26,7 @@ import java.time.LocalDate
 
 class SalaryUseCasesTest {
 
-    /** Keeps entries in a list instead of Firestore. */
+
     private class FakeEntryRepository(initial: List<Entry> = emptyList()) : EntryRepository {
         val entries = initial.toMutableList()
 
@@ -42,6 +42,10 @@ class SalaryUseCasesTest {
             return Result.success(Unit)
         }
 
+
+
+
+
         override suspend fun updateEntry(entry: Entry): Result<Unit> {
             entries.replaceAll { if (it.id == entry.id) entry else it }
             return Result.success(Unit)
@@ -54,6 +58,7 @@ class SalaryUseCasesTest {
     }
 
     private class FakePlanRepository(var plan: MoneyPlan?) : PlanRepository {
+
         override suspend fun savePlan(plan: MoneyPlan): Result<Unit> {
             this.plan = plan
             return Result.success(Unit)
@@ -80,6 +85,7 @@ class SalaryUseCasesTest {
     )
 
     private fun salary(status: EntryStatus, date: LocalDate = LocalDate.of(2026, 10, 25)) = Entry(
+
         id = "s1",
         type = EntryType.INCOME,
         amount = 120_000,
