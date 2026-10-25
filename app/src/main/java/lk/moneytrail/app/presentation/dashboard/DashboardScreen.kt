@@ -35,6 +35,7 @@ import lk.moneytrail.app.presentation.insights.InsightsScreen
 import lk.moneytrail.app.presentation.more.MoreScreen
 import java.time.LocalDate
 
+
 private enum class DashboardTab(val label: String, val icon: ImageVector) {
     CALENDAR("Calendar", MoneyTrailIcons.Calendar),
     FOLDERS("Folders", MoneyTrailIcons.Folder),
@@ -43,7 +44,9 @@ private enum class DashboardTab(val label: String, val icon: ImageVector) {
     MORE("More", MoneyTrailIcons.More)
 }
 
-/** The signed-in home: bottom bar with Calendar, Folders, Goal, Insights, and More. */
+
+
+
 @Composable
 fun DashboardScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
