@@ -12,13 +12,22 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import lk.moneytrail.app.data.local.EntryDao
+import lk.moneytrail.app.data.local.EntryEntity
+import lk.moneytrail.app.data.local.toEntity
+import lk.moneytrail.app.data.local.toEntry
 import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import java.time.LocalDate
 import javax.inject.Inject
@@ -28,68 +37,108 @@ import javax.inject.Singleton
  * Entries live in users/{uid}/entries/{entryId}. The date is stored as a yyyy-MM-dd
  * string, which sorts the same way as the dates, so a month (or several) is a single
  * range query on one field and needs no composite index.
+ *
+ * Screens read entries from Room (data/local), and Firestore listeners keep Room's copy
+ * up to date while they're open. New, changed and deleted entries go to Firestore, which
+ * shows them to its listeners at once, even offline, so they reach Room the same way.
  */
 @Singleton
 class FirestoreEntryRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val entryDao: EntryDao,
+    private val connectivity: ConnectivityRepository
 ) : EntryRepository {
 
-    override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> =
-        observeQuery { entries ->
-            entries
-                .whereGreaterThanOrEqualTo(FIELD_DATE, from.toString())
-                .whereLessThanOrEqualTo(FIELD_DATE, to.toString())
-        }
+    override fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>> {
+        val start = from.toString()
+        val end = to.toString()
+        return observeCached(
+            query = { entries ->
+                entries
+                    .whereGreaterThanOrEqualTo(FIELD_DATE, start)
+                    .whereLessThanOrEqualTo(FIELD_DATE, end)
+            },
+            save = { uid, rows -> entryDao.replaceBetween(uid, start, end, rows) },
+            read = { uid -> entryDao.observeBetween(uid, start, end) }
+        )
+    }
 
     // One equality filter on one field, so it needs no composite index either. Older
     // entries have no status field and are left out, which is right: they're confirmed.
-    override fun observeExpected(): Flow<Result<List<Entry>>> =
-        observeQuery { entries -> entries.whereEqualTo(FIELD_STATUS, EntryStatus.EXPECTED.name) }
+    override fun observeExpected(): Flow<Result<List<Entry>>> = observeCached(
+        query = { entries -> entries.whereEqualTo(FIELD_STATUS, EntryStatus.EXPECTED.name) },
+        save = { uid, rows -> entryDao.replaceExpected(uid, rows) },
+        read = { uid -> entryDao.observeExpected(uid) }
+    )
 
-    /** Listens to the user's entries that [query] picks, sorted by date and then time added. */
-    private fun observeQuery(query: (CollectionReference) -> Query): Flow<Result<List<Entry>>> = callbackFlow {
+    /**
+     * Emits the Room rows that [read] picks, oldest first, so a screen opens straight away
+     * with the copy on the phone. Meanwhile a Firestore listener on [query] hands every
+     * snapshot to [save], and Room emits the rows again whenever they change.
+     */
+    private fun observeCached(
+        query: (CollectionReference) -> Query,
+        save: suspend (uid: String, rows: List<EntryEntity>) -> Unit,
+        read: (uid: String) -> Flow<List<EntryEntity>>
+    ): Flow<Result<List<Entry>>> = channelFlow {
         val uid = auth.currentUser?.uid
         if (uid == null) {
-            trySend(Result.failure(AppException(SIGNED_OUT_MESSAGE)))
-            close()
-            awaitClose()
-            return@callbackFlow
+            send(Result.failure(AppException(SIGNED_OUT_MESSAGE)))
+            return@channelFlow
         }
 
-        // A snapshot listener, so screens update the moment an entry is saved. It answers
-        // from the offline cache first, so they also open without internet.
-        val registration = query(entriesOf(uid))
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Log.w(TAG, "Listening to entries failed", error)
-                    trySend(Result.failure(AppException(error.toFirestoreMessage(LOAD_FAILED_MESSAGE), error)))
-                    close()
-                    return@addSnapshotListener
-                }
-                if (snapshot != null) {
-                    val entries = snapshot.documents
-                        .sortedWith(
-                            compareBy<DocumentSnapshot>(
-                                { it.getString(FIELD_DATE) },
-                                // Entries saved offline have no server time yet; use Firestore's estimate.
-                                { it.getTimestamp(FIELD_CREATED_AT, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE) }
-                            )
-                        )
-                        .mapNotNull { it.toEntry() }
-                    trySend(Result.success(entries))
-                }
+        val synced = MutableStateFlow(false)
+        launch {
+            listen(uid, query).collect { result ->
+                result.fold(
+                    onSuccess = { rows ->
+                        save(uid, rows)
+                        synced.value = true
+                    },
+                    onFailure = { error -> send(Result.failure(error)) }
+                )
             }
-        awaitClose { registration.remove() }
+        }
+
+        combine(read(uid), synced) { rows, isSynced -> rows to isSynced }.collect { (rows, isSynced) ->
+            // No rows can just mean these dates were never opened on this phone, so wait
+            // for Firestore instead of flashing an empty screen.
+            if (rows.isNotEmpty() || isSynced) {
+                send(Result.success(rows.mapNotNull { it.toEntry() }))
+            }
+        }
     }
+
+    /** Listens to the user's entries that [query] picks, as rows for Room. Ends after a failure. */
+    private fun listen(uid: String, query: (CollectionReference) -> Query): Flow<Result<List<EntryEntity>>> =
+        callbackFlow {
+            // A snapshot listener, so screens update the moment an entry is saved. It answers
+            // from Firestore's offline cache first, then from the server.
+            val registration = query(entriesOf(uid))
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.w(TAG, "Listening to entries failed", error)
+                        trySend(Result.failure(AppException(error.toFirestoreMessage(LOAD_FAILED_MESSAGE), error)))
+                        close()
+                        return@addSnapshotListener
+                    }
+                    if (snapshot != null) {
+                        trySend(Result.success(snapshot.documents.mapNotNull { it.toEntity(uid) }))
+                    }
+                }
+            awaitClose { registration.remove() }
+        }
 
     override suspend fun getEntry(id: String): Result<Entry?> {
         val uid = auth.currentUser?.uid
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
 
         return try {
-            // Answered from the offline cache when there's no internet; any entry shown
-            // on the calendar is already there.
+            // Any entry shown on a screen is already in Room.
+            entryDao.getEntry(uid, id)?.toEntry()?.let { return Result.success(it) }
+
+            // Otherwise ask Firestore, which answers from its own cache when offline.
             val snapshot = entriesOf(uid).document(id).get().await()
             Result.success(if (snapshot.exists()) snapshot.toEntry() else null)
         } catch (e: CancellationException) {
@@ -105,7 +154,7 @@ class FirestoreEntryRepository @Inject constructor(
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
 
         return try {
-            entriesOf(uid).document().set(entry.toFirestore()).awaitServerBriefly(TAG)
+            entriesOf(uid).document().set(entry.toFirestore()).awaitServerBriefly(TAG, connectivity.isOnlineNow())
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -133,7 +182,7 @@ class FirestoreEntryRepository @Inject constructor(
             ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
 
         return try {
-            write(uid).awaitServerBriefly(TAG)
+            write(uid).awaitServerBriefly(TAG, connectivity.isOnlineNow())
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -166,6 +215,13 @@ class FirestoreEntryRepository @Inject constructor(
         FIELD_SPENDING_TYPE to spendingType?.name,
         FIELD_BONUS to bonus
     )
+
+    /** The Room row for this document, or null when [toEntry] skips it. */
+    private fun DocumentSnapshot.toEntity(uid: String): EntryEntity? {
+        // Entries saved offline have no server time yet; use Firestore's estimate.
+        val createdAt = getTimestamp(FIELD_CREATED_AT, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+        return toEntry()?.toEntity(uid, createdAt?.toDate()?.time ?: 0L)
+    }
 
     /** Null for a document with missing or unreadable fields, which is skipped rather than crashing the calendar. */
     private fun DocumentSnapshot.toEntry(): Entry? {

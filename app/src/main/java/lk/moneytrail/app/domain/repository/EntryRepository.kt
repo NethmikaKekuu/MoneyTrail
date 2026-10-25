@@ -12,7 +12,7 @@ interface EntryRepository {
     /**
      * The entries dated from [from] to [to], both included, oldest first. Emits again
      * whenever an entry is added, changed or deleted, including straight after a save
-     * while offline. After a failure the flow ends; collect it again to retry.
+     * while offline. After a failure it stops updating; collect it again to retry.
      */
     fun observeBetween(from: LocalDate, to: LocalDate): Flow<Result<List<Entry>>>
 
