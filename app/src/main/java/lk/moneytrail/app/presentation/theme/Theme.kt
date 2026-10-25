@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import lk.moneytrail.app.data.preferences.ThemeMode
 
 // Roles as used by the Figma screens: text fields sit on surfaceContainerLow with an
 // outlineVariant border, secondary buttons use secondaryContainer, and the focus ring
@@ -56,7 +57,12 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun MoneyTrailTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    darkTheme: Boolean = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    },
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
