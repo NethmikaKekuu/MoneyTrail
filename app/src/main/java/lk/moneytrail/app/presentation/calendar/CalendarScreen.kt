@@ -4,18 +4,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,7 +96,9 @@ private fun CalendarContent(
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
+        // The whole page scrolls, so a long day's list can be pulled up past the grid
+        // instead of being squeezed into the little space left under it.
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -140,9 +144,7 @@ private fun CalendarContent(
                 uiState = uiState,
                 onRetryClick = onRetryClick,
                 onEntryClick = onEntryClick,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(top = 8.dp)
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
 
@@ -174,6 +176,8 @@ private fun SelectedDayPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            // Keeps the sheet looking like a sheet when the day has few or no entries.
+            .heightIn(min = 320.dp)
             .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
@@ -197,25 +201,30 @@ private fun SelectedDayPanel(
             uiState.errorMessage != null -> ErrorView(
                 title = "Couldn't load your entries",
                 message = uiState.errorMessage,
-                onRetry = onRetryClick
+                onRetry = onRetryClick,
+                modifier = StateHeight
             )
-            uiState.isLoading -> LoadingView(message = "Loading your entries…")
+            uiState.isLoading -> LoadingView(message = "Loading your entries…", modifier = StateHeight)
             entries.isEmpty() -> EmptyView(
                 title = "Nothing logged on this day",
-                message = "Tap + to add an expense or income."
+                message = "Tap + to add an expense or income.",
+                modifier = StateHeight
             )
-            else -> LazyColumn(
+            else -> Column(
                 // Bottom space so the + button never covers the last entry.
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 96.dp),
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(entries, key = { it.id }) { entry ->
-                    EntryCard(entry, onClick = { onEntryClick(entry.id) })
+                entries.forEach { entry ->
+                    key(entry.id) { EntryCard(entry, onClick = { onEntryClick(entry.id) }) }
                 }
             }
         }
     }
 }
+
+// The state views fill their parent, so inside the scrolling page they get a fixed height.
+private val StateHeight = Modifier.height(200.dp)
 
 private val PreviewDay = LocalDate.of(2026, 10, 10)
 
