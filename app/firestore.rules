@@ -1,0 +1,137 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // users/{uid}: the profile written when an account is made, by email sign-up or
+    // the first Google sign-in. It holds only the name, the email and the server's
+    // creation time, and createdAt can't be changed afterwards. Google accounts with
+    // no display name save an empty name, so the name may be empty.
+    function isValidProfile(data) {
+      return data.keys().hasAll(['name', 'email', 'createdAt'])
+        && data.keys().hasOnly(['name', 'email', 'createdAt'])
+        && data.name is string && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 254
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && isValidProfile(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid)
+        && isValidProfile(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // users/{uid}/entries/{entryId}: one income or expense on the calendar.
+    // Amounts are whole rupees (LKR) and always positive; type says which way the money
+    // went. date is yyyy-MM-dd. Expenses say whether they were committed or
+    // discretionary; income has no spendingType. status is CONFIRMED for money that
+    // moved, EXPECTED for money planned for its date. bonus is the part of a salary's
+    // amount that came on top of the base pay; it's 0 for everything else.
+    function isValidEntry(data) {
+      let fields = ['status', 'type', 'amount', 'bonus', 'category', 'account', 'date', 'note', 'spendingType', 'createdAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.status in ['CONFIRMED', 'EXPECTED']
+        && data.type in ['INCOME', 'EXPENSE']
+        && data.amount is int && data.amount > 0 && data.amount <= 999999999
+        && data.bonus is int && data.bonus >= 0 && data.bonus < data.amount
+        && (data.bonus == 0 || (data.type == 'INCOME' && data.category == 'Salary'))
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 50
+        && data.account is string && data.account.size() > 0 && data.account.size() <= 50
+        && data.date is string && data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && data.note is string && data.note.size() <= 200
+        && ((data.type == 'INCOME' && data.spendingType == null)
+          || (data.type == 'EXPENSE' && data.spendingType in ['COMMITTED', 'DISCRETIONARY']))
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid}/entries/{entryId} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && isValidEntry(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid)
+        && isValidEntry(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // users/{uid}/accounts/{accountId}: a place the user keeps money, picked during
+    // onboarding. The id is a short slug such as "main-bank".
+    function isValidAccount(data) {
+      let fields = ['name', 'description', 'kind', 'createdAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 50
+        && data.description is string && data.description.size() <= 100
+        && data.kind in ['BANK', 'CASH', 'SAVINGS', 'CRYPTO']
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid}/accounts/{accountId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && accountId.size() <= 50
+        && isValidAccount(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+    }
+
+    // users/{uid}/settings/plan: pay day, base salary (whole LKR, 0 when there is no
+    // salary), income sources and the savings goal, written at the end of onboarding.
+    // What's already saved can't be more than the goal; dates are yyyy-MM-dd.
+    function isValidGoal(goal) {
+      let fields = ['name', 'targetAmount', 'savedAmount', 'targetDate'];
+      return goal is map && goal.keys().hasAll(fields) && goal.keys().hasOnly(fields)
+        && goal.name is string && goal.name.size() > 0 && goal.name.size() <= 60
+        && goal.targetAmount is int && goal.targetAmount > 0 && goal.targetAmount <= 999999999
+        && goal.savedAmount is int && goal.savedAmount >= 0 && goal.savedAmount <= goal.targetAmount
+        && goal.targetDate is string && goal.targetDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
+    }
+
+    function isValidPlan(data) {
+      let fields = ['payDay', 'baseSalary', 'incomeSources', 'goal', 'updatedAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.payDay is int && data.payDay >= 1 && data.payDay <= 31
+        && data.baseSalary is int && data.baseSalary >= 0 && data.baseSalary <= 999999999
+        && data.incomeSources is list && data.incomeSources.size() <= 5
+        && data.incomeSources.hasOnly(['SALARY', 'FREELANCE', 'ADSENSE', 'CRYPTO', 'OTHER'])
+        && isValidGoal(data.goal)
+        && data.updatedAt == request.time;
+    }
+
+    match /users/{uid}/settings/plan {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidPlan(request.resource.data);
+    }
+
+    // users/{uid}/categories/{categoryId}: a category the user added, e.g. "Pet care".
+    // Expense categories say whether they're usually committed or discretionary;
+    // income categories have no spendingType.
+    function isValidCategory(data) {
+      let fields = ['name', 'type', 'spendingType', 'createdAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 30
+        && ((data.type == 'INCOME' && data.spendingType == null)
+          || (data.type == 'EXPENSE' && data.spendingType in ['COMMITTED', 'DISCRETIONARY']))
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid}/categories/{categoryId} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && isValidCategory(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+    }
+
+    // Everything else stored under a user is private to them. The {collection} segment
+    // keeps this from also matching users/{uid} itself, and the collections checked
+    // above are left out so their checks can't be skipped.
+    match /users/{uid}/{collection}/{document=**} {
+      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories']);
+    }
+  }
+}
