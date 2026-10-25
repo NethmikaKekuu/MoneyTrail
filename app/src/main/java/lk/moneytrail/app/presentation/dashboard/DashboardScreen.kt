@@ -82,6 +82,7 @@ fun DashboardScreen(
                 DashboardTab.CALENDAR -> CalendarScreen(
                     onAddEntryClick = onAddEntryClick,
                     onEntryClick = onEntryClick,
+                    onPayYourselfFirstClick = { selectedTab = DashboardTab.GOAL },
                     modifier = tabModifier
                 )
                 DashboardTab.FOLDERS -> FoldersScreen(

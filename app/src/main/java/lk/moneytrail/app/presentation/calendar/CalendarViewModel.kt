@@ -7,13 +7,18 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.moneytrail.app.domain.model.MoneyPlan
 import lk.moneytrail.app.domain.model.confirmed
 import lk.moneytrail.app.domain.model.confirmedSalary
 import lk.moneytrail.app.domain.model.dueExpected
+import lk.moneytrail.app.domain.model.isSavingsDue
+import lk.moneytrail.app.domain.model.monthlySavings
 import lk.moneytrail.app.domain.repository.AuthRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
+import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.repository.UserRepository
 import lk.moneytrail.app.domain.usecase.EnsureMonthlySalaryUseCase
 import lk.moneytrail.app.domain.usecase.UpdateEntryUseCase
@@ -26,6 +31,7 @@ class CalendarViewModel @Inject constructor(
     private val entryRepository: EntryRepository,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
+    private val planRepository: PlanRepository,
     private val updateEntryUseCase: UpdateEntryUseCase,
     private val ensureMonthlySalary: EnsureMonthlySalaryUseCase
 ) : ViewModel() {
@@ -40,10 +46,14 @@ class CalendarViewModel @Inject constructor(
     /** The live listener for the month on screen. Replaced when the month changes. */
     private var monthJob: Job? = null
 
+    /** The latest plan, to know if confirming the salary should lead to Pay yourself first. */
+    private var plan: MoneyPlan? = null
+
     init {
         loadFirstName()
         listenToMonth(_uiState.value.month)
         listenToExpected()
+        listenToSavings()
         viewModelScope.launch {
             // Puts this month's salary on the calendar as expected. If it fails, the
             // user can still add it by hand, so there's nothing to show.
@@ -124,7 +134,8 @@ class CalendarViewModel @Inject constructor(
      * base and the bonus told apart.
      */
     fun onCheckConfirm() {
-        saveCheck { check ->
+        val isSalary = _uiState.value.check?.isSalary == true
+        saveCheck(onSaved = { if (isSalary) openGoalIfSavingsToMove() }) { check ->
             val amount = check.amountDigits.toLongOrNull() ?: 0L
             val confirmed = if (check.isSalary) {
                 check.entry.confirmedSalary(base = amount, bonus = check.bonus, date = check.date)
@@ -173,15 +184,46 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    private fun saveCheck(action: suspend (ExpectedCheck) -> Result<Unit>) {
+    private fun saveCheck(onSaved: () -> Unit = {}, action: suspend (ExpectedCheck) -> Result<Unit>) {
         val check = _uiState.value.check ?: return
         if (check.isSaving) return
 
         updateCheck { copy(isSaving = true, isPickingNewDate = false, errorMessage = null) }
         viewModelScope.launch {
             action(check)
-                .onSuccess { _uiState.update { it.copy(check = null) } }
+                .onSuccess {
+                    _uiState.update { it.copy(check = null) }
+                    onSaved()
+                }
                 .onFailure { e -> updateCheck { copy(isSaving = false, errorMessage = e.message) } }
+        }
+    }
+
+    /** The Goal tab has opened after the salary was confirmed. */
+    fun onGoalOpened() {
+        _uiState.update { it.copy(openGoal = false) }
+    }
+
+    /**
+     * Pay yourself first: once this month's salary is confirmed or the transfer day has
+     * come, the calendar shows what to move to savings, until it's moved or snoozed.
+     */
+    private fun listenToSavings() {
+        viewModelScope.launch {
+            combine(planRepository.observePlan(), entryRepository.observeMonth(YearMonth.from(today))) { planResult, entries ->
+                plan = planResult.getOrNull()
+                val isSalaryConfirmed = entries.getOrNull().orEmpty().any { it.isSalary && !it.isExpected }
+                // Only this card depends on it, so a failure just leaves it out.
+                plan?.takeIf { it.isSavingsDue(today, isSalaryConfirmed) }?.monthlySavings(today)?.values?.sum()
+            }.collect { amount -> _uiState.update { it.copy(savingsDue = amount) } }
+        }
+    }
+
+    /** After the salary is confirmed, goes on to Pay yourself first when there's something to save. */
+    private fun openGoalIfSavingsToMove() {
+        val plan = plan ?: return
+        if (plan.monthlySavings(today).isNotEmpty() && plan.savingsMovedMonth != YearMonth.from(today)) {
+            _uiState.update { it.copy(openGoal = true) }
         }
     }
 
