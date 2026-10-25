@@ -46,6 +46,8 @@ class CompleteOnboardingUseCaseTest {
         }
 
         override suspend fun getPlan(): Result<MoneyPlan?> = Result.success(saved)
+
+        override fun observePlan(): Flow<Result<MoneyPlan?>> = flowOf(Result.success(saved))
     }
 
     private class FakeCategoryRepository(private val existing: List<CustomCategory> = emptyList()) : CategoryRepository {
