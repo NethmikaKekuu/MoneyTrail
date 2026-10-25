@@ -107,6 +107,13 @@ object MoneyTrailIcons {
         "M16,17l5,-5 -5,-5M21,12H9"
     )
 
+    /** A crossed-out cloud, for the offline banner. */
+    val CloudOff = lineIcon(
+        "CloudOff", 2f,
+        "M7,19h10.5a4.5,4.5 0,0 0,0.9 -8.91A6,6 0,0 0,6.3 10.6a4.25,4.25 0,0 0,0.7 8.4z",
+        "M3,3l18,18"
+    )
+
     /** Google's "G" for the "Continue with Google" button. */
     val GoogleLogo: ImageVector = ImageVector.Builder(
         name = "GoogleLogo",
