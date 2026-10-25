@@ -153,6 +153,11 @@ class GoalViewModel @Inject constructor(
         allowEmergency: Boolean
     ) {
         val plan = currentPlan ?: return
+        // The same checks as the Firestore rules, so a bad goal is never sent.
+        if (name.isBlank() || targetAmount <= 0 || savedAmount > targetAmount) {
+            showBanner("Give the goal a name and a target, with no more saved than the target.")
+            return
+        }
 
         _uiState.update {
             if (it is GoalUiState.Success) {
@@ -219,15 +224,17 @@ class GoalViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            // A goal never goes past its target: what's saved can't be more than the goal.
             val updatedGoals = plan.goals.map { goal ->
-                val allocatedAmount = allocations[goal.name] ?: 0L
+                val allocatedAmount = (allocations[goal.name] ?: 0L)
+                    .coerceAtMost(goal.targetAmount - goal.savedAmount)
                 if (allocatedAmount > 0) {
                     goal.copy(savedAmount = goal.savedAmount + allocatedAmount)
                 } else goal
             }
 
             val updatedPlan = plan.copy(goals = updatedGoals)
-            val totalAllocated = allocations.values.sum()
+            val totalAllocated = updatedGoals.sumOf { it.savedAmount } - plan.goals.sumOf { it.savedAmount }
 
             planRepository.savePlan(updatedPlan)
                 .onSuccess {
@@ -259,7 +266,10 @@ class GoalViewModel @Inject constructor(
     fun onDeleteGoal(goalName: String) {
         val plan = currentPlan ?: return
         val updatedGoals = plan.goals.filterNot { it.name.equals(goalName, ignoreCase = true) }
-        if (updatedGoals.isEmpty()) return
+        if (updatedGoals.isEmpty()) {
+            showBanner("Keep at least one goal. Add another one before removing this.")
+            return
+        }
 
         _uiState.update {
             if (it is GoalUiState.Success) {
@@ -297,6 +307,14 @@ class GoalViewModel @Inject constructor(
         _uiState.update {
             if (it is GoalUiState.Success) {
                 it.copy(bannerMessage = null)
+            } else it
+        }
+    }
+
+    private fun showBanner(message: String) {
+        _uiState.update {
+            if (it is GoalUiState.Success) {
+                it.copy(bannerMessage = message)
             } else it
         }
     }

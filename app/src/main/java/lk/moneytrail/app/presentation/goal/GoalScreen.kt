@@ -116,11 +116,10 @@ fun GoalScreen(
         ) {
             when (val state = uiState) {
                 GoalUiState.Loading -> LoadingView(message = "Loading goal progress…")
+                // Goals live in the money plan, so without one there's nowhere to add a goal yet.
                 GoalUiState.Empty -> EmptyView(
                     title = "No Savings Goal Set",
-                    message = "Set up your target goal in settings or tap below to create a new goal.",
-                    actionLabel = "Create Goal",
-                    onAction = viewModel::onOpenNewGoalDialog
+                    message = "Set up your salary and goal from More › Settings, and your progress will show here."
                 )
                 is GoalUiState.Error -> ErrorView(
                     message = state.message,

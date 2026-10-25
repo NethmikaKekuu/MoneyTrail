@@ -87,6 +87,7 @@ service cloud.firestore {
     function isValidGoal(goal) {
       return goal is map
         && goal.keys().hasAll(['name', 'targetAmount', 'savedAmount', 'targetDate'])
+        && goal.keys().hasOnly(['name', 'targetAmount', 'savedAmount', 'targetDate', 'transferDay', 'allowEmergencyWithdrawals'])
         && goal.name is string && goal.name.size() > 0 && goal.name.size() <= 60
         && goal.targetAmount is int && goal.targetAmount > 0 && goal.targetAmount <= 999999999
         && goal.savedAmount is int && goal.savedAmount >= 0 && goal.savedAmount <= goal.targetAmount

@@ -32,8 +32,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.moneytrail.app.domain.model.SavingsGoal
+import lk.moneytrail.app.domain.model.monthlySavingNeeded
 import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
+import java.time.LocalDate
+
+// The limits the Firestore rules check on a goal.
+private const val MAX_NAME_LENGTH = 60
+private const val MAX_DIGITS = 9
 
 @Composable
 fun NewGoalDialog(
@@ -65,10 +71,12 @@ fun NewGoalDialog(
     val months = (monthsDigits.toIntOrNull() ?: 12).coerceAtLeast(1)
     val transferDay = (transferDayDigits.toIntOrNull() ?: defaultTransferDay ?: 1).coerceIn(1, 28)
 
-    val remainingShortfall = (targetAmount - savedAmount).coerceAtLeast(0L)
-    val monthlySavingNeeded = if (remainingShortfall > 0) {
-        (remainingShortfall + months - 1) / months
-    } else 0L
+    // The same rule the Firestore rules check: what's saved can't be more than the goal.
+    val isSavedTooMuch = savedAmount > targetAmount
+    val canSave = name.isNotBlank() && targetAmount > 0 && !isSavedTooMuch
+    val today = LocalDate.now()
+    val monthlySavingNeeded = SavingsGoal(name, targetAmount, savedAmount, today.plusMonths(months.toLong()))
+        .monthlySavingNeeded(today)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -86,7 +94,7 @@ fun NewGoalDialog(
             ) {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = { name = it.take(MAX_NAME_LENGTH) },
                     label = { Text("Goal Name") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -95,7 +103,7 @@ fun NewGoalDialog(
 
                 OutlinedTextField(
                     value = targetDigits,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) targetDigits = it },
+                    onValueChange = { if (it.all { char -> char.isDigit() }) targetDigits = it.take(MAX_DIGITS) },
                     label = { Text("Target Amount (LKR)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -105,8 +113,12 @@ fun NewGoalDialog(
 
                 OutlinedTextField(
                     value = savedDigits,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) savedDigits = it },
+                    onValueChange = { if (it.all { char -> char.isDigit() }) savedDigits = it.take(MAX_DIGITS) },
                     label = { Text("Current Saved Amount (LKR)") },
+                    isError = isSavedTooMuch,
+                    supportingText = if (isSavedTooMuch) {
+                        { Text("Can't be more than the target.") }
+                    } else null,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -181,7 +193,7 @@ fun NewGoalDialog(
             Button(
                 onClick = {
                     onSaveGoal(
-                        name.trim().ifEmpty { "Savings Goal" },
+                        name.trim(),
                         targetAmount,
                         savedAmount,
                         months,
@@ -189,7 +201,7 @@ fun NewGoalDialog(
                         allowEmergency
                     )
                 },
-                enabled = name.isNotBlank() && targetAmount > 0,
+                enabled = canSave,
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text("Save Goal")
