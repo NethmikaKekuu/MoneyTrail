@@ -41,7 +41,7 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Sign up and log in | Email and password, with Firestore user profiles | 03, 04 |
 | Google sign-in | Credential Manager account picker, then Firebase Auth | 03 |
 | Forgot password | Firebase reset email, then a "check your email" screen | 05 |
-| Onboarding | Four steps after sign-up: money places, pay day and base salary, income sources, and a savings goal showing the amount to save each month. Places and ways of earning that aren't listed can be added | 06 (steps 2–4 follow its style) |
+| Onboarding | Five steps after sign-up: money places, how much each place holds now (the starting balances catch-up compares the bank against; the Savings one is offered as the goal's "already saved"), pay day and base salary, income sources, and a savings goal showing the amount to save each month. Places and ways of earning that aren't listed can be added | 06 (steps 2–4 follow its style) |
 | Calendar | Month grid with income, expense and expected markers, Income / Expenses / Expected totals, the selected day's entries, updated live from Firestore | 07 |
 | New entry | Expense or income, amount keypad, category, account (from onboarding), date and note. **+ New** adds a category of your own | 08 |
 | Edit entry | Tap an entry to change its amount, category, account, committed or discretionary, date and note, or delete it after a confirm dialog | 24 |
@@ -220,8 +220,8 @@ Written at the end of onboarding, one document per place the user ticked, all in
 | `name` | string | 1–50 characters, e.g. `Main bank`. Entries store this name in their `account` field |
 | `description` | string | Up to 100 characters, e.g. `Card and salary account` |
 | `kind` | string | `BANK`, `CASH`, `SAVINGS` or `CRYPTO` |
-| `checkedBalance` | integer | Optional. The real balance in LKR typed in when the account was last balanced in catch-up |
-| `checkedOn` | string | Optional. `yyyy-MM-dd` of that balance. What the app thinks the account holds is `checkedBalance` plus the confirmed income minus the confirmed expenses logged in it after this day |
+| `checkedBalance` | integer | Optional. What the account held at the start of `checkedOn`, in LKR, worked out from the real balance typed that day in onboarding or catch-up (the real balance minus what was logged in it that day) |
+| `checkedOn` | string | Optional. `yyyy-MM-dd` the real balance was typed. What the app thinks the account holds is `checkedBalance` plus the confirmed income minus the confirmed expenses logged in it from that day on, so anything logged that day counts once, before or after the balance was typed |
 | `createdAt` | timestamp | Set by the server |
 
 ### `users/{uid}/categories/{categoryId}`
@@ -260,7 +260,7 @@ The monthly amount to save is worked out when needed (`SavingsGoal.monthlySaving
 
 **Pay yourself first.** Each month the goals' monthly saving (`MoneyPlan.monthlySavings`, leaving out goals already reached) is due once this month's salary is confirmed or the earliest transfer day has come (`MoneyPlan.isSavingsDue`). Until it's moved or snoozed, the calendar shows a "Pay yourself first" card that opens the Goal tab, and confirming the salary on the calendar goes straight there. "I've moved it" runs `MoveSavingsUseCase`, which adds what the user moved to each goal and sets `savingsMovedMonth`; "Remind me tomorrow" runs `RemindSavingsLaterUseCase`. Goals are added and edited through `SaveGoalUseCase` and removed through `DeleteGoalUseCase`, with the same checks as the rules.
 
-**Catch-up.** When the dashboard opens, `CheckCatchUpUseCase` compares today with the later of the day the last entry was saved (`EntryRepository.lastLoggedDate`, the newest `createdAt`) and the last finished catch-up; 3 or more days opens the catch-up, unless the user said "Later" today. Those two dates are kept on the phone (`CatchUpPreferences`), not in Firestore. `BalanceAccountUseCase` works out each account's balance from its last check and adds the difference to the real balance as a "Not logged" entry (spending counts as discretionary), then saves the real balance as the next starting point.
+**Catch-up.** When the dashboard opens, `CheckCatchUpUseCase` compares today with the later of the day the last entry was saved (`EntryRepository.lastLoggedDate`, the newest `createdAt`) and the last finished catch-up; 3 or more days opens the catch-up, unless the user said "Later" today. Those two dates are kept on the phone (`CatchUpPreferences`), not in Firestore. `BalanceAccountUseCase` works out each account's balance from its last check and adds the difference to the real balance as a "Not logged" entry (spending counts as discretionary), then saves the start-of-day balance as the next starting point. The first starting balances come from onboarding; an account without one (made before this step existed) gets it at its first catch-up.
 
 **Salary as expected income.** When the calendar opens, `EnsureMonthlySalaryUseCase` adds this month's salary as an `EXPECTED` Salary entry on pay day (a pay day of 31 falls on the last day of shorter months). It does nothing if there's no salary, if this month already has a Salary entry, or once pay day has passed, so a salary removed with "Didn't happen" doesn't come back. Changing the salary on Salary (`UpdateSalaryUseCase`) moves a still-expected salary to the new base and day, keeping any bonus already on it. A bonus is added to the salary entry itself: in the "Did it come in?" dialog (`Entry.confirmedSalary`) or later on Edit entry, which shows Base salary and Bonus for a Salary income.
 
@@ -271,7 +271,7 @@ The monthly amount to save is worked out when needed (`SavingsGoal.monthlySaving
 - A user can only read and write data under their own `users/{uid}`.
 - The profile may only hold `name`, `email` and `createdAt`; `createdAt` must be the server time on create and can't change later.
 - Every entry is checked field by field: allowed keys only, `status`, `type` and `spendingType` from fixed lists, amount range, a `bonus` below the amount and only on a Salary income, `yyyy-MM-dd` date, note length, server `createdAt`.
-- Each account must have a name, a description and a `kind` from a fixed list, with a server `createdAt` when it's made. Balancing it may add `checkedBalance` (a whole number) and `checkedOn` (`yyyy-MM-dd`) and must keep `createdAt`.
+- Each account must have a name, a description and a `kind` from a fixed list, with a server `createdAt` when it's made. Onboarding saves it with a starting `checkedBalance` (a whole number) and `checkedOn` (`yyyy-MM-dd`); balancing it in catch-up updates those two and must keep `createdAt`.
 - The plan must have a pay day of 1–31, a salary of 0 or more, income sources from a fixed list, and a goal with only the allowed fields whose saved amount is no more than its target. The `goals` list may hold up to 20 goals; rules can't loop over a list, so the app checks each goal before saving (`SaveGoalUseCase.goalError`, `NewGoalDialog`). `savingsMovedMonth` must be `yyyy-MM` and `savingsRemindOn` `yyyy-MM-dd`.
 - Each category must have a 1–30 character name and a `type`; expense categories need a `spendingType`, income ones must have `null`. Categories can be created and deleted, not changed.
 - Any other collection under a user is owner-only. Entries, accounts, settings and categories are excluded from that catch-all, so their checks can't be skipped.
@@ -342,7 +342,7 @@ app/src/main/java/lk/moneytrail/app/
     ├── insights/         Expense insights (income insights to come)
     ├── more/             Profile, Salary, Catch up and Settings links, sign-out
     ├── navigation/       Routes and the NavHost
-    ├── onboarding/       Four-step onboarding: money places, salary, income sources, goal
+    ├── onboarding/       Five-step onboarding: money places, starting balances, salary, income sources, goal
     ├── salary/           Salary: pay day and base salary
     ├── settings/         App theme, the user's own categories
     ├── splash/, welcome/

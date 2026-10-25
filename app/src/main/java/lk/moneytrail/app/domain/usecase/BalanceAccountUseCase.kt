@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.first
 import lk.moneytrail.app.domain.model.Account
 import lk.moneytrail.app.domain.model.calculatedBalance
 import lk.moneytrail.app.domain.model.notLoggedEntry
+import lk.moneytrail.app.domain.model.startOfDayBalance
 import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import java.time.LocalDate
@@ -13,7 +14,8 @@ import javax.inject.Inject
  * Balancing an account (MoneyTrail-Figma-HTML/21-MonthlyClose.html): the user types what
  * the bank really shows, the app compares it with what it worked out, and anything not
  * logged is added as a "Not logged" entry, so the account matches the bank again. The
- * real balance becomes the start for next time; the first time, that's all it does.
+ * balance is remembered as the start for next time; the first time, that's all it does.
+ * Onboarding can set that first balance too ([lk.moneytrail.app.domain.model.Account.checkedBalance]).
  */
 class BalanceAccountUseCase @Inject constructor(
     private val entryRepository: EntryRepository,
@@ -22,9 +24,8 @@ class BalanceAccountUseCase @Inject constructor(
     /** What the app thinks [account] holds today; null before it's ever been balanced. */
     suspend fun calculated(account: Account, today: LocalDate): Result<Long?> {
         val checkedOn = account.checkedOn ?: return Result.success(null)
-        // Entries from the day after the check: the typed balance already held that day's money.
-        if (!checkedOn.isBefore(today)) return Result.success(account.checkedBalance)
-        val entries = entryRepository.observeBetween(checkedOn.plusDays(1), today).first()
+        // From the check day itself: the check remembers the balance at the start of that day.
+        val entries = entryRepository.observeBetween(checkedOn, today).first()
             .getOrElse { return Result.failure(it) }
         return Result.success(account.calculatedBalance(entries))
     }
@@ -33,10 +34,15 @@ class BalanceAccountUseCase @Inject constructor(
     suspend operator fun invoke(account: Account, realBalance: Long, today: LocalDate): Result<Long> {
         val calculated = calculated(account, today).getOrElse { return Result.failure(it) }
         val difference = calculated?.let { realBalance - it } ?: 0L
+        // Read before the "Not logged" entry is added, which then joins them below.
+        val todaysEntries = entryRepository.observeBetween(today, today).first()
+            .getOrElse { return Result.failure(it) }
 
-        notLoggedEntry(account.name, difference, today)?.let { entry ->
+        val notLogged = notLoggedEntry(account.name, difference, today)
+        notLogged?.let { entry ->
             entryRepository.addEntry(entry).onFailure { return Result.failure(it) }
         }
-        return accountRepository.saveBalanceCheck(account.id, realBalance, today).map { difference }
+        val startOfDay = startOfDayBalance(realBalance, account.name, todaysEntries + listOfNotNull(notLogged))
+        return accountRepository.saveBalanceCheck(account.id, startOfDay, today).map { difference }
     }
 }

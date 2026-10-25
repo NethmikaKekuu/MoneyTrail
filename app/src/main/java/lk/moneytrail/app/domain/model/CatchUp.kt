@@ -30,11 +30,20 @@ fun List<Entry>.balanceChange(account: String): Long =
         .sumOf { if (it.type == EntryType.INCOME) it.amount else -it.amount }
 
 /**
- * What the app thinks [account] holds on [today]: the balance last typed in plus what was
- * logged after that day. Null before the account has ever been balanced.
+ * What the app thinks the account holds now: its balance at the start of the check day
+ * plus everything logged in it from that day on ([entriesSinceCheck]). Null before the
+ * account has ever been balanced.
  */
 fun Account.calculatedBalance(entriesSinceCheck: List<Entry>): Long? =
     checkedBalance?.let { it + entriesSinceCheck.balanceChange(name) }
+
+/**
+ * The balance to remember when the user types [realBalance] for [account] today: what it
+ * held before [todaysEntries]. Today's entries are counted again from the check day on, so
+ * anything logged today, before or after the balance was typed, counts exactly once.
+ */
+fun startOfDayBalance(realBalance: Long, account: String, todaysEntries: List<Entry>): Long =
+    realBalance - todaysEntries.balanceChange(account)
 
 /**
  * The entry that makes the app match the bank when the real balance is [difference] away

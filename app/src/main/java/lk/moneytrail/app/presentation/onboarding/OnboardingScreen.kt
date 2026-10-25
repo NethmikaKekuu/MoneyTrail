@@ -54,6 +54,7 @@ import lk.moneytrail.app.presentation.auth.AuthErrorText
 import lk.moneytrail.app.presentation.auth.AuthPrimaryButton
 import lk.moneytrail.app.presentation.auth.AuthTextField
 import lk.moneytrail.app.presentation.components.AddCategoryDialog
+import lk.moneytrail.app.presentation.components.AmountVisualTransformation
 import lk.moneytrail.app.presentation.components.MoneyTrailDatePickerDialog
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
@@ -75,7 +76,7 @@ fun OnboardingScreen(
         if (uiState.isFinished) onFinishClick()
     }
 
-    // On steps 2 to 4, Back goes to the previous step instead of leaving the app.
+    // After the first step, Back goes to the previous step instead of leaving the app.
     BackHandler(enabled = uiState.step != OnboardingStep.MONEY_PLACES) {
         viewModel.onBackClick()
     }
@@ -89,6 +90,7 @@ fun OnboardingScreen(
         onAddPlaceClick = viewModel::onAddPlaceClick,
         onAddPlace = viewModel::onAddPlace,
         onAddPlaceDismiss = viewModel::onAddPlaceDismiss,
+        onBalanceChange = viewModel::onBalanceChange,
         onPayDayClick = viewModel::onPayDayClick,
         onBaseSalaryChange = viewModel::onBaseSalaryChange,
         onIncomeSourceToggle = viewModel::onIncomeSourceToggle,
@@ -117,6 +119,7 @@ private fun OnboardingContent(
     onAddPlaceClick: () -> Unit,
     onAddPlace: (String, AccountKind) -> Unit,
     onAddPlaceDismiss: () -> Unit,
+    onBalanceChange: (accountId: String, text: String) -> Unit,
     onPayDayClick: (Int) -> Unit,
     onBaseSalaryChange: (String) -> Unit,
     onIncomeSourceToggle: (IncomeSource) -> Unit,
@@ -183,6 +186,7 @@ private fun OnboardingContent(
         ) {
             when (uiState.step) {
                 OnboardingStep.MONEY_PLACES -> MoneyPlacesStep(uiState, onAccountToggle, onAddPlaceClick)
+                OnboardingStep.BALANCES -> BalancesStep(uiState, onBalanceChange)
                 OnboardingStep.SALARY -> SalaryStep(uiState, onPayDayClick, onBaseSalaryChange)
                 OnboardingStep.INCOME_SOURCES ->
                     IncomeSourcesStep(uiState, onIncomeSourceToggle, onOwnIncomeToggle, onAddIncomeClick)
@@ -222,6 +226,9 @@ private fun OnboardingContent(
 private fun stepText(step: OnboardingStep): Pair<String, String> = when (step) {
     OnboardingStep.MONEY_PLACES -> "Where does your money sit?" to
         "Pick every place you keep money. Moving cash between them never counts as spending."
+    OnboardingStep.BALANCES -> "How much is in each place now?" to
+        "Open your banking apps and type what each one holds today. MoneyTrail starts from these " +
+        "and checks them against your bank later, so spending you forget to log isn't lost."
     OnboardingStep.SALARY -> "When does your salary arrive?" to
         "MoneyTrail will remind you on pay day to confirm what actually came in."
     OnboardingStep.INCOME_SOURCES -> "Where else does money come from?" to
@@ -248,6 +255,26 @@ private fun ColumnScope.MoneyPlacesStep(
         )
     }
     AddMoreButton(text = "Add another place", onClick = onAddPlaceClick, enabled = !uiState.isSaving)
+}
+
+/** One amount field for each ticked place: the starting balances catch-up compares against later. */
+@Composable
+private fun ColumnScope.BalancesStep(
+    uiState: OnboardingState,
+    onBalanceChange: (accountId: String, text: String) -> Unit
+) {
+    uiState.selectedAccounts.forEach { account ->
+        AuthTextField(
+            value = uiState.balanceDigits[account.id].orEmpty(),
+            onValueChange = { onBalanceChange(account.id, it) },
+            label = "${account.name} (LKR)",
+            placeholder = "e.g. 48,320",
+            enabled = !uiState.isSaving,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+            visualTransformation = AmountVisualTransformation
+        )
+    }
+    AmountHint(text = "Type 0 for a place that's empty right now.")
 }
 
 @Composable
@@ -438,6 +465,7 @@ private fun OnboardingPreviewContent(state: OnboardingState) {
         onAddPlaceClick = {},
         onAddPlace = { _, _ -> },
         onAddPlaceDismiss = {},
+        onBalanceChange = { _, _ -> },
         onPayDayClick = {},
         onBaseSalaryChange = {},
         onIncomeSourceToggle = {},
