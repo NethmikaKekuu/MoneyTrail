@@ -57,6 +57,7 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 @Composable
 fun FreelanceProjectsScreen(
     onBackClick: () -> Unit,
+    onAddProjectClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: FreelanceViewModel = hiltViewModel()
 ) {
@@ -75,7 +76,7 @@ fun FreelanceProjectsScreen(
         topBar = {
             FreelanceTopBar(
                 onBackClick = onBackClick,
-                onAddProjectClick = {}
+                onAddProjectClick = onAddProjectClick
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -518,14 +519,9 @@ private fun MilestoneCard(milestone: Milestone) {
 @Composable
 private fun FreelanceProjectsScreenPreview() {
     MoneyTrailTheme {
-        FreelanceContent(
-            state = FreelanceUiState(
-                projects = FreelanceViewModel.defaultMockProjects(),
-                selectedProjectId = "p1"
-            ),
-            onSelectProject = {},
-            onMarkInvoiced = {},
-            onRecordPayment = {}
+        FreelanceProjectsScreen(
+            onBackClick = {},
+            onAddProjectClick = {}
         )
     }
 }

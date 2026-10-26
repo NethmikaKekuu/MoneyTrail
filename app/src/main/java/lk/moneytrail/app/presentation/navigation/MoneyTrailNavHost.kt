@@ -16,6 +16,7 @@ import lk.moneytrail.app.presentation.catchup.CatchUpScreen
 import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
+import lk.moneytrail.app.presentation.freelance.AddProjectScreen
 import lk.moneytrail.app.presentation.freelance.FreelanceProjectsScreen
 import lk.moneytrail.app.presentation.goal.GoalScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
@@ -113,7 +114,14 @@ fun MoneyTrailNavHost(
         }
         composable(Routes.FREELANCE) {
             FreelanceProjectsScreen(
-                onBackClick = { navController.popBackStack(Routes.FREELANCE, inclusive = true) }
+                onBackClick = { navController.popBackStack(Routes.FREELANCE, inclusive = true) },
+                onAddProjectClick = { navController.navigate(Routes.ADD_PROJECT) { launchSingleTop = true } }
+            )
+        }
+        composable(Routes.ADD_PROJECT) {
+            AddProjectScreen(
+                onBackClick = { navController.popBackStack(Routes.ADD_PROJECT, inclusive = true) },
+                onProjectSaved = { navController.popBackStack(Routes.ADD_PROJECT, inclusive = true) }
             )
         }
         composable(
