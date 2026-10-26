@@ -17,6 +17,7 @@ object Routes {
     const val CATCH_UP = "catch_up"
     const val FREELANCE = "freelance"
     const val ADD_PROJECT = "add_project"
+    const val RECORD_FREELANCE_PAYMENT = "record_freelance_payment"
 
     /** Optional yyyy-MM-dd day for a new entry to start on, e.g. the day picked on the calendar. */
     const val ADD_ENTRY_DATE_ARG = "date"

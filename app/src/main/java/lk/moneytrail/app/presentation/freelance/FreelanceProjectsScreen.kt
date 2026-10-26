@@ -58,6 +58,7 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 fun FreelanceProjectsScreen(
     onBackClick: () -> Unit,
     onAddProjectClick: () -> Unit,
+    onRecordPaymentClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: FreelanceViewModel = hiltViewModel()
 ) {
@@ -98,7 +99,7 @@ fun FreelanceProjectsScreen(
                         state = uiState,
                         onSelectProject = viewModel::onSelectProject,
                         onMarkInvoiced = viewModel::onMarkInvoiced,
-                        onRecordPayment = viewModel::onRecordPayment,
+                        onRecordPayment = onRecordPaymentClick,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -521,7 +522,8 @@ private fun FreelanceProjectsScreenPreview() {
     MoneyTrailTheme {
         FreelanceProjectsScreen(
             onBackClick = {},
-            onAddProjectClick = {}
+            onAddProjectClick = {},
+            onRecordPaymentClick = {}
         )
     }
 }

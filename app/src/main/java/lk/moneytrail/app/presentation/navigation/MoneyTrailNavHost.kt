@@ -18,6 +18,7 @@ import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
 import lk.moneytrail.app.presentation.freelance.AddProjectScreen
 import lk.moneytrail.app.presentation.freelance.FreelanceProjectsScreen
+import lk.moneytrail.app.presentation.freelance.RecordFreelancePaymentScreen
 import lk.moneytrail.app.presentation.goal.GoalScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
 import lk.moneytrail.app.presentation.salary.SalaryScreen
@@ -115,13 +116,20 @@ fun MoneyTrailNavHost(
         composable(Routes.FREELANCE) {
             FreelanceProjectsScreen(
                 onBackClick = { navController.popBackStack(Routes.FREELANCE, inclusive = true) },
-                onAddProjectClick = { navController.navigate(Routes.ADD_PROJECT) { launchSingleTop = true } }
+                onAddProjectClick = { navController.navigate(Routes.ADD_PROJECT) { launchSingleTop = true } },
+                onRecordPaymentClick = { navController.navigate(Routes.RECORD_FREELANCE_PAYMENT) { launchSingleTop = true } }
             )
         }
         composable(Routes.ADD_PROJECT) {
             AddProjectScreen(
                 onBackClick = { navController.popBackStack(Routes.ADD_PROJECT, inclusive = true) },
                 onProjectSaved = { navController.popBackStack(Routes.ADD_PROJECT, inclusive = true) }
+            )
+        }
+        composable(Routes.RECORD_FREELANCE_PAYMENT) {
+            RecordFreelancePaymentScreen(
+                onBackClick = { navController.popBackStack(Routes.RECORD_FREELANCE_PAYMENT, inclusive = true) },
+                onPaymentSaved = { navController.popBackStack(Routes.RECORD_FREELANCE_PAYMENT, inclusive = true) }
             )
         }
         composable(
