@@ -64,6 +64,32 @@ class FreelanceModelTest {
     }
 
     @Test
+    fun markingMilestoneAsPaid_updatesPaidAndInvoicedAmountsCorrectly() {
+        val milestone1 = Milestone("m1", "Design", 30_000L, MilestoneStatus.PAID)
+        val milestone2 = Milestone("m2", "Build", 45_000L, MilestoneStatus.PAID)
+        val milestone3 = Milestone("m3", "Launch", 30_000L, MilestoneStatus.INVOICED)
+        val milestone4 = Milestone("m4", "Support", 15_000L, MilestoneStatus.PLANNED)
+
+        val project = Project("p1", "Bakery website", "React build", 120_000L, listOf(milestone1, milestone2, milestone3, milestone4))
+
+        // Initial state before payment: Paid = 75,000, Invoiced = 30,000
+        assertEquals(75_000L, project.paidAmount)
+        assertEquals(30_000L, project.invoicedAmount)
+        assertEquals(15_000L, project.plannedAmount)
+
+        // Settle milestone 3 ("Launch") to PAID
+        val updatedMilestones = project.milestones.map {
+            if (it.id == "m3") it.copy(status = MilestoneStatus.PAID) else it
+        }
+        val updatedProject = project.copy(milestones = updatedMilestones)
+
+        // Updated state after payment: Paid = 105,000, Invoiced = 0
+        assertEquals(105_000L, updatedProject.paidAmount)
+        assertEquals(0L, updatedProject.invoicedAmount)
+        assertEquals(15_000L, updatedProject.plannedAmount)
+    }
+
+    @Test
     fun project_withEmptyMilestones_returnsZeroTotals() {
         val project = Project(
             id = "p2",

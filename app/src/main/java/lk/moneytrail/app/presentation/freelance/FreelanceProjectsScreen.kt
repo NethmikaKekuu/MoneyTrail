@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.Milestone
 import lk.moneytrail.app.domain.model.MilestoneStatus
 import lk.moneytrail.app.domain.model.Project
+import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.ErrorView
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
@@ -93,6 +94,12 @@ fun FreelanceProjectsScreen(
                 uiState.errorMessage != null && uiState.projects.isEmpty() -> ErrorView(
                     message = uiState.errorMessage ?: "Failed to load projects",
                     onRetry = viewModel::onRetry
+                )
+                uiState.projects.isEmpty() -> EmptyView(
+                    title = "No Freelance Projects",
+                    message = "Track clients, budgets, and milestone payments by adding your first project.",
+                    actionLabel = "Add Project",
+                    onAction = onAddProjectClick
                 )
                 else -> {
                     FreelanceContent(
@@ -520,10 +527,14 @@ private fun MilestoneCard(milestone: Milestone) {
 @Composable
 private fun FreelanceProjectsScreenPreview() {
     MoneyTrailTheme {
-        FreelanceProjectsScreen(
-            onBackClick = {},
-            onAddProjectClick = {},
-            onRecordPaymentClick = {}
+        FreelanceContent(
+            state = FreelanceUiState(
+                projects = FreelanceViewModel.defaultMockProjects(),
+                selectedProjectId = "p1"
+            ),
+            onSelectProject = {},
+            onMarkInvoiced = {},
+            onRecordPayment = {}
         )
     }
 }
