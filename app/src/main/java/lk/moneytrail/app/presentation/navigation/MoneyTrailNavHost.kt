@@ -16,6 +16,7 @@ import lk.moneytrail.app.presentation.catchup.CatchUpScreen
 import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
+import lk.moneytrail.app.presentation.freelance.FreelanceProjectsScreen
 import lk.moneytrail.app.presentation.goal.GoalScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
 import lk.moneytrail.app.presentation.salary.SalaryScreen
@@ -83,6 +84,7 @@ fun MoneyTrailNavHost(
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                 onSalaryClick = { navController.navigate(Routes.SALARY) { launchSingleTop = true } },
                 onCatchUpClick = { navController.navigate(Routes.CATCH_UP) { launchSingleTop = true } },
+                onFreelanceClick = { navController.navigate(Routes.FREELANCE) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
             )
         }
@@ -107,6 +109,11 @@ fun MoneyTrailNavHost(
                 onBackClick = { navController.popBackStack(Routes.SALARY, inclusive = true) },
                 // Onboarding ends on a fresh dashboard, which then expects the new salary.
                 onSetUpClick = { navController.navigate(Routes.ONBOARDING) { launchSingleTop = true } }
+            )
+        }
+        composable(Routes.FREELANCE) {
+            FreelanceProjectsScreen(
+                onBackClick = { navController.popBackStack(Routes.FREELANCE, inclusive = true) }
             )
         }
         composable(

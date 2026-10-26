@@ -56,6 +56,7 @@ fun DashboardScreen(
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
+    onFreelanceClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel()
@@ -108,6 +109,7 @@ fun DashboardScreen(
                     onSettingsClick = onSettingsClick,
                     onSalaryClick = onSalaryClick,
                     onCatchUpClick = onCatchUpClick,
+                    onFreelanceClick = onFreelanceClick,
                     onSignedOut = onSignedOut,
                     modifier = tabModifier
                 )
