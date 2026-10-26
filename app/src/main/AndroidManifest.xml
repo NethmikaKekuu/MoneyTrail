@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Looks up the market dollar rate for an AdSense payout. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Lets the app tell when the phone is offline, to say so on screen. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 

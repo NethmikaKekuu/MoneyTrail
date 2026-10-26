@@ -28,7 +28,10 @@ object Categories {
      */
     const val NOT_LOGGED = "Not logged"
 
-    val income: List<String> = listOf(SALARY, "Freelance", "AdSense", "Crypto", "Other")
+    /** The one category paid in US dollars; its entries can carry [Entry.usdCents]. */
+    const val ADSENSE = "AdSense"
+
+    val income: List<String> = listOf(SALARY, "Freelance", ADSENSE, "Crypto", "Other")
 
     fun namesFor(type: EntryType): List<String> = when (type) {
         EntryType.EXPENSE -> expense.keys.toList()

@@ -13,6 +13,7 @@ import lk.moneytrail.app.data.repository.FirestoreCategoryRepository
 import lk.moneytrail.app.data.repository.FirestoreEntryRepository
 import lk.moneytrail.app.data.repository.FirestorePlanRepository
 import lk.moneytrail.app.data.repository.FirestoreUserRepository
+import lk.moneytrail.app.data.repository.HttpUsdRateRepository
 import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.repository.AuthRepository
 import lk.moneytrail.app.domain.repository.CatchUpRepository
@@ -21,6 +22,7 @@ import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.repository.ReminderScheduler
+import lk.moneytrail.app.domain.repository.UsdRateRepository
 import lk.moneytrail.app.domain.repository.UserRepository
 import javax.inject.Singleton
 
@@ -51,6 +53,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCategoryRepository(impl: FirestoreCategoryRepository): CategoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUsdRateRepository(impl: HttpUsdRateRepository): UsdRateRepository
 
     @Binds
     @Singleton
