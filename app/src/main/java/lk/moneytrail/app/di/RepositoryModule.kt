@@ -10,6 +10,7 @@ import lk.moneytrail.app.data.repository.FirebaseAuthRepository
 import lk.moneytrail.app.data.repository.FirestoreAccountRepository
 import lk.moneytrail.app.data.repository.FirestoreCategoryRepository
 import lk.moneytrail.app.data.repository.FirestoreEntryRepository
+import lk.moneytrail.app.data.repository.FirestoreFreelanceRepository
 import lk.moneytrail.app.data.repository.FirestorePlanRepository
 import lk.moneytrail.app.data.repository.FirestoreUserRepository
 import lk.moneytrail.app.domain.repository.AccountRepository
@@ -18,6 +19,7 @@ import lk.moneytrail.app.domain.repository.CatchUpRepository
 import lk.moneytrail.app.domain.repository.CategoryRepository
 import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
+import lk.moneytrail.app.domain.repository.FreelanceRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.repository.UserRepository
 import javax.inject.Singleton
@@ -57,4 +59,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCatchUpRepository(impl: CatchUpPreferences): CatchUpRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFreelanceRepository(impl: FirestoreFreelanceRepository): FreelanceRepository
 }
