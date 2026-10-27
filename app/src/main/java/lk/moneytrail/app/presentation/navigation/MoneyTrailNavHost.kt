@@ -21,6 +21,7 @@ import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
 import lk.moneytrail.app.presentation.salary.SalaryScreen
 import lk.moneytrail.app.presentation.settings.SettingsScreen
 import lk.moneytrail.app.presentation.splash.SplashScreen
+import lk.moneytrail.app.presentation.usd.UsdPayoutScreen
 import lk.moneytrail.app.presentation.welcome.WelcomeScreen
 import java.time.LocalDate
 
@@ -122,7 +123,24 @@ fun MoneyTrailNavHost(
             AddEntryScreen(
                 // Pops only this screen, so saving and tapping close together can't also
                 // pop the dashboard.
-                onClose = { navController.popBackStack(Routes.ADD_ENTRY, inclusive = true) }
+                onClose = { navController.popBackStack(Routes.ADD_ENTRY, inclusive = true) },
+                onUsdClick = { date -> navController.navigate(Routes.usdPayout(date)) { launchSingleTop = true } }
+            )
+        }
+        composable(
+            route = Routes.USD_PAYOUT,
+            arguments = listOf(
+                navArgument(Routes.USD_PAYOUT_DATE_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            UsdPayoutScreen(
+                onBackClick = { navController.popBackStack(Routes.USD_PAYOUT, inclusive = true) },
+                // The payment is saved, so the new entry underneath is finished too.
+                onSaved = { navController.popBackStack(Routes.ADD_ENTRY, inclusive = true) }
             )
         }
         composable(

@@ -93,6 +93,7 @@ import java.util.Locale
 @Composable
 fun AddEntryScreen(
     onClose: () -> Unit,
+    onUsdClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AddEntryViewModel = hiltViewModel()
 ) {
@@ -115,6 +116,7 @@ fun AddEntryScreen(
         onDateChange = viewModel::onDateChange,
         onNoteChange = viewModel::onNoteChange,
         onExpectedChange = viewModel::onExpectedChange,
+        onUsdClick = onUsdClick,
         onSaveClick = viewModel::save,
         onCloseClick = onClose,
         modifier = modifier
@@ -137,6 +139,7 @@ private fun AddEntryContent(
     onDateChange: (LocalDate) -> Unit,
     onNoteChange: (String) -> Unit,
     onExpectedChange: (Boolean) -> Unit,
+    onUsdClick: (LocalDate) -> Unit,
     onSaveClick: () -> Unit,
     onCloseClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -204,6 +207,16 @@ private fun AddEntryContent(
                 onAddClick = onAddCategoryClick,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp)
             )
+
+            if (uiState.canEnterUsd) {
+                PickerButton(
+                    icon = MoneyTrailIcons.Calendar,
+                    text = "Enter it in USD instead",
+                    contentDescription = "Enter the AdSense payout in US dollars",
+                    onClick = { onUsdClick(uiState.date) },
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp).fillMaxWidth()
+                )
+            }
 
             Row(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp),
@@ -677,6 +690,7 @@ private fun AddEntryScreenPreview() {
             onDateChange = {},
             onNoteChange = {},
             onExpectedChange = {},
+            onUsdClick = {},
             onSaveClick = {},
             onCloseClick = {}
         )

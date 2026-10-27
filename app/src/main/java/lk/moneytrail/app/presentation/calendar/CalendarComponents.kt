@@ -41,6 +41,7 @@ import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryTotals
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.domain.model.UsdConversion
 import lk.moneytrail.app.presentation.components.MINUS_SIGN
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
@@ -289,7 +290,8 @@ internal fun EntryCard(entry: Entry, onClick: () -> Unit, modifier: Modifier = M
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(entry.category, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = "${entry.account} · $kind" + if (entry.bonus > 0) " · incl. ${formatAmount(entry.bonus)} bonus" else "",
+                    text = "${entry.account} · $kind" + if (entry.bonus > 0) " · incl. ${formatAmount(entry.bonus)} bonus" else "" +
+                        if (entry.isUsd) " · USD ${UsdConversion.formatHundredths(entry.usdCents)} at ${UsdConversion.formatHundredths(entry.effectiveRate)}" else "",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Normal,
                     color = colors.outline

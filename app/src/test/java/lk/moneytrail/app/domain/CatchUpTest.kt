@@ -127,7 +127,24 @@ class CatchUpTest {
 
         assertEquals(-1_420L, difference.getOrNull())
         assertEquals(1_420L, entries.entries.last { it.category == Categories.NOT_LOGGED }.amount)
-        assertEquals(48_320L to today, accounts.checks["main-bank"])
+        // Remembered as the start of today: 48,320 plus the 1,420 "Not logged" dated today.
+        assertEquals(49_740L to today, accounts.checks["main-bank"])
+    }
+
+    @Test
+    fun entriesLoggedOnTheCheckDay_countOnce() = runBlocking {
+        // Onboarding this morning: Main bank held 50,000 and nothing was logged yet.
+        val mainBank = Account("main-bank", "Main bank", "", AccountKind.BANK, checkedBalance = 50_000, checkedOn = today)
+        // Later the same day a 1,000 coffee is logged.
+        val entries = FakeEntryRepository(listOf(entry(EntryType.EXPENSE, 1_000, "Main bank", today)))
+        val accounts = FakeAccountRepository()
+        val balance = BalanceAccountUseCase(entries, accounts)
+
+        assertEquals(49_000L, balance.calculated(mainBank, today).getOrNull())
+        // The bank shows 48,500: only 500 went without being logged, not 1,500.
+        assertEquals(-500L, balance(mainBank, realBalance = 48_500, today = today).getOrNull())
+        // Still this morning's balance: 48,500 + the 1,000 coffee + the 500 not logged.
+        assertEquals(50_000L to today, accounts.checks["main-bank"])
     }
 
     @Test

@@ -47,6 +47,7 @@ import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.presentation.components.AmountVisualTransformation
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
@@ -278,8 +279,10 @@ private fun BalanceCard(row: BalanceRow, enabled: Boolean, onChange: (String) ->
                 )
             }
             OutlinedTextField(
-                value = row.realDigits.toLongOrNull()?.let { formatAmount(it) } ?: row.realDigits,
+                // Plain digits, shown with commas, so the cursor stays where the user types.
+                value = row.realDigits,
                 onValueChange = onChange,
+                visualTransformation = AmountVisualTransformation,
                 label = { Text("Real balance (LKR)") },
                 singleLine = true,
                 enabled = enabled,
