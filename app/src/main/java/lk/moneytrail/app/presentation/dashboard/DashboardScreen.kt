@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -34,6 +35,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import lk.moneytrail.app.domain.model.NotificationKind
 import lk.moneytrail.app.presentation.calendar.CalendarScreen
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.OfflineBanner
@@ -64,6 +66,7 @@ fun DashboardScreen(
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel()
@@ -78,6 +81,20 @@ fun DashboardScreen(
         }
     }
     var selectedTab by rememberSaveable { mutableStateOf(DashboardTab.CALENDAR) }
+    var checkDueRequested by remember { mutableStateOf(false) }
+
+    // "Check now" or "Open savings" chosen in the notification list.
+    LaunchedEffect(uiState.notificationAction) {
+        when (uiState.notificationAction) {
+            NotificationKind.MONEY_DUE -> {
+                selectedTab = DashboardTab.CALENDAR
+                checkDueRequested = true
+            }
+            NotificationKind.PAY_YOURSELF_FIRST -> selectedTab = DashboardTab.GOAL
+            else -> return@LaunchedEffect
+        }
+        viewModel.onNotificationActionHandled()
+    }
 
     val context = LocalContext.current
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -114,6 +131,9 @@ fun DashboardScreen(
                     onAddEntryClick = onAddEntryClick,
                     onEntryClick = onEntryClick,
                     onPayYourselfFirstClick = { selectedTab = DashboardTab.GOAL },
+                    onNotificationsClick = onNotificationsClick,
+                    checkDueRequested = checkDueRequested,
+                    onCheckDueRequestHandled = { checkDueRequested = false },
                     modifier = tabModifier
                 )
                 DashboardTab.FOLDERS -> FoldersScreen(

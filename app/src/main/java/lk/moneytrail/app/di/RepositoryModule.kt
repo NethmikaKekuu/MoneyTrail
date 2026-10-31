@@ -6,6 +6,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import lk.moneytrail.app.data.preferences.CatchUpPreferences
 import lk.moneytrail.app.data.reminders.WorkManagerReminderScheduler
+import lk.moneytrail.app.data.notifications.RoomNotificationLogRepository
 import lk.moneytrail.app.data.repository.AndroidConnectivityRepository
 import lk.moneytrail.app.data.repository.FirebaseAuthRepository
 import lk.moneytrail.app.data.repository.FirestoreAccountRepository
@@ -20,6 +21,7 @@ import lk.moneytrail.app.domain.repository.CatchUpRepository
 import lk.moneytrail.app.domain.repository.CategoryRepository
 import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
+import lk.moneytrail.app.domain.repository.NotificationLogRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.repository.ReminderScheduler
 import lk.moneytrail.app.domain.repository.UsdRateRepository
@@ -53,6 +55,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCategoryRepository(impl: FirestoreCategoryRepository): CategoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNotificationLogRepository(impl: RoomNotificationLogRepository): NotificationLogRepository
 
     @Binds
     @Singleton

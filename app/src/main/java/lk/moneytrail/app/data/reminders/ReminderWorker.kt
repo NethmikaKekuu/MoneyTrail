@@ -30,7 +30,7 @@ class ReminderWorker(
             Log.w(TAG, "The reminder check took too long; trying again at the next run")
             return Result.success()
         }
-        ReminderNotifier(applicationContext).show(reminders, today, force = inputData.getBoolean(KEY_FORCE, false))
+        ReminderNotifier(applicationContext, dependencies.notificationLog()).show(reminders, today, force = inputData.getBoolean(KEY_FORCE, false))
         return Result.success()
     }
 
