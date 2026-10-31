@@ -13,23 +13,34 @@ import lk.moneytrail.app.MainActivity
 import lk.moneytrail.app.R
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.Reminder
+import lk.moneytrail.app.domain.model.kind
+import lk.moneytrail.app.domain.repository.NotificationLogRepository
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
  * Shows reminders as system notifications in one "Reminders" channel. Each kind has its
- * own notification and shows at most once a day, unless forced; tapping one opens the app,
+ * own notification and shows at most once a day, unless forced; each is also kept in the
+ * app's notification list; tapping one opens the app,
  * where the matching card is waiting.
  */
-internal class ReminderNotifier(private val context: Context) {
+internal class ReminderNotifier(
+    private val context: Context,
+    private val notificationLog: NotificationLogRepository
+) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val manager = NotificationManagerCompat.from(context)
 
     // Checked just before: notifications are on, which on Android 13+ includes the permission.
     @SuppressLint("MissingPermission")
-    fun show(reminders: List<Reminder>, today: LocalDate, force: Boolean) {
+    suspend fun show(reminders: List<Reminder>, today: LocalDate, force: Boolean) {
+        // Kept in the app's notification list even when the phone doesn't show them.
+        reminders.forEach { reminder ->
+            val (title, text) = textFor(reminder, today)
+            notificationLog.add(reminder.kind, title, text, today)
+        }
         if (!manager.areNotificationsEnabled()) return
         createChannel()
 

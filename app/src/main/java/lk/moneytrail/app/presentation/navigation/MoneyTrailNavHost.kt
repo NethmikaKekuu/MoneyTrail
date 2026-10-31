@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import lk.moneytrail.app.domain.model.NotificationKind
 import lk.moneytrail.app.presentation.auth.ForgotPasswordScreen
 import lk.moneytrail.app.presentation.auth.LoginScreen
 import lk.moneytrail.app.presentation.auth.RegisterScreen
@@ -17,6 +18,7 @@ import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
 import lk.moneytrail.app.presentation.goal.GoalScreen
+import lk.moneytrail.app.presentation.notifications.NotificationsScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
 import lk.moneytrail.app.presentation.salary.SalaryScreen
 import lk.moneytrail.app.presentation.settings.SettingsScreen
@@ -84,7 +86,22 @@ fun MoneyTrailNavHost(
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                 onSalaryClick = { navController.navigate(Routes.SALARY) { launchSingleTop = true } },
                 onCatchUpClick = { navController.navigate(Routes.CATCH_UP) { launchSingleTop = true } },
+                onNotificationsClick = { navController.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
+            )
+        }
+        composable(Routes.NOTIFICATIONS) {
+            NotificationsScreen(
+                onBackClick = { navController.popBackStack(Routes.NOTIFICATIONS, inclusive = true) },
+                onAction = { kind ->
+                    if (kind == NotificationKind.CATCH_UP) {
+                        navController.navigate(Routes.CATCH_UP) { launchSingleTop = true }
+                    } else {
+                        // The calendar and savings live on the dashboard underneath: hand it the choice and go back.
+                        navController.previousBackStackEntry?.savedStateHandle?.set(Routes.RESULT_NOTIFICATION_ACTION, kind.name)
+                        navController.popBackStack(Routes.NOTIFICATIONS, inclusive = true)
+                    }
+                }
             )
         }
         composable(Routes.SETTINGS) {

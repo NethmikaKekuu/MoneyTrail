@@ -4,6 +4,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import lk.moneytrail.app.domain.repository.AuthRepository
+import lk.moneytrail.app.domain.repository.NotificationLogRepository
 import lk.moneytrail.app.domain.usecase.GetRemindersUseCase
 
 /**
@@ -15,4 +16,5 @@ import lk.moneytrail.app.domain.usecase.GetRemindersUseCase
 interface ReminderEntryPoint {
     fun getReminders(): GetRemindersUseCase
     fun authRepository(): AuthRepository
+    fun notificationLog(): NotificationLogRepository
 }

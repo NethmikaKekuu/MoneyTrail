@@ -20,6 +20,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +54,10 @@ fun CalendarScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
     onPayYourselfFirstClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    /** True when "Check now" was chosen in the notification list: open the first due entry's check. */
+    checkDueRequested: Boolean,
+    onCheckDueRequestHandled: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
@@ -59,6 +68,18 @@ fun CalendarScreen(
         if (uiState.openGoal) {
             viewModel.onGoalOpened()
             onPayYourselfFirstClick()
+        }
+    }
+
+    // Back on the calendar: reminders that were dealt with leave the notification list.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
+
+    // The due entries load separately from the month, so wait a moment for them.
+    LaunchedEffect(checkDueRequested) {
+        if (checkDueRequested) {
+            val loaded = withTimeoutOrNull(DUE_LOAD_TIMEOUT_MS) { snapshotFlow { uiState.dueExpected }.first { it.isNotEmpty() } }
+            if (loaded != null) viewModel.onCheckDueClick()
+            onCheckDueRequestHandled()
         }
     }
 
@@ -84,12 +105,14 @@ fun CalendarScreen(
         onRetryClick = viewModel::onRetryClick,
         onAddEntryClick = { onAddEntryClick(uiState.selectedDate) },
         onEntryClick = onEntryClick,
-        onCheckDueClick = viewModel::onCheckDueClick,
         onPayYourselfFirstClick = onPayYourselfFirstClick,
+        onNotificationsClick = onNotificationsClick,
         checkActions = checkActions,
         modifier = modifier
     )
 }
+
+private const val DUE_LOAD_TIMEOUT_MS = 3_000L
 
 private val MonthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)
 private val DayFormatter = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
@@ -103,8 +126,8 @@ private fun CalendarContent(
     onRetryClick: () -> Unit,
     onAddEntryClick: () -> Unit,
     onEntryClick: (String) -> Unit,
-    onCheckDueClick: () -> Unit,
     onPayYourselfFirstClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
     checkActions: ExpectedCheckActions,
     modifier: Modifier = Modifier
 ) {
@@ -112,10 +135,20 @@ private fun CalendarContent(
         // The whole page scrolls, so a long day's list can be pulled up past the grid
         // instead of being squeezed into the little space left under it.
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            // Its own row at the very top, so the bell sits in the corner apart from the month arrows.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 12.dp),
+                    .padding(start = 20.dp, end = 20.dp, top = 14.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                NotificationBell(uiState.unreadNotifications, onNotificationsClick)
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -132,15 +165,6 @@ private fun CalendarContent(
                     SquareIconButton(MoneyTrailIcons.ChevronLeft, "Previous month", onPreviousMonthClick)
                     SquareIconButton(MoneyTrailIcons.ChevronRight, "Next month", onNextMonthClick)
                 }
-            }
-
-            if (uiState.dueExpected.isNotEmpty()) {
-                DueBanner(
-                    due = uiState.dueExpected,
-                    today = uiState.today,
-                    onCheckClick = onCheckDueClick,
-                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp)
-                )
             }
 
             uiState.savingsDue?.let { amount ->
@@ -275,8 +299,8 @@ private fun CalendarScreenPreview() {
             onRetryClick = {},
             onAddEntryClick = {},
             onEntryClick = {},
-            onCheckDueClick = {},
             onPayYourselfFirstClick = {},
+            onNotificationsClick = {},
             checkActions = ExpectedCheckActions({}, {}, {}, {}, {}, {}, {}, {}, {})
         )
     }

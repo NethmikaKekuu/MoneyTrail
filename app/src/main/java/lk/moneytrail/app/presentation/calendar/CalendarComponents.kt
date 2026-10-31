@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
@@ -70,6 +73,24 @@ internal fun SquareIconButton(
         modifier = modifier.size(44.dp)
     ) {
         Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** The bell in the header: opens the notification list, with the number of reminders waiting. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun NotificationBell(unreadCount: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    BadgedBox(
+        badge = {
+            if (unreadCount > 0) Badge { Text(if (unreadCount > 9) "9+" else unreadCount.toString()) }
+        },
+        modifier = modifier
+    ) {
+        SquareIconButton(
+            icon = MoneyTrailIcons.Bell,
+            contentDescription = if (unreadCount > 0) "Notifications, $unreadCount waiting" else "Notifications",
+            onClick = onClick
+        )
     }
 }
 
