@@ -18,11 +18,9 @@ import lk.moneytrail.app.domain.model.isSavingsDue
 import lk.moneytrail.app.domain.model.monthlySavings
 import lk.moneytrail.app.domain.repository.AuthRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
-import lk.moneytrail.app.domain.repository.NotificationLogRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.repository.UserRepository
 import lk.moneytrail.app.domain.usecase.EnsureMonthlySalaryUseCase
-import lk.moneytrail.app.domain.usecase.RefreshNotificationsUseCase
 import lk.moneytrail.app.domain.usecase.UpdateEntryUseCase
 import java.time.LocalDate
 import java.time.YearMonth
@@ -35,9 +33,7 @@ class CalendarViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val planRepository: PlanRepository,
     private val updateEntryUseCase: UpdateEntryUseCase,
-    private val ensureMonthlySalary: EnsureMonthlySalaryUseCase,
-    private val notificationLog: NotificationLogRepository,
-    private val refreshNotifications: RefreshNotificationsUseCase
+    private val ensureMonthlySalary: EnsureMonthlySalaryUseCase
 ) : ViewModel() {
 
     private val today = LocalDate.now()
@@ -58,7 +54,6 @@ class CalendarViewModel @Inject constructor(
         listenToMonth(_uiState.value.month)
         listenToExpected()
         listenToSavings()
-        listenToNotifications()
         viewModelScope.launch {
             // Puts this month's salary on the calendar as expected. If it fails, the
             // user can still add it by hand, so there's nothing to show.
@@ -201,20 +196,6 @@ class CalendarViewModel @Inject constructor(
                     onSaved()
                 }
                 .onFailure { e -> updateCheck { copy(isSaving = false, errorMessage = e.message) } }
-        }
-    }
-
-    /** The calendar is shown again: reminders that were dealt with meanwhile leave the list, and the bell's count follows. */
-    fun onResume() {
-        viewModelScope.launch { refreshNotifications(today) }
-    }
-
-    /** How many reminders are waiting in the notification list. */
-    private fun listenToNotifications() {
-        viewModelScope.launch {
-            notificationLog.observeUnread().collect { items ->
-                _uiState.update { it.copy(unreadNotifications = items.size) }
-            }
         }
     }
 

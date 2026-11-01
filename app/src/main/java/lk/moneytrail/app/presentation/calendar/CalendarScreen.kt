@@ -21,8 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.Alignment
@@ -54,7 +52,6 @@ fun CalendarScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
     onPayYourselfFirstClick: () -> Unit,
-    onNotificationsClick: () -> Unit,
     /** True when "Check now" was chosen in the notification list: open the first due entry's check. */
     checkDueRequested: Boolean,
     onCheckDueRequestHandled: () -> Unit,
@@ -70,9 +67,6 @@ fun CalendarScreen(
             onPayYourselfFirstClick()
         }
     }
-
-    // Back on the calendar: reminders that were dealt with leave the notification list.
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
 
     // The due entries load separately from the month, so wait a moment for them.
     LaunchedEffect(checkDueRequested) {
@@ -106,7 +100,6 @@ fun CalendarScreen(
         onAddEntryClick = { onAddEntryClick(uiState.selectedDate) },
         onEntryClick = onEntryClick,
         onPayYourselfFirstClick = onPayYourselfFirstClick,
-        onNotificationsClick = onNotificationsClick,
         checkActions = checkActions,
         modifier = modifier
     )
@@ -127,7 +120,6 @@ private fun CalendarContent(
     onAddEntryClick: () -> Unit,
     onEntryClick: (String) -> Unit,
     onPayYourselfFirstClick: () -> Unit,
-    onNotificationsClick: () -> Unit,
     checkActions: ExpectedCheckActions,
     modifier: Modifier = Modifier
 ) {
@@ -135,20 +127,10 @@ private fun CalendarContent(
         // The whole page scrolls, so a long day's list can be pulled up past the grid
         // instead of being squeezed into the little space left under it.
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            // Its own row at the very top, so the bell sits in the corner apart from the month arrows.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 14.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                NotificationBell(uiState.unreadNotifications, onNotificationsClick)
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 12.dp),
+                    .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -300,7 +282,6 @@ private fun CalendarScreenPreview() {
             onAddEntryClick = {},
             onEntryClick = {},
             onPayYourselfFirstClick = {},
-            onNotificationsClick = {},
             checkActions = ExpectedCheckActions({}, {}, {}, {}, {}, {}, {}, {}, {})
         )
     }
