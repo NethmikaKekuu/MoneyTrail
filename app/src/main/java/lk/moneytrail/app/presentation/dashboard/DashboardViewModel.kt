@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.moneytrail.app.domain.model.NotificationKind
 import lk.moneytrail.app.domain.repository.ConnectivityRepository
+import lk.moneytrail.app.domain.repository.NotificationLogRepository
 import lk.moneytrail.app.domain.usecase.CheckCatchUpUseCase
+import lk.moneytrail.app.domain.usecase.RefreshNotificationsUseCase
 import lk.moneytrail.app.presentation.navigation.Routes
 import java.time.LocalDate
 import javax.inject.Inject
@@ -20,7 +22,9 @@ import javax.inject.Inject
 class DashboardViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val connectivityRepository: ConnectivityRepository,
-    private val checkCatchUp: CheckCatchUpUseCase
+    private val checkCatchUp: CheckCatchUpUseCase,
+    private val notificationLog: NotificationLogRepository,
+    private val refreshNotifications: RefreshNotificationsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardState())
@@ -40,6 +44,11 @@ class DashboardViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            notificationLog.observeUnread().collect { items ->
+                _uiState.update { it.copy(unreadNotifications = items.size) }
+            }
+        }
+        viewModelScope.launch {
             connectivityRepository.isOnline.collect { isOnline ->
                 _uiState.update { it.copy(isOffline = !isOnline) }
             }
@@ -54,5 +63,10 @@ class DashboardViewModel @Inject constructor(
     /** The dashboard has acted on the chosen reminder action. */
     fun onNotificationActionHandled() {
         savedStateHandle[Routes.RESULT_NOTIFICATION_ACTION] = null
+    }
+
+    /** The dashboard is shown again: reminders that were dealt with meanwhile leave the notification list. */
+    fun onResume() {
+        viewModelScope.launch { refreshNotifications(LocalDate.now()) }
     }
 }

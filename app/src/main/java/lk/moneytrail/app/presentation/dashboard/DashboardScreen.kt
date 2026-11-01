@@ -6,6 +6,15 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.expandVertically
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
@@ -50,8 +59,7 @@ private enum class DashboardTab(val label: String, val icon: ImageVector) {
     CALENDAR("Calendar", MoneyTrailIcons.Calendar),
     FOLDERS("Folders", MoneyTrailIcons.Folder),
     GOAL("Goal", MoneyTrailIcons.Goal),
-    INSIGHTS("Insights", MoneyTrailIcons.Insights),
-    MORE("More", MoneyTrailIcons.More)
+    INSIGHTS("Insights", MoneyTrailIcons.Insights)
 }
 
 /**
@@ -82,9 +90,16 @@ fun DashboardScreen(
     }
     var selectedTab by rememberSaveable { mutableStateOf(DashboardTab.CALENDAR) }
     var checkDueRequested by remember { mutableStateOf(false) }
+    // The More page, opened from the menu button over whichever tab is selected.
+    var isMoreOpen by rememberSaveable { mutableStateOf(false) }
+    BackHandler(enabled = isMoreOpen) { isMoreOpen = false }
+
+    // Back on the dashboard: reminders that were dealt with leave the notification list.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
 
     // "Check now" or "Open savings" chosen in the notification list.
     LaunchedEffect(uiState.notificationAction) {
+        isMoreOpen = false
         when (uiState.notificationAction) {
             NotificationKind.MONEY_DUE -> {
                 selectedTab = DashboardTab.CALENDAR
@@ -113,7 +128,13 @@ fun DashboardScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            DashboardNavigationBar(selected = selectedTab, onTabClick = { selectedTab = it })
+            DashboardNavigationBar(
+                selected = selectedTab.takeUnless { isMoreOpen },
+                onTabClick = {
+                    selectedTab = it
+                    isMoreOpen = false
+                }
+            )
         }
     ) { innerPadding ->
         Column(
@@ -125,33 +146,52 @@ fun DashboardScreen(
                 OfflineBanner()
             }
 
-            val tabModifier = Modifier.weight(1f)
-            when (selectedTab) {
-                DashboardTab.CALENDAR -> CalendarScreen(
-                    onAddEntryClick = onAddEntryClick,
-                    onEntryClick = onEntryClick,
-                    onPayYourselfFirstClick = { selectedTab = DashboardTab.GOAL },
-                    onNotificationsClick = onNotificationsClick,
-                    checkDueRequested = checkDueRequested,
-                    onCheckDueRequestHandled = { checkDueRequested = false },
-                    modifier = tabModifier
-                )
-                DashboardTab.FOLDERS -> FoldersScreen(
-                    onAddEntryClick = { onAddEntryClick(LocalDate.now()) },
-                    modifier = tabModifier
-                )
-                DashboardTab.GOAL -> GoalScreen(
-                    onBackClick = { selectedTab = DashboardTab.CALENDAR },
-                    modifier = tabModifier
-                )
-                DashboardTab.INSIGHTS -> InsightsScreen(modifier = tabModifier)
-                DashboardTab.MORE -> MoreScreen(
-                    onSettingsClick = onSettingsClick,
-                    onSalaryClick = onSalaryClick,
-                    onCatchUpClick = onCatchUpClick,
-                    onSignedOut = onSignedOut,
-                    modifier = tabModifier
-                )
+            DashboardTopBar(
+                isMenuOpen = isMoreOpen,
+                unreadNotifications = uiState.unreadNotifications,
+                onMenuClick = { isMoreOpen = !isMoreOpen },
+                onNotificationsClick = onNotificationsClick
+            )
+
+            Box(Modifier.weight(1f)) {
+                val tabModifier = Modifier.fillMaxSize()
+                when (selectedTab) {
+                    DashboardTab.CALENDAR -> CalendarScreen(
+                        onAddEntryClick = onAddEntryClick,
+                        onEntryClick = onEntryClick,
+                        onPayYourselfFirstClick = { selectedTab = DashboardTab.GOAL },
+                        checkDueRequested = checkDueRequested,
+                        onCheckDueRequestHandled = { checkDueRequested = false },
+                        modifier = tabModifier
+                    )
+                    DashboardTab.FOLDERS -> FoldersScreen(
+                        onAddEntryClick = { onAddEntryClick(LocalDate.now()) },
+                        modifier = tabModifier
+                    )
+                    DashboardTab.GOAL -> GoalScreen(
+                        onBackClick = { selectedTab = DashboardTab.CALENDAR },
+                        modifier = tabModifier
+                    )
+                    DashboardTab.INSIGHTS -> InsightsScreen(modifier = tabModifier)
+                }
+
+                // Slides down over the tab; the menu button, Back or any tab closes it again.
+                // Fully named: inside this Box the plain name would pick the Column's version.
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isMoreOpen,
+                    enter = expandVertically(expandFrom = Alignment.Top),
+                    exit = shrinkVertically(shrinkTowards = Alignment.Top)
+                ) {
+                    MoreScreen(
+                        onSettingsClick = onSettingsClick,
+                        onSalaryClick = onSalaryClick,
+                        onCatchUpClick = onCatchUpClick,
+                        onSignedOut = onSignedOut,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                    )
+                }
             }
         }
     }
@@ -159,7 +199,7 @@ fun DashboardScreen(
 
 @Composable
 private fun DashboardNavigationBar(
-    selected: DashboardTab,
+    selected: DashboardTab?,
     onTabClick: (DashboardTab) -> Unit
 ) {
     val colors = MaterialTheme.colorScheme

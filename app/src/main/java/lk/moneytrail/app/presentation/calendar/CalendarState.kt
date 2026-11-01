@@ -23,8 +23,6 @@ data class CalendarState(
     val check: ExpectedCheck? = null,
     /** LKR to move to savings this month while Pay yourself first is due; null otherwise. */
     val savingsDue: Long? = null,
-    /** Reminders still waiting in the notification list, for the bell's badge. */
-    val unreadNotifications: Int = 0,
     /** True once the salary is confirmed and there's saving to do, to open the Goal tab. */
     val openGoal: Boolean = false
 ) {
