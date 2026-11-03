@@ -14,4 +14,7 @@ sealed interface Reminder {
 
     /** Back after a break: [daysAway] days without logging anything. */
     data class CatchUp(val daysAway: Long) : Reminder
+
+    /** Freelance invoices past their due date and still unpaid, oldest first: "Follow up". */
+    data class InvoiceOverdue(val invoices: List<OverdueInvoice>) : Reminder
 }

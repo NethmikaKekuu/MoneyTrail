@@ -219,6 +219,7 @@ private val NotificationKind.icon: ImageVector
         NotificationKind.MONEY_DUE -> MoneyTrailIcons.Calendar
         NotificationKind.PAY_YOURSELF_FIRST -> MoneyTrailIcons.Goal
         NotificationKind.CATCH_UP -> MoneyTrailIcons.Check
+        NotificationKind.INVOICE_OVERDUE -> MoneyTrailIcons.Card
     }
 
 private val NotificationKind.actionLabel: String
@@ -226,6 +227,7 @@ private val NotificationKind.actionLabel: String
         NotificationKind.MONEY_DUE -> "Check now"
         NotificationKind.PAY_YOURSELF_FIRST -> "Open savings"
         NotificationKind.CATCH_UP -> "Catch up now"
+        NotificationKind.INVOICE_OVERDUE -> "Open projects"
     }
 
 private fun dayText(day: LocalDate, today: LocalDate): String = when (day) {

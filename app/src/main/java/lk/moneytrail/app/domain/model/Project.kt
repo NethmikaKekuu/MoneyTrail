@@ -1,5 +1,8 @@
 package lk.moneytrail.app.domain.model
 
+import java.time.ZoneId
+import java.time.LocalDate
+import java.time.Instant
 import java.util.Locale
 
 /** Status of a freelance project milestone: planned, invoiced, or paid. */
@@ -49,3 +52,22 @@ data class Project(
     val plannedAmount: Long
         get() = milestones.filter { it.status == MilestoneStatus.PLANNED }.sumOf { it.amount }
 }
+
+/** An invoiced milestone whose due date has passed without being paid. */
+data class OverdueInvoice(val project: String, val milestone: String, val amount: Long, val dueDate: LocalDate)
+
+/**
+ * Every invoiced milestone due before [today], oldest first: the follow-ups Kavindu
+ * forgot twice. A milestone without a due date can't be late.
+ */
+fun List<Project>.overdueInvoices(today: LocalDate): List<OverdueInvoice> =
+    flatMap { project ->
+        project.milestones
+            .filter { it.status == MilestoneStatus.INVOICED && it.dueTimestamp > 0 }
+            .map { m ->
+                val due = Instant.ofEpochMilli(m.dueTimestamp).atZone(ZoneId.systemDefault()).toLocalDate()
+                OverdueInvoice(project.name, m.title, m.amount, due)
+            }
+    }
+        .filter { it.dueDate.isBefore(today) }
+        .sortedBy { it.dueDate }

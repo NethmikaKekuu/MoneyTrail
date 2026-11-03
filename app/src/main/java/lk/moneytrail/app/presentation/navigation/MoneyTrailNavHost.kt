@@ -101,6 +101,8 @@ fun MoneyTrailNavHost(
                 onAction = { kind ->
                     if (kind == NotificationKind.CATCH_UP) {
                         navController.navigate(Routes.CATCH_UP) { launchSingleTop = true }
+                    } else if (kind == NotificationKind.INVOICE_OVERDUE) {
+                        navController.navigate(Routes.FREELANCE) { launchSingleTop = true }
                     } else {
                         // The calendar and savings live on the dashboard underneath: hand it the choice and go back.
                         navController.previousBackStackEntry?.savedStateHandle?.set(Routes.RESULT_NOTIFICATION_ACTION, kind.name)

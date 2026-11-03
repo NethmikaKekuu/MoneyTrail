@@ -8,4 +8,5 @@ internal val NotificationKind.systemNotificationId: Int
         NotificationKind.MONEY_DUE -> 1
         NotificationKind.PAY_YOURSELF_FIRST -> 2
         NotificationKind.CATCH_UP -> 3
+        NotificationKind.INVOICE_OVERDUE -> 4
     }
