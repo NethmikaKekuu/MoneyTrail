@@ -18,6 +18,7 @@ import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.FileExportRepository
 import lk.moneytrail.app.domain.repository.MonthCloseRepository
 import lk.moneytrail.app.presentation.navigation.Routes
+import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
 
@@ -34,7 +35,7 @@ class StatementViewModel @Inject constructor(
         ?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
         ?: YearMonth.now().minusMonths(1)
 
-    private val _uiState = MutableStateFlow(StatementState(month = startMonth, latestMonth = YearMonth.now()))
+    private val _uiState = MutableStateFlow(StatementState(month = startMonth, latestMonth = YearMonth.now(), today = LocalDate.now()))
     val uiState: StateFlow<StatementState> = _uiState.asStateFlow()
 
     private var listenJob: Job? = null

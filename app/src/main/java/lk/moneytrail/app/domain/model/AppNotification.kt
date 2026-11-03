@@ -24,5 +24,7 @@ data class AppNotification(
     val text: String,
     val day: LocalDate,
     /** Milliseconds; newest first in the list. */
-    val createdAt: Long
+    val createdAt: Long,
+    /** Read once opened or once what it asked for is done. Read ones stay in the list as history. */
+    val isRead: Boolean = false
 )

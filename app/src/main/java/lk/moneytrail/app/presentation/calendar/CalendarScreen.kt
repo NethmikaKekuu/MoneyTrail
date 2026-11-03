@@ -1,5 +1,7 @@
 package lk.moneytrail.app.presentation.calendar
 
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -151,6 +153,17 @@ private fun CalendarContent(
                     Text(uiState.month.format(MonthFormatter), style = MaterialTheme.typography.headlineSmall)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BadgedBox(badge = {
+                        if (unreadNotifications > 0) {
+                            Badge { Text(if (unreadNotifications > 9) "9+" else unreadNotifications.toString()) }
+                        }
+                    }) {
+                        SquareIconButton(
+                            MoneyTrailIcons.Bell,
+                            if (unreadNotifications > 0) "Notifications, $unreadNotifications new" else "Notifications",
+                            onNotificationsClick
+                        )
+                    }
                     SquareIconButton(MoneyTrailIcons.ChevronLeft, "Previous month", onPreviousMonthClick)
                     SquareIconButton(MoneyTrailIcons.ChevronRight, "Next month", onNextMonthClick)
                 }

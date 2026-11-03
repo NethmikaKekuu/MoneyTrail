@@ -261,7 +261,7 @@ private fun GoalTopBar(
 
         Text(
             text = "Pay yourself first",
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f)
@@ -342,14 +342,14 @@ private fun GoalContent(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text(text = "I’ve moved it", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            Text(text = "I’ve moved it", style = MaterialTheme.typography.labelLarge)
                         }
                     }
 
                     TextButton(onClick = onRemindTomorrowClick, enabled = !state.isTransferring) {
                         Text(
                             text = "Remind me tomorrow",
-                            fontSize = 15.sp,
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -609,9 +609,8 @@ private fun SingleGoalCard(
                     ) {
                         Text(
                             text = "Formula: ${goal.formulaExplanation}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -674,13 +673,12 @@ private fun GoalProgressGauge(
         ) {
             Text(
                 text = percentageText,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "of your goal",
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )
         }

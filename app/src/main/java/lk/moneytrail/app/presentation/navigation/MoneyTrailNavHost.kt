@@ -1,5 +1,8 @@
 package lk.moneytrail.app.presentation.navigation
 
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import lk.moneytrail.app.presentation.monthlyclose.MonthlyCloseScreen
 import lk.moneytrail.app.presentation.statement.StatementScreen
 import androidx.compose.runtime.Composable
@@ -35,8 +38,21 @@ import java.time.LocalDate
 @Composable
 fun MoneyTrailNavHost(
     modifier: Modifier = Modifier,
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    /** A tapped phone notification's kind name, opened once the dashboard is reached. */
+    openedNotification: String? = null,
+    onOpenedNotificationHandled: () -> Unit = {}
 ) {
+    // A phone notification was tapped: once signed in and on the dashboard, open its place.
+    val currentEntry by navController.currentBackStackEntryAsState()
+    LaunchedEffect(openedNotification, currentEntry?.destination?.route) {
+        val kind = NotificationKind.entries.find { it.name == openedNotification } ?: return@LaunchedEffect
+        if (currentEntry?.destination?.route == Routes.DASHBOARD) {
+            navController.openReminder(kind)
+            onOpenedNotificationHandled()
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Routes.SPLASH,
@@ -132,17 +148,7 @@ fun MoneyTrailNavHost(
         composable(Routes.NOTIFICATIONS) {
             NotificationsScreen(
                 onBackClick = { navController.popBackStack(Routes.NOTIFICATIONS, inclusive = true) },
-                onAction = { kind ->
-                    if (kind == NotificationKind.CATCH_UP) {
-                        navController.navigate(Routes.CATCH_UP) { launchSingleTop = true }
-                    } else if (kind == NotificationKind.INVOICE_OVERDUE) {
-                        navController.navigate(Routes.FREELANCE) { launchSingleTop = true }
-                    } else {
-                        // The calendar and savings live on the dashboard underneath: hand it the choice and go back.
-                        navController.previousBackStackEntry?.savedStateHandle?.set(Routes.RESULT_NOTIFICATION_ACTION, kind.name)
-                        navController.popBackStack(Routes.NOTIFICATIONS, inclusive = true)
-                    }
-                }
+                onAction = { kind -> navController.openReminder(kind) }
             )
         }
         composable(Routes.SETTINGS) {
@@ -256,4 +262,14 @@ private fun NavController.switchAuthScreen(route: String) {
     if (!popBackStack(route, inclusive = false)) {
         navigate(route) { launchSingleTop = true }
     }
+}
+
+/**
+ * Opens what a reminder is about. The dashboard does it, from the calendar, savings,
+ * catch-up or freelance, so the same works from the list and from a phone notification.
+ */
+private fun NavHostController.openReminder(kind: NotificationKind) {
+    val dashboard = runCatching { getBackStackEntry(Routes.DASHBOARD) }.getOrNull() ?: return
+    dashboard.savedStateHandle[Routes.RESULT_NOTIFICATION_ACTION] = kind.name
+    popBackStack(Routes.DASHBOARD, inclusive = false)
 }

@@ -124,8 +124,8 @@ private fun RecordPaymentTopBar(onBackClick: () -> Unit) {
 
         Text(
             text = "Freelance payment",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f)
         )
