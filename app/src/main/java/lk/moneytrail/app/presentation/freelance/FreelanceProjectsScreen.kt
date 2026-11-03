@@ -37,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -132,7 +131,7 @@ private fun FreelanceTopBar(
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 .clickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
@@ -155,15 +154,15 @@ private fun FreelanceTopBar(
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFFFFF5EE))
-                .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 .clickable(onClick = onAddProjectClick),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = MoneyTrailIcons.Plus,
                 contentDescription = "Add Project",
-                tint = Color(0xFFC83803)
+                tint = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -189,7 +188,7 @@ private fun FreelanceContent(
         // Top Summary Card (Outstanding Card)
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = Color(0xFFFA5E00), // Vibrant orange
+            color = MaterialTheme.colorScheme.primary,
             shape = RoundedCornerShape(20.dp)
         ) {
             Column(
@@ -204,19 +203,19 @@ private fun FreelanceContent(
                     Text(
                         text = "Outstanding (invoiced, unpaid)",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f)
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
                     )
 
                     if (state.overdueCount > 0) {
                         Surface(
-                            color = Color(0xFF211A18),
+                            color = MaterialTheme.colorScheme.onSurface,
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Text(
                                 text = "${state.overdueCount} overdue",
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
@@ -224,10 +223,10 @@ private fun FreelanceContent(
                 }
 
                 Text(
-                    text = "LKR ${formatAmount(state.totalOutstandingInvoiced.coerceAtLeast(50000L))}",
+                    text = "LKR ${formatAmount(state.totalOutstandingInvoiced)}",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -244,10 +243,10 @@ private fun FreelanceContent(
                 Surface(
                     onClick = { onSelectProject(project.id) },
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) Color(0xFF211A18) else Color(0xFFFFF8F5),
+                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier.border(
                         1.dp,
-                        if (isSelected) Color(0xFF211A18) else Color(0xFFF2E4DC),
+                        if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant,
                         RoundedCornerShape(20.dp)
                     )
                 ) {
@@ -255,7 +254,7 @@ private fun FreelanceContent(
                         text = project.name,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isSelected) Color.White else Color(0xFF211A18),
+                        color = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
                     )
                 }
@@ -267,9 +266,9 @@ private fun FreelanceContent(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(22.dp)),
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(22.dp)),
                 shape = RoundedCornerShape(22.dp),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
@@ -310,14 +309,14 @@ private fun FreelanceContent(
                             .fillMaxWidth()
                             .height(10.dp)
                             .clip(RoundedCornerShape(5.dp))
-                            .background(Color(0xFFF2E4DC))
+                            .background(MaterialTheme.colorScheme.outlineVariant)
                     ) {
                         if (paidFraction > 0f) {
                             Box(
                                 modifier = Modifier
                                     .weight(paidFraction)
                                     .fillMaxSize()
-                                    .background(Color(0xFF8B2500)) // Dark terracotta
+                                    .background(MaterialTheme.colorScheme.primary)
                             )
                         }
                         if (invoicedFraction > 0f) {
@@ -325,7 +324,7 @@ private fun FreelanceContent(
                                 modifier = Modifier
                                     .weight(invoicedFraction)
                                     .fillMaxSize()
-                                    .background(Color(0xFFFA5E00)) // Vibrant orange
+                                    .background(MaterialTheme.colorScheme.tertiary)
                             )
                         }
                         val remainingFraction = (1f - paidFraction - invoicedFraction).coerceAtLeast(0.001f)
@@ -333,7 +332,7 @@ private fun FreelanceContent(
                             modifier = Modifier
                                 .weight(remainingFraction)
                                 .fillMaxSize()
-                                .background(Color(0xFFF2E4DC))
+                                .background(MaterialTheme.colorScheme.outlineVariant)
                         )
                     }
 
@@ -349,13 +348,12 @@ private fun FreelanceContent(
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
-                                    .background(Color(0xFF8B2500), RoundedCornerShape(2.dp))
+                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
                             )
                             Text(
                                 text = "Paid ${formatAmount(selectedProject.paidAmount)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline,
-                                fontSize = 12.sp
                             )
                         }
 
@@ -366,13 +364,12 @@ private fun FreelanceContent(
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
-                                    .background(Color(0xFFFA5E00), RoundedCornerShape(2.dp))
+                                    .background(MaterialTheme.colorScheme.tertiary, RoundedCornerShape(2.dp))
                             )
                             Text(
                                 text = "Outstanding ${formatAmount(selectedProject.invoicedAmount)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline,
-                                fontSize = 12.sp
                             )
                         }
                     }
@@ -419,7 +416,7 @@ private fun FreelanceContent(
                 Text(
                     text = "Mark invoiced",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
 
@@ -432,21 +429,21 @@ private fun FreelanceContent(
                     .height(52.dp),
                 shape = RoundedCornerShape(26.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC83803)
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 if (state.isSaving) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
                         strokeWidth = 2.dp,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
                     Text(
                         text = "Record payment",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Color.White
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
@@ -459,9 +456,9 @@ private fun MilestoneCard(milestone: Milestone) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(18.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        color = Color.White
+        color = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier
@@ -503,9 +500,9 @@ private fun MilestoneCard(milestone: Milestone) {
                 )
 
                 val (badgeBg, badgeTextColor, label) = when (milestone.status) {
-                    MilestoneStatus.PAID -> Triple(Color(0xFF8B2500), Color.White, "Paid")
-                    MilestoneStatus.INVOICED -> Triple(Color(0xFFFDE8DC), Color(0xFF8B2500), "Invoiced")
-                    MilestoneStatus.PLANNED -> Triple(Color(0xFFEFEFEF), Color(0xFF616161), "Planned")
+                    MilestoneStatus.PAID -> Triple(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary, "Paid")
+                    MilestoneStatus.INVOICED -> Triple(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer, "Invoiced")
+                    MilestoneStatus.PLANNED -> Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "Planned")
                 }
 
                 Surface(
@@ -514,7 +511,7 @@ private fun MilestoneCard(milestone: Milestone) {
                 ) {
                     Text(
                         text = label,
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = badgeTextColor,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
