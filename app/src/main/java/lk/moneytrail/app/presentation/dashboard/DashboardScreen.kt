@@ -150,6 +150,8 @@ fun DashboardScreen(
                         onAddEntryClick = onAddEntryClick,
                         onEntryClick = onEntryClick,
                         onPayYourselfFirstClick = { selectedTab = DashboardTab.GOAL },
+                        unreadNotifications = uiState.unreadNotifications,
+                        onNotificationsClick = onNotificationsClick,
                         checkDueRequested = checkDueRequested,
                         onCheckDueRequestHandled = { checkDueRequested = false },
                         modifier = tabModifier
