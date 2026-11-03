@@ -41,6 +41,8 @@ class DashboardViewModel @Inject constructor(
             savedStateHandle.getStateFlow<String?>(Routes.RESULT_NOTIFICATION_ACTION, null).collect { name ->
                 val kind = NotificationKind.entries.find { it.name == name }
                 _uiState.update { it.copy(notificationAction = kind) }
+                // Opened, from the list or the phone: it's read now, and the others stay as they are.
+                kind?.let { notificationLog.markKindRead(it) }
             }
         }
         viewModelScope.launch {

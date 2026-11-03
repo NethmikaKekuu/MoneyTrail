@@ -13,6 +13,13 @@ abstract class NotificationDao {
     @Query("SELECT * FROM notifications WHERE uid = :uid AND isRead = 0 ORDER BY createdAt DESC, id DESC")
     abstract fun observeUnread(uid: String): Flow<List<NotificationEntity>>
 
+    /** Read ones are kept for a month (see [deleteReadBefore]), so this is the last month's history. */
+    @Query("SELECT * FROM notifications WHERE uid = :uid ORDER BY createdAt DESC, id DESC")
+    abstract fun observeAll(uid: String): Flow<List<NotificationEntity>>
+
+    @Query("UPDATE notifications SET isRead = 1 WHERE uid = :uid AND id = :id")
+    abstract suspend fun markRead(uid: String, id: Long)
+
     @Insert
     abstract suspend fun insert(notification: NotificationEntity): Long
 

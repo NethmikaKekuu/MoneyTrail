@@ -1,7 +1,8 @@
 package lk.moneytrail.app.presentation.notifications
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,13 +19,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -40,7 +38,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.AppNotification
 import lk.moneytrail.app.domain.model.NotificationKind
 import lk.moneytrail.app.presentation.auth.AuthBackButton
-import lk.moneytrail.app.presentation.auth.AuthPrimaryButton
 import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
@@ -71,25 +68,21 @@ fun NotificationsScreen(
     NotificationsContent(
         uiState = uiState,
         today = LocalDate.now(),
-        onItemClick = viewModel::onItemClick,
-        onLaterClick = viewModel::onLaterClick,
-        onActionClick = { kind ->
-            viewModel.onLaterClick()
-            onAction(kind)
+        // Like other apps: tapping a reminder opens the place it's about.
+        onItemClick = { item ->
+            viewModel.onItemClick(item)
+            onAction(item.kind)
         },
         onBackClick = onBackClick,
         modifier = modifier
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NotificationsContent(
     uiState: NotificationsState,
     today: LocalDate,
-    onItemClick: (Long) -> Unit,
-    onLaterClick: () -> Unit,
-    onActionClick: (NotificationKind) -> Unit,
+    onItemClick: (AppNotification) -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -112,48 +105,66 @@ private fun NotificationsContent(
         when {
             uiState.isLoading -> LoadingView()
             uiState.items.isEmpty() -> EmptyView(
-                title = "You're all caught up",
-                message = "Reminders that need you show up here until you've dealt with them."
+                title = "No notifications yet",
+                message = "Reminders about money due, savings, invoices and catching up show here, and stay for a month."
             )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(uiState.items, key = { it.id }) { item ->
-                    NotificationRow(item, today, onClick = { onItemClick(item.id) })
+                if (uiState.unread.isNotEmpty()) {
+                    item(key = "new") { SectionLabel("New") }
+                    items(uiState.unread, key = { it.id }) { item ->
+                        NotificationCard(item, today, onClick = { onItemClick(item) })
+                    }
+                }
+                if (uiState.earlier.isNotEmpty()) {
+                    item(key = "earlier") { SectionLabel("Earlier", Modifier.padding(top = 8.dp)) }
+                    items(uiState.earlier, key = { it.id }) { item ->
+                        NotificationCard(item, today, onClick = { onItemClick(item) })
+                    }
                 }
             }
         }
     }
-
-    uiState.selected?.let { selected ->
-        ModalBottomSheet(onDismissRequest = onLaterClick) {
-            ActionSheet(selected, onActionClick = { onActionClick(selected.kind) }, onLaterClick = onLaterClick)
-        }
-    }
 }
 
+/** A small uppercase heading, as on the More and Settings pages. */
 @Composable
-private fun NotificationRow(item: AppNotification, today: LocalDate, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text.uppercase(Locale.ENGLISH),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.7.sp,
+        color = MaterialTheme.colorScheme.outline,
+        modifier = modifier.padding(start = 4.dp, bottom = 2.dp)
+    )
+}
+
+/** One reminder as a card: unread ones in the warm accent with a dot, read ones quieter. */
+@Composable
+private fun NotificationCard(item: AppNotification, today: LocalDate, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(18.dp)
     Surface(
         onClick = onClick,
-        shape = shape,
-        color = colors.surface,
-        modifier = modifier
-            .fillMaxWidth()
-            .border(1.dp, colors.outlineVariant, shape)
+        shape = RoundedCornerShape(20.dp),
+        color = if (item.isRead) colors.surfaceContainerLow else colors.primaryContainer.copy(alpha = 0.55f),
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             KindIcon(item.kind)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    item.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (item.isRead) FontWeight.Medium else FontWeight.Bold
+                )
                 Text(
                     text = item.text,
                     style = MaterialTheme.typography.bodySmall,
@@ -161,14 +172,15 @@ private fun NotificationRow(item: AppNotification, today: LocalDate, onClick: ()
                     maxLines = 2
                 )
                 Text(
-                    text = dayText(item.day, today),
+                    text = "${dayText(item.day, today)} · ${item.kind.actionLabel}",
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Normal,
-                    color = colors.outline
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (item.isRead) colors.outline else colors.primary
                 )
             }
-            // Everything in the list is unread, so the dot is always on.
-            Box(Modifier.size(10.dp).background(colors.tertiary, CircleShape))
+            if (!item.isRead) {
+                Box(Modifier.size(10.dp).background(colors.tertiary, CircleShape))
+            }
         }
     }
 }
@@ -186,33 +198,6 @@ private fun KindIcon(kind: NotificationKind, modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-private fun ActionSheet(
-    item: AppNotification,
-    onActionClick: () -> Unit,
-    onLaterClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            KindIcon(item.kind)
-            Spacer(Modifier.width(12.dp))
-            Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        }
-        Text(item.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        AuthPrimaryButton(text = item.kind.actionLabel, onClick = onActionClick)
-        TextButton(onClick = onLaterClick, modifier = Modifier.fillMaxWidth()) {
-            Text("Later", style = MaterialTheme.typography.labelLarge)
-        }
-    }
-}
 
 private val NotificationKind.icon: ImageVector
     get() = when (this) {
@@ -246,13 +231,11 @@ private fun NotificationsScreenPreview() {
                 isLoading = false,
                 items = listOf(
                     AppNotification(1, NotificationKind.PAY_YOURSELF_FIRST, "Pay yourself first", "Move LKR 39,900 to Savings now, before it gets spent.", today, 2),
-                    AppNotification(2, NotificationKind.MONEY_DUE, "Freelance expected today", "LKR 85,000. Did it come in? Tap to check.", today.minusDays(1), 1)
+                    AppNotification(2, NotificationKind.MONEY_DUE, "Freelance expected today", "LKR 85,000. Did it come in? Tap to check.", today.minusDays(1), 1, isRead = true)
                 )
             ),
             today = today,
             onItemClick = {},
-            onLaterClick = {},
-            onActionClick = {},
             onBackClick = {}
         )
     }

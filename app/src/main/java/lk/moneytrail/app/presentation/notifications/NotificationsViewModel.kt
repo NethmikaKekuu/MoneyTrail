@@ -1,5 +1,6 @@
 package lk.moneytrail.app.presentation.notifications
 
+import lk.moneytrail.app.domain.model.AppNotification
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
-    notificationLog: NotificationLogRepository,
+    private val notificationLog: NotificationLogRepository,
     private val refreshNotifications: RefreshNotificationsUseCase
 ) : ViewModel() {
 
@@ -24,7 +25,7 @@ class NotificationsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            notificationLog.observeUnread().collect { items ->
+            notificationLog.observeAll().collect { items ->
                 _uiState.update { it.copy(items = items, isLoading = false) }
             }
         }
@@ -35,12 +36,8 @@ class NotificationsViewModel @Inject constructor(
         viewModelScope.launch { refreshNotifications(LocalDate.now()) }
     }
 
-    fun onItemClick(id: Long) {
-        _uiState.update { it.copy(selectedId = id) }
-    }
-
-    /** "Later": closes the sheet and leaves the reminder unread. */
-    fun onLaterClick() {
-        _uiState.update { it.copy(selectedId = null) }
+    /** A reminder is opened: only that one becomes read; the rest of the list stays as it is. */
+    fun onItemClick(item: AppNotification) {
+        if (!item.isRead) viewModelScope.launch { notificationLog.markRead(item.id) }
     }
 }

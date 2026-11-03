@@ -1,5 +1,6 @@
 package lk.moneytrail.app.data.reminders
 
+import lk.moneytrail.app.domain.model.NotificationKind
 import java.time.temporal.ChronoUnit
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
@@ -23,8 +24,7 @@ import java.util.Locale
 /**
  * Shows reminders as system notifications in one "Reminders" channel. Each kind has its
  * own notification and shows at most once a day, unless forced; each is also kept in the
- * app's notification list; tapping one opens the app,
- * where the matching card is waiting.
+ * app's notification list; tapping one opens the app on the place it's about.
  */
 internal class ReminderNotifier(
     private val context: Context,
@@ -56,7 +56,7 @@ internal class ReminderNotifier(
                 .setContentTitle(title)
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-                .setContentIntent(openAppIntent())
+                .setContentIntent(openAppIntent(reminder.kind))
                 .setAutoCancel(true)
                 .build()
             try {
@@ -76,10 +76,13 @@ internal class ReminderNotifier(
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    private fun openAppIntent(): PendingIntent = PendingIntent.getActivity(
+    /** Opens the app on what [kind] is about; each kind has its own request code so their extras don't mix. */
+    private fun openAppIntent(kind: NotificationKind): PendingIntent = PendingIntent.getActivity(
         context,
-        0,
-        Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+        kind.systemNotificationId,
+        Intent(context, MainActivity::class.java)
+            .putExtra(MainActivity.EXTRA_NOTIFICATION_KIND, kind.name)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 
