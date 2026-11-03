@@ -55,7 +55,7 @@ import java.util.Locale
 
 private val WeekdayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
-/** 44dp outlined square button, used for the month arrows. */
+/** 38dp outlined square button, used for the month arrows and the bell. */
 @Composable
 internal fun SquareIconButton(
     icon: ImageVector,
@@ -65,11 +65,11 @@ internal fun SquareIconButton(
 ) {
     OutlinedIconButton(
         onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = modifier.size(44.dp)
+        modifier = modifier.size(38.dp)
     ) {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(16.dp))
     }
 }
 
