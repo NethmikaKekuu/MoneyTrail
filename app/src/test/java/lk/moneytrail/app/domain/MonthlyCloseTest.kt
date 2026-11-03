@@ -79,16 +79,25 @@ class MonthlyCloseTest {
     }
 
     @Test
-    fun csv_hasTheColumnsAndItsAmountsAddUpToWhatWasKept() {
-        val csv = entries.toStatementCsv(sep)
-        val lines = csv.trimEnd().split("\r\n")
-        assertEquals("date,type,category,account,amount,currency,note", lines.first())
-        // The expected freelance payment isn't confirmed, so it's left out.
-        assertEquals(4, lines.size - 1)
-        assertTrue(lines.any { it == "2026-09-10,expense,Coffee,Cash wallet,-2950,LKR,\"Flat white, \"\"large\"\"\"" })
+    fun csv_saysTheMonthAndDateAndItsEntriesAddUpToWhatWasKept() {
+        val csv = entries.toStatementCsv(sep, exportedOn = LocalDate.of(2026, 10, 1))
+        val lines = csv.split("\r\n")
+        assertEquals("MoneyTrail statement,September 2026", lines[0])
+        assertEquals("Period,2026-09-01 to 2026-09-30", lines[1])
+        assertEquals("Exported on,2026-10-01", lines[2])
 
-        val sum = lines.drop(1).sumOf { line -> Regex("""^[^,]*,[^,]*,[^,]*,[^,]*,(-?\d+),""").find(line)!!.groupValues[1].toLong() }
-        assertEquals(entries.statementTotals(sep).kept, sum)
+        val header = lines.indexOf("date,type,category,account,amount,currency,note")
+        val rows = lines.drop(header + 1).takeWhile { it.isNotEmpty() }
+        // The expected freelance payment isn't confirmed, so it's left out; every row has its date.
+        assertEquals(4, rows.size)
+        assertTrue(rows.all { it.startsWith("2026-09-") })
+        assertTrue(rows.any { it == "2026-09-10,expense,Coffee,Cash wallet,-2950,LKR,\"Flat white, \"\"large\"\"\"" })
+
+        val kept = entries.statementTotals(sep).kept
+        val sum = rows.sumOf { row -> Regex("""^[^,]*,[^,]*,[^,]*,[^,]*,(-?\d+),""").find(row)!!.groupValues[1].toLong() }
+        assertEquals(kept, sum)
+        assertTrue(lines.contains(",,Kept,,$kept,LKR,"))
+        assertTrue(lines.contains(",,Unaccounted,,-1420,LKR,"))
     }
 
     // --- closing a month ---

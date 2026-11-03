@@ -96,15 +96,24 @@ private val CsvDate: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 private fun csvCell(value: String): String =
     if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"" + value.replace("\"", "\"\"") + "\"" else value
 
+private val CsvMonth: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)
+
 /**
- * The month's confirmed entries as CSV, oldest first, for a spreadsheet. Amounts are in
- * LKR, what really arrived or left; an AdSense payout also says its dollars in the note.
- * Expenses are negative, so a spreadsheet SUM of the amount column gives the month's net.
+ * The month's statement as CSV for a spreadsheet. On top, which month it is and when it was
+ * exported; then every confirmed entry, oldest first, each with its date; then the totals.
+ * Amounts are in LKR, what really arrived or left; an AdSense payout also says its dollars
+ * in the note. Expenses are negative, so a SUM of the entries' amount column gives "Kept".
  */
-fun List<Entry>.toStatementCsv(month: YearMonth): String {
+fun List<Entry>.toStatementCsv(month: YearMonth, exportedOn: LocalDate): String {
     val rows = confirmedIn(month).sortedWith(compareBy({ it.date }, { it.type }, { it.category }))
+    val totals = statementTotals(month)
+    fun line(vararg cells: String) = cells.joinToString(",") { csvCell(it) } + "\r\n"
     return buildString {
-        append("date,type,category,account,amount,currency,note\r\n")
+        append(line("MoneyTrail statement", month.format(CsvMonth)))
+        append(line("Period", "${month.atDay(1).format(CsvDate)} to ${month.atEndOfMonth().format(CsvDate)}"))
+        append(line("Exported on", exportedOn.format(CsvDate)))
+        append("\r\n")
+        append(line("date", "type", "category", "account", "amount", "currency", "note"))
         rows.forEach { entry ->
             val signed = if (entry.type == EntryType.EXPENSE) -entry.amount else entry.amount
             val note = if (entry.isUsd) {
@@ -114,7 +123,7 @@ fun List<Entry>.toStatementCsv(month: YearMonth): String {
                 entry.note
             }
             append(
-                listOf(
+                line(
                     entry.date.format(CsvDate),
                     entry.type.name.lowercase(Locale.ENGLISH),
                     entry.category,
@@ -122,9 +131,14 @@ fun List<Entry>.toStatementCsv(month: YearMonth): String {
                     signed.toString(),
                     "LKR",
                     note
-                ).joinToString(",") { csvCell(it) }
+                )
             )
-            append("\r\n")
         }
+        // The same totals as the statement screen, in the amount column.
+        append("\r\n")
+        append(line("", "", "Income", "", totals.income.toString(), "LKR", ""))
+        append(line("", "", "Expenses", "", (-totals.expenses).toString(), "LKR", ""))
+        if (totals.unaccounted != 0L) append(line("", "", "Unaccounted", "", (-totals.unaccounted).toString(), "LKR", ""))
+        append(line("", "", "Kept", "", totals.kept.toString(), "LKR", ""))
     }
 }
