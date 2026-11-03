@@ -131,6 +131,22 @@ service cloud.firestore {
       allow create, update: if isOwner(uid) && isValidPlan(request.resource.data);
     }
 
+    // users/{uid}/projects/{projectId}: freelance projects and milestone lists
+    function isValidProject(data) {
+      return data.keys().hasAll(['name', 'client', 'totalBudget', 'milestones', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'client', 'totalBudget', 'milestones', 'updatedAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.client is string && data.client.size() <= 100
+        && data.totalBudget is int && data.totalBudget >= 0 && data.totalBudget <= 999999999
+        && data.milestones is list && data.milestones.size() <= 50
+        && data.updatedAt == request.time;
+    }
+
+    match /users/{uid}/projects/{projectId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidProject(request.resource.data);
+    }
+
     // users/{uid}/categories/{categoryId}: a category the user added, e.g. "Pet care".
     // Expense categories say whether they're usually committed or discretionary;
     // income categories have no spendingType.
@@ -154,7 +170,7 @@ service cloud.firestore {
     // keeps this from also matching users/{uid} itself, and the collections checked
     // above are left out so their checks can't be skipped.
     match /users/{uid}/{collection}/{document=**} {
-      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories']);
+      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories', 'projects']);
     }
   }
 }

@@ -39,6 +39,7 @@ fun MoreScreen(
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
+    onFreelanceClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MoreViewModel = hiltViewModel()
@@ -51,6 +52,7 @@ fun MoreScreen(
         onSettingsClick = onSettingsClick,
         onSalaryClick = onSalaryClick,
         onCatchUpClick = onCatchUpClick,
+        onFreelanceClick = onFreelanceClick,
         onSignOutClick = {
             viewModel.signOut()
             onSignedOut()
@@ -66,6 +68,7 @@ private fun MoreContent(
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
+    onFreelanceClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -94,6 +97,13 @@ private fun MoreContent(
         }
 
         // Core Actionable Rows
+        MoreRow(
+            icon = MoneyTrailIcons.Card,
+            title = "Freelance projects",
+            subtitle = "Track clients, milestone invoices & payments",
+            onClick = onFreelanceClick
+        )
+
         MoreRow(
             icon = MoneyTrailIcons.Check,
             title = "Salary",
@@ -252,6 +262,7 @@ private fun MoreScreenPreview() {
             onSettingsClick = {},
             onSalaryClick = {},
             onCatchUpClick = {},
+            onFreelanceClick = {},
             onSignOutClick = {}
         )
     }
