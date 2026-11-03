@@ -20,13 +20,7 @@ class AddProjectViewModel @Inject constructor(
     private val freelanceRepository: FreelanceRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        AddProjectUiState(
-            projectName = "Salon website",
-            clientName = "Glow Salon, Kandy",
-            milestones = defaultInitialMilestones()
-        )
-    )
+    private val _uiState = MutableStateFlow(AddProjectUiState())
     val uiState: StateFlow<AddProjectUiState> = _uiState.asStateFlow()
 
     fun onProjectNameChange(name: String) {
@@ -111,16 +105,4 @@ class AddProjectViewModel @Inject constructor(
         }
     }
 
-    companion object {
-        fun defaultInitialMilestones(): List<Milestone> {
-            val now = System.currentTimeMillis()
-            val dayMs = 86_400_000L
-
-            return listOf(
-                Milestone("m1", "Design", 20_000L, MilestoneStatus.PLANNED, now + (4 * dayMs)),
-                Milestone("m2", "Build", 25_000L, MilestoneStatus.PLANNED, now + (25 * dayMs)),
-                Milestone("m3", "Launch", 15_000L, MilestoneStatus.PLANNED, now + (45 * dayMs))
-            )
-        }
-    }
 }
