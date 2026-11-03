@@ -17,8 +17,8 @@ import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
 /**
- * The row above every tab: the menu on the left, which opens and closes the More page,
- * and the bell on the right, which opens the notification list with the number waiting.
+ * The row above every tab: the bell on the far left, which opens the notification list with the number waiting,
+ * and the menu on the far right, which opens and closes the More page.
  */
 @Composable
 internal fun DashboardTopBar(
@@ -35,11 +35,6 @@ internal fun DashboardTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SquareIconButton(
-            icon = MoneyTrailIcons.Menu,
-            contentDescription = if (isMenuOpen) "Close menu" else "Open menu",
-            onClick = onMenuClick
-        )
         BadgedBox(
             badge = {
                 if (unreadNotifications > 0) Badge { Text(if (unreadNotifications > 9) "9+" else unreadNotifications.toString()) }
@@ -51,6 +46,11 @@ internal fun DashboardTopBar(
                 onClick = onNotificationsClick
             )
         }
+        SquareIconButton(
+            icon = MoneyTrailIcons.Menu,
+            contentDescription = if (isMenuOpen) "Close menu" else "Open menu",
+            onClick = onMenuClick
+        )
     }
 }
 
