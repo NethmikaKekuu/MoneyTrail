@@ -17,6 +17,9 @@ import lk.moneytrail.app.presentation.catchup.CatchUpScreen
 import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
+import lk.moneytrail.app.presentation.freelance.AddProjectScreen
+import lk.moneytrail.app.presentation.freelance.FreelanceProjectsScreen
+import lk.moneytrail.app.presentation.freelance.RecordFreelancePaymentScreen
 import lk.moneytrail.app.presentation.goal.GoalScreen
 import lk.moneytrail.app.presentation.notifications.NotificationsScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
@@ -86,6 +89,8 @@ fun MoneyTrailNavHost(
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                 onSalaryClick = { navController.navigate(Routes.SALARY) { launchSingleTop = true } },
                 onCatchUpClick = { navController.navigate(Routes.CATCH_UP) { launchSingleTop = true } },
+                onFreelanceClick = { navController.navigate(Routes.FREELANCE) { launchSingleTop = true } },
+
                 onNotificationsClick = { navController.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
             )
@@ -125,6 +130,25 @@ fun MoneyTrailNavHost(
                 onBackClick = { navController.popBackStack(Routes.SALARY, inclusive = true) },
                 // Onboarding ends on a fresh dashboard, which then expects the new salary.
                 onSetUpClick = { navController.navigate(Routes.ONBOARDING) { launchSingleTop = true } }
+            )
+        }
+        composable(Routes.FREELANCE) {
+            FreelanceProjectsScreen(
+                onBackClick = { navController.popBackStack(Routes.FREELANCE, inclusive = true) },
+                onAddProjectClick = { navController.navigate(Routes.ADD_PROJECT) { launchSingleTop = true } },
+                onRecordPaymentClick = { navController.navigate(Routes.RECORD_FREELANCE_PAYMENT) { launchSingleTop = true } }
+            )
+        }
+        composable(Routes.ADD_PROJECT) {
+            AddProjectScreen(
+                onBackClick = { navController.popBackStack(Routes.ADD_PROJECT, inclusive = true) },
+                onProjectSaved = { navController.popBackStack(Routes.ADD_PROJECT, inclusive = true) }
+            )
+        }
+        composable(Routes.RECORD_FREELANCE_PAYMENT) {
+            RecordFreelancePaymentScreen(
+                onBackClick = { navController.popBackStack(Routes.RECORD_FREELANCE_PAYMENT, inclusive = true) },
+                onPaymentSaved = { navController.popBackStack(Routes.RECORD_FREELANCE_PAYMENT, inclusive = true) }
             )
         }
         composable(

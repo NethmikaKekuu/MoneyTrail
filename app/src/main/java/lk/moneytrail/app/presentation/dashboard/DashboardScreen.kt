@@ -74,6 +74,7 @@ fun DashboardScreen(
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
+    onFreelanceClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -186,6 +187,7 @@ fun DashboardScreen(
                         onSettingsClick = onSettingsClick,
                         onSalaryClick = onSalaryClick,
                         onCatchUpClick = onCatchUpClick,
+                        onFreelanceClick = onFreelanceClick,
                         onSignedOut = onSignedOut,
                         modifier = Modifier
                             .fillMaxSize()
