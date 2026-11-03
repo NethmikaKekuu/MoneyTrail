@@ -165,7 +165,7 @@ fun NewGoalDialog(
                         )
                         Text(
                             text = "Formula: (${formatAmount(targetAmount)} - ${formatAmount(savedAmount)}) ÷ $months months = LKR ${formatAmount(monthlySavingNeeded)}/mo",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )
                     }

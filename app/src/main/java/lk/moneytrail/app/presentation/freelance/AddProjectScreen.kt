@@ -130,8 +130,8 @@ private fun AddProjectTopBar(onBackClick: () -> Unit) {
 
         Text(
             text = "New project",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f)
         )
