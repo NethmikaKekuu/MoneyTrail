@@ -104,7 +104,9 @@ fun DashboardScreen(
                 checkDueRequested = true
             }
             NotificationKind.PAY_YOURSELF_FIRST -> selectedTab = DashboardTab.GOAL
-            else -> return@LaunchedEffect
+            NotificationKind.CATCH_UP -> onCatchUpClick()
+            NotificationKind.INVOICE_OVERDUE -> onFreelanceClick()
+            null -> return@LaunchedEffect
         }
         viewModel.onNotificationActionHandled()
     }

@@ -25,5 +25,5 @@ data class NotificationEntity(
 fun NotificationEntity.toNotification(): AppNotification? {
     val notificationKind = NotificationKind.entries.find { it.name == kind } ?: return null
     val date = runCatching { LocalDate.parse(day) }.getOrNull() ?: return null
-    return AppNotification(id, notificationKind, title, text, date, createdAt)
+    return AppNotification(id, notificationKind, title, text, date, createdAt, isRead)
 }

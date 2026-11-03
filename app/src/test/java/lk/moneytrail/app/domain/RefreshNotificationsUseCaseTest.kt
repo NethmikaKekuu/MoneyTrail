@@ -62,6 +62,8 @@ class RefreshNotificationsUseCaseTest {
     private class FakeNotificationLog : NotificationLogRepository {
         val markedRead = mutableListOf<NotificationKind>()
         override fun observeUnread(): Flow<List<AppNotification>> = flowOf(emptyList())
+        override fun observeAll(): Flow<List<AppNotification>> = flowOf(emptyList())
+        override suspend fun markRead(id: Long) = Unit
         override suspend fun add(kind: NotificationKind, title: String, text: String, day: LocalDate) = Unit
         override suspend fun markKindRead(kind: NotificationKind) {
             markedRead += kind

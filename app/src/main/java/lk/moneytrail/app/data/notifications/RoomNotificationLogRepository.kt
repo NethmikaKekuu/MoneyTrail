@@ -28,6 +28,16 @@ class RoomNotificationLogRepository @Inject constructor(
         return dao.observeUnread(uid).map { rows -> rows.mapNotNull { it.toNotification() } }
     }
 
+    override fun observeAll(): Flow<List<AppNotification>> {
+        val uid = authRepository.currentUserId ?: return flowOf(emptyList())
+        return dao.observeAll(uid).map { rows -> rows.mapNotNull { it.toNotification() } }
+    }
+
+    override suspend fun markRead(id: Long) {
+        val uid = authRepository.currentUserId ?: return
+        dao.markRead(uid, id)
+    }
+
     override suspend fun add(kind: NotificationKind, title: String, text: String, day: LocalDate) {
         val uid = authRepository.currentUserId ?: return
         val row = NotificationEntity(
