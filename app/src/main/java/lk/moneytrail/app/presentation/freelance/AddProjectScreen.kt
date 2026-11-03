@@ -38,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -118,7 +117,7 @@ private fun AddProjectTopBar(onBackClick: () -> Unit) {
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 .clickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
@@ -173,8 +172,8 @@ private fun AddProjectContent(
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFC83803),
-                    unfocusedBorderColor = Color(0xFFE5E5E5)
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -195,8 +194,8 @@ private fun AddProjectContent(
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFC83803),
-                    unfocusedBorderColor = Color(0xFFE5E5E5)
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -206,9 +205,9 @@ private fun AddProjectContent(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(16.dp)),
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFFFFF8F5)
+            color = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             Row(
                 modifier = Modifier
@@ -221,14 +220,14 @@ private fun AddProjectContent(
                     text = "Total project price",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF5A2C1A)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Text(
                     text = "LKR ${formatAmount(state.totalProjectPrice)}",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFC83803)
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -269,10 +268,10 @@ private fun AddProjectContent(
             Surface(
                 onClick = onOpenAddMilestoneDialog,
                 shape = RoundedCornerShape(20.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, Color(0xFFFA5E00), RoundedCornerShape(20.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.tertiary, RoundedCornerShape(20.dp))
             ) {
                 Box(
                     modifier = Modifier.padding(vertical = 14.dp),
@@ -282,7 +281,7 @@ private fun AddProjectContent(
                         text = "+ Add milestone",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFC83803)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -291,7 +290,6 @@ private fun AddProjectContent(
                 text = "All milestones start as Planned. Mark one Invoiced when you ask the client to pay.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
-                fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
         }
@@ -307,13 +305,13 @@ private fun AddProjectContent(
                 .height(56.dp),
             shape = RoundedCornerShape(28.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFC83803)
+                containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
             if (state.isSaving) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     strokeWidth = 2.dp
                 )
             } else {
@@ -321,7 +319,7 @@ private fun AddProjectContent(
                     text = "Save project",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -337,9 +335,9 @@ private fun MilestoneItemCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(18.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
-        color = Color.White
+        color = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier
@@ -352,13 +350,13 @@ private fun MilestoneItemCard(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .background(Color(0xFFFDE8DC), CircleShape),
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = number.toString(),
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF8B2500)
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 

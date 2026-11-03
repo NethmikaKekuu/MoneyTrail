@@ -171,38 +171,42 @@ private fun DayCell(
         Modifier.clearAndSetSemantics {}
     }
 
-    Column(
-        modifier = modifier
-            .height(46.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (isSelected) colors.primary else Color.Transparent)
-            .clickable(enabled = day.isInMonth, role = Role.Button, onClick = onClick)
-            .then(semantics),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = day.date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.bodyMedium,
-            fontSize = 14.sp,
-            fontWeight = if (isToday) FontWeight.Bold else FontWeight.SemiBold,
-            color = textColor
-        )
-        Spacer(Modifier.height(3.dp))
-        Row(
-            modifier = Modifier.height(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-            verticalAlignment = Alignment.CenterVertically
+    // The cell fills its column; the highlight is a centred square, so it stays square on
+    // every screen width. The number sits in the middle and the markers under it.
+    Box(modifier = modifier.height(46.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (isSelected) colors.primary else Color.Transparent)
+                .clickable(enabled = day.isInMonth, role = Role.Button, onClick = onClick)
+                .then(semantics),
+            contentAlignment = Alignment.Center
         ) {
-            val markerOnSelected = colors.onPrimary.copy(alpha = 0.75f)
-            if (day.hasIncome) {
-                Marker(if (isSelected) markerOnSelected else colors.secondary, CircleShape)
-            }
-            if (day.hasExpense) {
-                Marker(if (isSelected) markerOnSelected else colors.tertiary, RoundedCornerShape(1.dp))
-            }
-            if (day.hasExpected) {
-                ExpectedMarker(if (isSelected) markerOnSelected else colors.secondary)
+            Text(
+                text = day.date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isToday) FontWeight.Bold else FontWeight.SemiBold,
+                color = textColor
+            )
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 6.dp)
+                    .height(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val markerOnSelected = colors.onPrimary.copy(alpha = 0.75f)
+                if (day.hasIncome) {
+                    Marker(if (isSelected) markerOnSelected else colors.secondary, CircleShape)
+                }
+                if (day.hasExpense) {
+                    Marker(if (isSelected) markerOnSelected else colors.tertiary, RoundedCornerShape(1.dp))
+                }
+                if (day.hasExpected) {
+                    ExpectedMarker(if (isSelected) markerOnSelected else colors.secondary)
+                }
             }
         }
     }
