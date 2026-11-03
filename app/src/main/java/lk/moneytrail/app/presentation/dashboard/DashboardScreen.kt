@@ -73,6 +73,7 @@ fun DashboardScreen(
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
+    onStatementClick: () -> Unit,
     onFreelanceClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onSignedOut: () -> Unit,
@@ -169,6 +170,7 @@ fun DashboardScreen(
                         onSettingsClick = onSettingsClick,
                         onSalaryClick = onSalaryClick,
                         onCatchUpClick = onCatchUpClick,
+                        onStatementClick = onStatementClick,
                         onFreelanceClick = onFreelanceClick,
                         onSignedOut = onSignedOut,
                         modifier = tabModifier
