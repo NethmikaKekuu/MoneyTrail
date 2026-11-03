@@ -15,6 +15,13 @@ object Routes {
     const val GOAL = "goal"
     const val SALARY = "salary"
     const val CATCH_UP = "catch_up"
+
+    /** Optional yyyy-MM month for the monthly close and the statement; last month when left out. */
+    const val MONTH_ARG = "month"
+    const val MONTHLY_CLOSE = "monthly_close?$MONTH_ARG={$MONTH_ARG}"
+    const val STATEMENT = "statement?$MONTH_ARG={$MONTH_ARG}"
+    fun monthlyClose(month: java.time.YearMonth): String = "monthly_close?$MONTH_ARG=$month"
+    fun statement(month: java.time.YearMonth?): String = if (month == null) "statement" else "statement?$MONTH_ARG=$month"
     const val FREELANCE = "freelance"
     const val ADD_PROJECT = "add_project"
     const val RECORD_PAYMENT_PROJECT_ARG = "projectId"

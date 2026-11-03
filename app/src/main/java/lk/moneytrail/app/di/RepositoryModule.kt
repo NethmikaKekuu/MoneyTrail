@@ -1,5 +1,9 @@
 package lk.moneytrail.app.di
 
+import lk.moneytrail.app.domain.repository.FileExportRepository
+import lk.moneytrail.app.data.files.ContentResolverFileExportRepository
+import lk.moneytrail.app.domain.repository.MonthCloseRepository
+import lk.moneytrail.app.data.repository.FirestoreMonthCloseRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -81,4 +85,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindReminderScheduler(impl: WorkManagerReminderScheduler): ReminderScheduler
+
+    @Binds
+    @Singleton
+    abstract fun bindMonthCloseRepository(impl: FirestoreMonthCloseRepository): MonthCloseRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFileExportRepository(impl: ContentResolverFileExportRepository): FileExportRepository
 }
