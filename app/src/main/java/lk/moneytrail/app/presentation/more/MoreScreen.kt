@@ -43,6 +43,7 @@ fun MoreScreen(
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
+    onStatementClick: () -> Unit,
     onFreelanceClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -58,6 +59,7 @@ fun MoreScreen(
         onSettingsClick = onSettingsClick,
         onSalaryClick = onSalaryClick,
         onCatchUpClick = onCatchUpClick,
+        onStatementClick = onStatementClick,
         onFreelanceClick = onFreelanceClick,
         onSignOutClick = {
             viewModel.signOut()
@@ -76,6 +78,7 @@ private fun MoreContent(
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
+    onStatementClick: () -> Unit,
     onFreelanceClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -137,6 +140,13 @@ private fun MoreContent(
             title = "Catch up",
             subtitle = "Back after a break? Get current and balance your accounts",
             onClick = onCatchUpClick
+        )
+
+        MoreRow(
+            icon = MoneyTrailIcons.Note,
+            title = "Monthly close & statement",
+            subtitle = "Check each account against the bank and export the month as CSV",
+            onClick = onStatementClick
         )
 
         MoreRow(
@@ -285,6 +295,7 @@ private fun MoreScreenPreview() {
             onSettingsClick = {},
             onSalaryClick = {},
             onCatchUpClick = {},
+            onStatementClick = {},
             onFreelanceClick = {},
             onSignOutClick = {}
         )

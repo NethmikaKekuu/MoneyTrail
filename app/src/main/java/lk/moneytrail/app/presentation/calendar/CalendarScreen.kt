@@ -52,6 +52,9 @@ fun CalendarScreen(
     onAddEntryClick: (date: LocalDate) -> Unit,
     onEntryClick: (entryId: String) -> Unit,
     onPayYourselfFirstClick: () -> Unit,
+    /** Reminders still waiting in the notification list, for the card at the top. */
+    unreadNotifications: Int,
+    onNotificationsClick: () -> Unit,
     /** True when "Check now" was chosen in the notification list: open the first due entry's check. */
     checkDueRequested: Boolean,
     onCheckDueRequestHandled: () -> Unit,
@@ -100,6 +103,8 @@ fun CalendarScreen(
         onAddEntryClick = { onAddEntryClick(uiState.selectedDate) },
         onEntryClick = onEntryClick,
         onPayYourselfFirstClick = onPayYourselfFirstClick,
+        unreadNotifications = unreadNotifications,
+        onNotificationsClick = onNotificationsClick,
         checkActions = checkActions,
         modifier = modifier
     )
@@ -120,6 +125,8 @@ private fun CalendarContent(
     onAddEntryClick: () -> Unit,
     onEntryClick: (String) -> Unit,
     onPayYourselfFirstClick: () -> Unit,
+    unreadNotifications: Int,
+    onNotificationsClick: () -> Unit,
     checkActions: ExpectedCheckActions,
     modifier: Modifier = Modifier
 ) {
@@ -147,6 +154,15 @@ private fun CalendarContent(
                     SquareIconButton(MoneyTrailIcons.ChevronLeft, "Previous month", onPreviousMonthClick)
                     SquareIconButton(MoneyTrailIcons.ChevronRight, "Next month", onNextMonthClick)
                 }
+            }
+
+            // Waiting reminders reach the front page, and only while there are some.
+            if (unreadNotifications > 0) {
+                RemindersBanner(
+                    count = unreadNotifications,
+                    onOpenClick = onNotificationsClick,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp)
+                )
             }
 
             uiState.savingsDue?.let { amount ->
@@ -282,6 +298,8 @@ private fun CalendarScreenPreview() {
             onAddEntryClick = {},
             onEntryClick = {},
             onPayYourselfFirstClick = {},
+            unreadNotifications = 2,
+            onNotificationsClick = {},
             checkActions = ExpectedCheckActions({}, {}, {}, {}, {}, {}, {}, {}, {})
         )
     }

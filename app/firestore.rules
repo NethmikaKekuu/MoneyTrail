@@ -166,11 +166,26 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
     }
 
+    // users/{uid}/closes/{yyyy-MM}: a closed month, the real balance of each account
+    // (by account id) at the end of it. The month is the id, so there's one per month.
+    function isValidClose(month, data) {
+      let fields = ['month', 'balances', 'closedOn'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.month == month && month.matches('[0-9]{4}-[0-9]{2}')
+        && data.balances is map && data.balances.size() <= 50
+        && data.closedOn is string && data.closedOn.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
+    }
+
+    match /users/{uid}/closes/{month} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidClose(month, request.resource.data);
+    }
+
     // Everything else stored under a user is private to them. The {collection} segment
     // keeps this from also matching users/{uid} itself, and the collections checked
     // above are left out so their checks can't be skipped.
     match /users/{uid}/{collection}/{document=**} {
-      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories', 'projects']);
+      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories', 'projects', 'closes']);
     }
   }
 }

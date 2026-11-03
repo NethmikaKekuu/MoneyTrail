@@ -73,6 +73,7 @@ fun DashboardScreen(
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
+    onStatementClick: () -> Unit,
     onFreelanceClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onSignedOut: () -> Unit,
@@ -150,6 +151,8 @@ fun DashboardScreen(
                         onAddEntryClick = onAddEntryClick,
                         onEntryClick = onEntryClick,
                         onPayYourselfFirstClick = { selectedTab = DashboardTab.GOAL },
+                        unreadNotifications = uiState.unreadNotifications,
+                        onNotificationsClick = onNotificationsClick,
                         checkDueRequested = checkDueRequested,
                         onCheckDueRequestHandled = { checkDueRequested = false },
                         modifier = tabModifier
@@ -169,6 +172,7 @@ fun DashboardScreen(
                         onSettingsClick = onSettingsClick,
                         onSalaryClick = onSalaryClick,
                         onCatchUpClick = onCatchUpClick,
+                        onStatementClick = onStatementClick,
                         onFreelanceClick = onFreelanceClick,
                         onSignedOut = onSignedOut,
                         modifier = tabModifier

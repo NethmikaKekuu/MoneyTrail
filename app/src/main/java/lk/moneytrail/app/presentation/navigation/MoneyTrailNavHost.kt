@@ -1,5 +1,7 @@
 package lk.moneytrail.app.presentation.navigation
 
+import lk.moneytrail.app.presentation.monthlyclose.MonthlyCloseScreen
+import lk.moneytrail.app.presentation.statement.StatementScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
@@ -89,10 +91,42 @@ fun MoneyTrailNavHost(
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                 onSalaryClick = { navController.navigate(Routes.SALARY) { launchSingleTop = true } },
                 onCatchUpClick = { navController.navigate(Routes.CATCH_UP) { launchSingleTop = true } },
+                onStatementClick = { navController.navigate(Routes.statement(null)) { launchSingleTop = true } },
                 onFreelanceClick = { navController.navigate(Routes.FREELANCE) { launchSingleTop = true } },
 
                 onNotificationsClick = { navController.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
+            )
+        }
+        composable(
+            route = Routes.STATEMENT,
+            arguments = listOf(
+                navArgument(Routes.MONTH_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            StatementScreen(
+                onBackClick = { navController.popBackStack(Routes.STATEMENT, inclusive = true) },
+                onCloseMonthClick = { month -> navController.navigate(Routes.monthlyClose(month)) { launchSingleTop = true } }
+            )
+        }
+        composable(
+            route = Routes.MONTHLY_CLOSE,
+            arguments = listOf(
+                navArgument(Routes.MONTH_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            MonthlyCloseScreen(
+                onBackClick = { navController.popBackStack(Routes.MONTHLY_CLOSE, inclusive = true) },
+                // Back to the statement, which now shows the month as balanced.
+                onClosed = { navController.popBackStack(Routes.MONTHLY_CLOSE, inclusive = true) }
             )
         }
         composable(Routes.NOTIFICATIONS) {
@@ -101,6 +135,8 @@ fun MoneyTrailNavHost(
                 onAction = { kind ->
                     if (kind == NotificationKind.CATCH_UP) {
                         navController.navigate(Routes.CATCH_UP) { launchSingleTop = true }
+                    } else if (kind == NotificationKind.INVOICE_OVERDUE) {
+                        navController.navigate(Routes.FREELANCE) { launchSingleTop = true }
                     } else {
                         // The calendar and savings live on the dashboard underneath: hand it the choice and go back.
                         navController.previousBackStackEntry?.savedStateHandle?.set(Routes.RESULT_NOTIFICATION_ACTION, kind.name)

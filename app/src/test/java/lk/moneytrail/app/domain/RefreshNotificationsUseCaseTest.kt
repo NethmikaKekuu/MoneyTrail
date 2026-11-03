@@ -1,5 +1,7 @@
 package lk.moneytrail.app.domain
 
+import lk.moneytrail.app.domain.repository.FreelanceRepository
+import lk.moneytrail.app.domain.model.Project
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -43,6 +45,13 @@ class RefreshNotificationsUseCaseTest {
         override fun observePlan(): Flow<Result<MoneyPlan?>> = flowOf(Result.success(null))
     }
 
+    private class FakeFreelanceRepository(private val projects: List<Project> = emptyList()) : FreelanceRepository {
+        override fun observeProjects(): Flow<Result<List<Project>>> = flowOf(Result.success(projects))
+        override suspend fun getProject(id: String): Result<Project?> = Result.success(projects.find { it.id == id })
+        override suspend fun saveProject(project: Project): Result<Unit> = Result.success(Unit)
+        override suspend fun deleteProject(id: String): Result<Unit> = Result.success(Unit)
+    }
+
     private class FakeCatchUpRepository : CatchUpRepository {
         override fun lastCatchUpOn(): LocalDate? = null
         override fun setLastCatchUpOn(date: LocalDate) = Unit
@@ -62,7 +71,7 @@ class RefreshNotificationsUseCaseTest {
     private fun refresh(entries: List<Entry>): List<NotificationKind> = runBlocking {
         val entryRepository = FakeEntryRepository(entries)
         val log = FakeNotificationLog()
-        val getReminders = GetRemindersUseCase(entryRepository, FakePlanRepository(), CheckCatchUpUseCase(entryRepository, FakeCatchUpRepository()))
+        val getReminders = GetRemindersUseCase(entryRepository, FakePlanRepository(), CheckCatchUpUseCase(entryRepository, FakeCatchUpRepository()), FakeFreelanceRepository())
         RefreshNotificationsUseCase(getReminders, log)(today)
         log.markedRead
     }
@@ -75,7 +84,7 @@ class RefreshNotificationsUseCaseTest {
         val read = refresh(listOf(salary(EntryStatus.EXPECTED)))
 
         // Money is still due, so only the other two kinds are cleared.
-        assertEquals(setOf(NotificationKind.PAY_YOURSELF_FIRST, NotificationKind.CATCH_UP), read.toSet())
+        assertEquals(setOf(NotificationKind.PAY_YOURSELF_FIRST, NotificationKind.CATCH_UP, NotificationKind.INVOICE_OVERDUE), read.toSet())
     }
 
     @Test
