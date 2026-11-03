@@ -1,5 +1,7 @@
 package lk.moneytrail.app.presentation.settings
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -31,15 +33,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.data.preferences.ThemeMode
 import lk.moneytrail.app.domain.model.CustomCategory
@@ -65,6 +73,7 @@ fun SettingsScreen(
         uiState = uiState,
         onBackClick = onBackClick,
         onThemeModeClick = viewModel::onThemeModeClick,
+        onCheckRemindersClick = viewModel::onCheckRemindersClick,
         onAddCategoryClick = viewModel::onAddCategoryClick,
         onAddCategory = viewModel::onAddCategory,
         onAddCategoryDismiss = viewModel::onAddCategoryDismiss,
@@ -80,6 +89,7 @@ private fun SettingsContent(
     uiState: SettingsState,
     onBackClick: () -> Unit,
     onThemeModeClick: (ThemeMode) -> Unit,
+    onCheckRemindersClick: () -> Unit,
     onAddCategoryClick: () -> Unit,
     onAddCategory: (String, EntryType, SpendingType?) -> Unit,
     onAddCategoryDismiss: () -> Unit,
@@ -122,6 +132,10 @@ private fun SettingsContent(
         ) {
             SectionTitle("Theme")
             ThemeSection(selected = uiState.themeMode, onThemeModeClick = onThemeModeClick)
+
+            Spacer(Modifier.height(14.dp))
+            SectionTitle("Reminders")
+            RemindersSection(onCheckRemindersClick = onCheckRemindersClick)
 
             Spacer(Modifier.height(14.dp))
             SectionTitle("Your categories")
@@ -187,6 +201,53 @@ private fun ThemeSection(selected: ThemeMode, onThemeModeClick: (ThemeMode) -> U
                 Text(mode.label, style = MaterialTheme.typography.bodyMedium)
             }
         }
+    }
+}
+
+/**
+ * When the daily reminders come, whether the phone lets them show, and a way to see them
+ * now (for checking, and the demo) instead of waiting for the morning.
+ */
+@Composable
+private fun RemindersSection(onCheckRemindersClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    var areNotificationsOn by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
+    // Read again on coming back from the phone's settings.
+    LifecycleResumeEffect(Unit) {
+        areNotificationsOn = NotificationManagerCompat.from(context).areNotificationsEnabled()
+        onPauseOrDispose {}
+    }
+
+    Text(
+        text = "Every morning at 9:00 MoneyTrail sends a notification, even when the app is closed: money due " +
+            "that day, paying yourself first once the salary is in, and catching up after a few days away.",
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.outline
+    )
+    if (!areNotificationsOn) {
+        Text(
+            text = "Notifications are off for MoneyTrail.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.error
+        )
+        TextButton(onClick = {
+            context.startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            )
+        }) { Text("Turn on notifications") }
+    }
+    OutlinedButton(
+        onClick = onCheckRemindersClick,
+        enabled = areNotificationsOn,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.5.dp, colors.outlineVariant),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+    ) {
+        Text("Check reminders now", style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -273,6 +334,7 @@ private fun SettingsScreenPreview() {
             ),
             onBackClick = {},
             onThemeModeClick = {},
+            onCheckRemindersClick = {},
             onAddCategoryClick = {},
             onAddCategory = { _, _, _ -> },
             onAddCategoryDismiss = {},

@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import lk.moneytrail.app.domain.model.NotificationKind
 import lk.moneytrail.app.presentation.auth.ForgotPasswordScreen
 import lk.moneytrail.app.presentation.auth.LoginScreen
 import lk.moneytrail.app.presentation.auth.RegisterScreen
@@ -20,10 +21,12 @@ import lk.moneytrail.app.presentation.freelance.AddProjectScreen
 import lk.moneytrail.app.presentation.freelance.FreelanceProjectsScreen
 import lk.moneytrail.app.presentation.freelance.RecordFreelancePaymentScreen
 import lk.moneytrail.app.presentation.goal.GoalScreen
+import lk.moneytrail.app.presentation.notifications.NotificationsScreen
 import lk.moneytrail.app.presentation.onboarding.OnboardingScreen
 import lk.moneytrail.app.presentation.salary.SalaryScreen
 import lk.moneytrail.app.presentation.settings.SettingsScreen
 import lk.moneytrail.app.presentation.splash.SplashScreen
+import lk.moneytrail.app.presentation.usd.UsdPayoutScreen
 import lk.moneytrail.app.presentation.welcome.WelcomeScreen
 import java.time.LocalDate
 
@@ -87,7 +90,23 @@ fun MoneyTrailNavHost(
                 onSalaryClick = { navController.navigate(Routes.SALARY) { launchSingleTop = true } },
                 onCatchUpClick = { navController.navigate(Routes.CATCH_UP) { launchSingleTop = true } },
                 onFreelanceClick = { navController.navigate(Routes.FREELANCE) { launchSingleTop = true } },
+
+                onNotificationsClick = { navController.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
+            )
+        }
+        composable(Routes.NOTIFICATIONS) {
+            NotificationsScreen(
+                onBackClick = { navController.popBackStack(Routes.NOTIFICATIONS, inclusive = true) },
+                onAction = { kind ->
+                    if (kind == NotificationKind.CATCH_UP) {
+                        navController.navigate(Routes.CATCH_UP) { launchSingleTop = true }
+                    } else {
+                        // The calendar and savings live on the dashboard underneath: hand it the choice and go back.
+                        navController.previousBackStackEntry?.savedStateHandle?.set(Routes.RESULT_NOTIFICATION_ACTION, kind.name)
+                        navController.popBackStack(Routes.NOTIFICATIONS, inclusive = true)
+                    }
+                }
             )
         }
         composable(Routes.SETTINGS) {
@@ -145,7 +164,24 @@ fun MoneyTrailNavHost(
             AddEntryScreen(
                 // Pops only this screen, so saving and tapping close together can't also
                 // pop the dashboard.
-                onClose = { navController.popBackStack(Routes.ADD_ENTRY, inclusive = true) }
+                onClose = { navController.popBackStack(Routes.ADD_ENTRY, inclusive = true) },
+                onUsdClick = { date -> navController.navigate(Routes.usdPayout(date)) { launchSingleTop = true } }
+            )
+        }
+        composable(
+            route = Routes.USD_PAYOUT,
+            arguments = listOf(
+                navArgument(Routes.USD_PAYOUT_DATE_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            UsdPayoutScreen(
+                onBackClick = { navController.popBackStack(Routes.USD_PAYOUT, inclusive = true) },
+                // The payment is saved, so the new entry underneath is finished too.
+                onSaved = { navController.popBackStack(Routes.ADD_ENTRY, inclusive = true) }
             )
         }
         composable(
