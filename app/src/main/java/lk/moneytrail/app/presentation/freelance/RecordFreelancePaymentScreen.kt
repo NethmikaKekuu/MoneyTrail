@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -112,7 +111,7 @@ private fun RecordPaymentTopBar(onBackClick: () -> Unit) {
             modifier = Modifier
                 .size(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
                 .clickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
@@ -166,14 +165,14 @@ private fun RecordPaymentContent(
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFFA5E00),
-                    unfocusedBorderColor = Color(0xFFF2E4DC),
-                    focusedContainerColor = Color(0xFFFFF8F5),
-                    unfocusedContainerColor = Color(0xFFFFF8F5)
+                    focusedBorderColor = MaterialTheme.colorScheme.tertiary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
                 textStyle = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFC83803),
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 28.sp
                 ),
                 modifier = Modifier.fillMaxWidth()
@@ -197,12 +196,12 @@ private fun RecordPaymentContent(
                 Surface(
                     onClick = { onSelectOption(option.optionId) },
                     shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFFFF8F5),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                     modifier = Modifier
                         .fillMaxWidth()
                         .border(
                             1.dp,
-                            if (isSelected) Color(0xFFFA5E00) else Color(0xFFF2E4DC),
+                            if (isSelected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outlineVariant,
                             RoundedCornerShape(16.dp)
                         )
                 ) {
@@ -217,8 +216,8 @@ private fun RecordPaymentContent(
                             selected = isSelected,
                             onClick = null,
                             colors = RadioButtonDefaults.colors(
-                                selectedColor = Color(0xFFC83803),
-                                unselectedColor = Color(0xFFB0B0B0)
+                                selectedColor = MaterialTheme.colorScheme.primary,
+                                unselectedColor = MaterialTheme.colorScheme.outline
                             )
                         )
 
@@ -261,9 +260,9 @@ private fun RecordPaymentContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(16.dp)),
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
                 shape = RoundedCornerShape(16.dp),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
@@ -287,9 +286,9 @@ private fun RecordPaymentContent(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(16.dp)),
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
                 shape = RoundedCornerShape(16.dp),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
@@ -314,9 +313,9 @@ private fun RecordPaymentContent(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, Color(0xFFF2E4DC), RoundedCornerShape(16.dp)),
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFFFFF5EE)
+            color = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             Row(
                 modifier = Modifier.padding(14.dp),
@@ -326,22 +325,21 @@ private fun RecordPaymentContent(
                 Box(
                     modifier = Modifier
                         .size(24.dp)
-                        .background(Color(0xFFFDE8DC), CircleShape),
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "ⓘ",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = Color(0xFFC83803)
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
                 Text(
                     text = state.infoBannerMessage,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF5A2C1A),
-                    fontSize = 13.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -357,13 +355,13 @@ private fun RecordPaymentContent(
                 .height(56.dp),
             shape = RoundedCornerShape(28.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFC83803)
+                containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
             if (state.isSaving) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     strokeWidth = 2.dp
                 )
             } else {
@@ -371,7 +369,7 @@ private fun RecordPaymentContent(
                     text = "Save payment",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }

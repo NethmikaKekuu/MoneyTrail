@@ -59,7 +59,7 @@ internal class ReminderNotifier(
                 .setAutoCancel(true)
                 .build()
             try {
-                manager.notify(idFor(reminder), notification)
+                manager.notify(reminder.kind.systemNotificationId, notification)
                 prefs.edit().putString(key, today.toString()).apply()
             } catch (e: SecurityException) {
                 Log.w(TAG, "Notifications were turned off while checking", e)
@@ -108,12 +108,6 @@ internal class ReminderNotifier(
     private fun amount(value: Long): String = String.format(Locale.US, "%,d", value)
 
     private fun keyFor(reminder: Reminder): String = "shown_" + reminder::class.java.simpleName
-
-    private fun idFor(reminder: Reminder): Int = when (reminder) {
-        is Reminder.MoneyDue -> 1
-        is Reminder.PayYourselfFirst -> 2
-        is Reminder.CatchUp -> 3
-    }
 
     private companion object {
         const val TAG = "ReminderNotifier"

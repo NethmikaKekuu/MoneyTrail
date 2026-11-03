@@ -17,7 +17,11 @@ object Routes {
     const val CATCH_UP = "catch_up"
     const val FREELANCE = "freelance"
     const val ADD_PROJECT = "add_project"
-    const val RECORD_FREELANCE_PAYMENT = "record_freelance_payment"
+    const val RECORD_PAYMENT_PROJECT_ARG = "projectId"
+    /** Optional id of the project whose next unpaid milestone the payment screen starts on. */
+    const val RECORD_FREELANCE_PAYMENT = "record_freelance_payment?$RECORD_PAYMENT_PROJECT_ARG={$RECORD_PAYMENT_PROJECT_ARG}"
+    fun recordFreelancePayment(projectId: String?): String =
+        if (projectId == null) "record_freelance_payment" else "record_freelance_payment?$RECORD_PAYMENT_PROJECT_ARG=$projectId"
 
     const val NOTIFICATIONS = "notifications"
 

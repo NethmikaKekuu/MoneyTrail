@@ -28,8 +28,9 @@ class GetRemindersUseCase @Inject constructor(
         planRepository.getPlan().getOrNull()?.let { plan ->
             val entries = entryRepository.observeMonth(YearMonth.from(today)).first().getOrNull().orEmpty()
             val isSalaryConfirmed = entries.any { it.isSalary && !it.isExpected }
-            if (plan.isSavingsDue(today, isSalaryConfirmed)) {
-                add(Reminder.PayYourselfFirst(plan.monthlySavings(today).values.sum()))
+            val amount = plan.monthlySavings(today).values.sum()
+            if (amount > 0 && plan.isSavingsDue(today, isSalaryConfirmed)) {
+                add(Reminder.PayYourselfFirst(amount))
             }
         }
 

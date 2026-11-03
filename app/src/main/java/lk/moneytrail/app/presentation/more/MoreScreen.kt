@@ -3,6 +3,8 @@ package lk.moneytrail.app.presentation.more
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +38,8 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 
 @Composable
 fun MoreScreen(
+    unreadNotifications: Int,
+    onNotificationsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onCatchUpClick: () -> Unit,
@@ -48,6 +52,8 @@ fun MoreScreen(
 
     MoreContent(
         uiState = uiState,
+        unreadNotifications = unreadNotifications,
+        onNotificationsClick = onNotificationsClick,
         onRetry = viewModel::loadProfile,
         onSettingsClick = onSettingsClick,
         onSalaryClick = onSalaryClick,
@@ -64,6 +70,8 @@ fun MoreScreen(
 @Composable
 private fun MoreContent(
     uiState: MoreState,
+    unreadNotifications: Int,
+    onNotificationsClick: () -> Unit,
     onRetry: () -> Unit,
     onSettingsClick: () -> Unit,
     onSalaryClick: () -> Unit,
@@ -75,7 +83,9 @@ private fun MoreContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
@@ -97,6 +107,17 @@ private fun MoreContent(
         }
 
         // Core Actionable Rows
+        MoreRow(
+            icon = MoneyTrailIcons.Bell,
+            title = "Notifications",
+            subtitle = when (unreadNotifications) {
+                0 -> "You're all caught up"
+                1 -> "1 reminder waiting"
+                else -> "$unreadNotifications reminders waiting"
+            },
+            onClick = onNotificationsClick
+        )
+
         MoreRow(
             icon = MoneyTrailIcons.Card,
             title = "Freelance projects",
@@ -258,6 +279,8 @@ private fun MoreScreenPreview() {
                 name = "Kavindu Silva",
                 email = "kavindu.silva@gmail.com"
             ),
+            unreadNotifications = 2,
+            onNotificationsClick = {},
             onRetry = {},
             onSettingsClick = {},
             onSalaryClick = {},

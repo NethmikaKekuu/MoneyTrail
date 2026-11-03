@@ -136,7 +136,7 @@ fun MoneyTrailNavHost(
             FreelanceProjectsScreen(
                 onBackClick = { navController.popBackStack(Routes.FREELANCE, inclusive = true) },
                 onAddProjectClick = { navController.navigate(Routes.ADD_PROJECT) { launchSingleTop = true } },
-                onRecordPaymentClick = { navController.navigate(Routes.RECORD_FREELANCE_PAYMENT) { launchSingleTop = true } }
+                onRecordPaymentClick = { projectId -> navController.navigate(Routes.recordFreelancePayment(projectId)) { launchSingleTop = true } }
             )
         }
         composable(Routes.ADD_PROJECT) {
@@ -145,7 +145,16 @@ fun MoneyTrailNavHost(
                 onProjectSaved = { navController.popBackStack(Routes.ADD_PROJECT, inclusive = true) }
             )
         }
-        composable(Routes.RECORD_FREELANCE_PAYMENT) {
+        composable(
+            route = Routes.RECORD_FREELANCE_PAYMENT,
+            arguments = listOf(
+                navArgument(Routes.RECORD_PAYMENT_PROJECT_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
             RecordFreelancePaymentScreen(
                 onBackClick = { navController.popBackStack(Routes.RECORD_FREELANCE_PAYMENT, inclusive = true) },
                 onPaymentSaved = { navController.popBackStack(Routes.RECORD_FREELANCE_PAYMENT, inclusive = true) }

@@ -4,6 +4,7 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import java.util.Locale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -115,7 +116,6 @@ private fun SettingsContent(
             Text(
                 text = "Settings",
                 style = MaterialTheme.typography.titleMedium,
-                fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
@@ -128,18 +128,17 @@ private fun SettingsContent(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
-            SectionTitle("Theme")
-            ThemeSection(selected = uiState.themeMode, onThemeModeClick = onThemeModeClick)
-
-            Spacer(Modifier.height(14.dp))
-            SectionTitle("Reminders")
-            RemindersSection(onCheckRemindersClick = onCheckRemindersClick)
-
-            Spacer(Modifier.height(14.dp))
-            SectionTitle("Your categories")
-            CategoriesSection(uiState, onAddCategoryClick, onDeleteCategoryClick)
+            SettingsGroup("Appearance") {
+                ThemeSection(selected = uiState.themeMode, onThemeModeClick = onThemeModeClick)
+            }
+            SettingsGroup("Reminders") {
+                RemindersSection(onCheckRemindersClick = onCheckRemindersClick)
+            }
+            SettingsGroup("Your categories") {
+                CategoriesSection(uiState, onAddCategoryClick, onDeleteCategoryClick)
+            }
         }
     }
 
@@ -172,9 +171,30 @@ private fun SettingsContent(
     }
 }
 
+/**
+ * One group of settings, as on the More page in the Figma screens: a small uppercase
+ * heading over its own rounded card, so each group reads on its own.
+ */
 @Composable
-private fun SectionTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = title.uppercase(Locale.ENGLISH),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.7.sp,
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(20.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            content = content
+        )
+    }
 }
 
 /** Light, Dark or the phone's own setting, as radio rows. */
@@ -184,7 +204,6 @@ private fun ThemeSection(selected: ThemeMode, onThemeModeClick: (ThemeMode) -> U
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.surfaceContainerLow, RoundedCornerShape(16.dp))
             .selectableGroup()
     ) {
         ThemeMode.entries.forEach { mode ->
@@ -192,8 +211,7 @@ private fun ThemeSection(selected: ThemeMode, onThemeModeClick: (ThemeMode) -> U
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 52.dp)
-                    .selectable(selected = mode == selected, role = Role.RadioButton, onClick = { onThemeModeClick(mode) })
-                    .padding(horizontal = 12.dp),
+                    .selectable(selected = mode == selected, role = Role.RadioButton, onClick = { onThemeModeClick(mode) }),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -298,7 +316,8 @@ private fun CategoryRow(category: CustomCategory, onDeleteClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .background(colors.surfaceContainerLow, RoundedCornerShape(16.dp))
+            // Rows sit on the group's card, so they use the page colour to stand apart from it.
+            .background(colors.surface, RoundedCornerShape(14.dp))
             .padding(start = 16.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

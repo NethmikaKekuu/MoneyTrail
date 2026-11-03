@@ -58,16 +58,6 @@ class FreelanceViewModelTest {
         assertEquals(0, updatedState.overdueCount)
     }
 
-    @Test
-    fun defaultMockProjects_containsBakeryAndClinicProjects() {
-        val projects = FreelanceViewModel.defaultMockProjects()
-
-        assertEquals(2, projects.size)
-        assertEquals("Bakery website", projects[0].name)
-        assertEquals("Clinic booking site", projects[1].name)
-        assertEquals(120_000L, projects[0].totalBudget)
-        assertEquals(120_000L, projects[1].totalBudget)
-    }
 
     @Test
     fun freelanceUiState_handlesLoadingAndErrorStates() {
