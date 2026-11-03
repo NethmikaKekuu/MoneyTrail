@@ -1,5 +1,7 @@
 package lk.moneytrail.app.domain.model
 
+import java.time.LocalDate
+
 enum class AccountKind { BANK, CASH, SAVINGS, CRYPTO }
 
 /** A place the user keeps money: the users/{uid}/accounts/{id} document in Firestore. */
@@ -8,7 +10,14 @@ data class Account(
     val id: String,
     val name: String,
     val description: String,
-    val kind: AccountKind
+    val kind: AccountKind,
+    /**
+     * What the account held at the start of [checkedOn], in LKR, worked out from the real
+     * balance the user typed that day (in onboarding or catch-up); null before the first time.
+     */
+    val checkedBalance: Long? = null,
+    /** The day the real balance was typed in. */
+    val checkedOn: LocalDate? = null
 )
 
 /** The money places offered in onboarding step 1, as in MoneyTrail-Figma-HTML/06-Onboarding.html. */

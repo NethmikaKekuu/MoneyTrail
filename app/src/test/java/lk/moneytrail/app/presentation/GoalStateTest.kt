@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
-class GoalViewModelTest {
+class GoalStateTest {
 
     @Test
     fun goalUiState_handlesMultiGoalSuccessState() {
@@ -98,6 +98,25 @@ class GoalViewModelTest {
         assertEquals(0L, state.totalSavedAmount)
         assertEquals(0.0f, state.overallProgressFraction, 0.001f)
         assertEquals("0.0%", state.overallPercentageText)
+    }
+
+    @Test
+    fun goalUiState_asksToMoveSavingsUntilDoneThisMonth() {
+        val goal = GoalModel("MacBook Pro M4", 490_000L, 11_200L, LocalDate.of(2027, 10, 19), id = "mac")
+        val toDo = GoalUiState.Success(goals = listOf(goal), totalAllocationPool = 39_900L)
+
+        assertTrue(toDo.isSavingsToDo)
+        assertFalse(toDo.copy(isSavingsMovedThisMonth = true).isSavingsToDo)
+        assertFalse(toDo.areAllGoalsReached)
+    }
+
+    @Test
+    fun goalUiState_seesWhenEveryGoalIsReached() {
+        val reached = GoalModel("Headphones", 30_000L, 30_000L, LocalDate.of(2026, 12, 1), id = "phones")
+        val state = GoalUiState.Success(goals = listOf(reached))
+
+        assertTrue(state.areAllGoalsReached)
+        assertFalse(state.isSavingsToDo)
     }
 
     @Test

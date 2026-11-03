@@ -7,18 +7,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import lk.moneytrail.app.domain.model.GoalModel
 import lk.moneytrail.app.domain.repository.AuthRepository
-import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.repository.UserRepository
-import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class MoreViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository,
-    private val planRepository: PlanRepository
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<MoreState>(MoreState.Loading)
@@ -37,17 +33,11 @@ class MoreViewModel @Inject constructor(
 
         _uiState.value = MoreState.Loading
         viewModelScope.launch {
-            val plan = planRepository.getPlan().getOrNull()
-            val goalBadge = plan?.goal?.let { goal ->
-                GoalModel.fromSavingsGoal(goal, LocalDate.now()).percentageText
-            } ?: "2.3%"
-
             userRepository.getProfile(uid)
                 .onSuccess { profile ->
                     _uiState.value = MoreState.Ready(
                         name = profile?.name,
-                        email = profile?.email ?: authRepository.currentUserEmail,
-                        goalProgressBadge = goalBadge
+                        email = profile?.email ?: authRepository.currentUserEmail
                     )
                 }
                 .onFailure { e ->

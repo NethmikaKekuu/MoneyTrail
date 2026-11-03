@@ -12,14 +12,32 @@ import kotlinx.coroutines.launch
 import lk.moneytrail.app.domain.model.GoalModel
 import lk.moneytrail.app.domain.model.MoneyPlan
 import lk.moneytrail.app.domain.model.SavingsGoal
+import lk.moneytrail.app.domain.model.monthlySavings
+import lk.moneytrail.app.domain.model.savingsDayIn
+import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
+import lk.moneytrail.app.domain.usecase.DeleteGoalUseCase
+import lk.moneytrail.app.domain.usecase.MoveSavingsUseCase
+import lk.moneytrail.app.domain.usecase.RemindSavingsLaterUseCase
+import lk.moneytrail.app.domain.usecase.SaveGoalUseCase
 import lk.moneytrail.app.presentation.components.formatAmount
 import java.time.LocalDate
+import java.time.YearMonth
 import javax.inject.Inject
 
+/**
+ * Pay yourself first (MoneyTrail-Figma-HTML/14-SavingsTransfer.html): every goal's
+ * progress, this month's saving to move, and adding, editing and removing goals. The
+ * rules live in the use cases; this only turns taps into calls and results into state.
+ */
 @HiltViewModel
 class GoalViewModel @Inject constructor(
-    private val planRepository: PlanRepository
+    private val planRepository: PlanRepository,
+    private val entryRepository: EntryRepository,
+    private val saveGoal: SaveGoalUseCase,
+    private val deleteGoal: DeleteGoalUseCase,
+    private val moveSavings: MoveSavingsUseCase,
+    private val remindSavingsLater: RemindSavingsLaterUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<GoalUiState>(GoalUiState.Loading)
@@ -27,19 +45,44 @@ class GoalViewModel @Inject constructor(
 
     private var currentPlan: MoneyPlan? = null
     private var observeJob: Job? = null
+    private var salaryJob: Job? = null
+
+    /** "Salary confirmed: …" for this month's confirmed salary; null until it's confirmed. */
+    private var salaryConfirmedText: String? = null
+
+    /** The account this month's salary went into, to say where to move savings from. */
+    private var salaryAccount: String? = null
 
     init {
         observeGoalProgress()
+        observeThisMonthsSalary()
     }
 
     fun onRetry() {
         observeGoalProgress()
+        observeThisMonthsSalary()
     }
 
-    /**
-     * Listens to Firestore real-time updates for the plan & multi-goals.
-     * Dynamically computes remaining shortfalls and recommended savings across all active goals.
-     */
+    /** Follows this month's entries, so the banner shows the salary as it really arrived. */
+    private fun observeThisMonthsSalary() {
+        salaryJob?.cancel()
+        salaryJob = viewModelScope.launch {
+            entryRepository.observeMonth(YearMonth.now()).collect { result ->
+                // Only the banner depends on this, so a failure just leaves it out.
+                result.onSuccess { entries ->
+                    val salary = entries.lastOrNull { it.isSalary && !it.isExpected }
+                    salaryAccount = salary?.account
+                    salaryConfirmedText = salary?.let {
+                        val bonus = if (it.bonus > 0) " (bonus ${formatAmount(it.bonus)})" else ""
+                        "Salary confirmed: LKR ${formatAmount(it.amount)}$bonus"
+                    }
+                    updateSuccess { copy(salaryConfirmedText = salaryConfirmedText, fromAccount = salaryAccount) }
+                }
+            }
+        }
+    }
+
+    /** Listens to the plan, so progress updates the moment savings are moved or a goal changes. */
     private fun observeGoalProgress() {
         observeJob?.cancel()
         _uiState.value = GoalUiState.Loading
@@ -49,34 +92,22 @@ class GoalViewModel @Inject constructor(
                 result
                     .onSuccess { plan ->
                         currentPlan = plan
-                        if (plan == null || plan.goals.isEmpty() || plan.goals.all { it.targetAmount <= 0 }) {
+                        if (plan == null || plan.goals.isEmpty()) {
                             _uiState.value = GoalUiState.Empty
                         } else {
                             val today = LocalDate.now()
-                            val goalModels = plan.goals.map { GoalModel.fromSavingsGoal(it, today) }
-                            val totalMonthlySaving = goalModels.sumOf { it.monthlySavingNeeded }
-
-                            val salaryText = if (plan.baseSalary > 0) {
-                                "Salary confirmed: LKR ${formatAmount(plan.baseSalary + 12400L)} (bonus 12,400)"
-                            } else {
-                                "Salary confirmed: LKR 132,400 (bonus 12,400)"
-                            }
-
-                            val previousState = _uiState.value
-
-                            if (previousState is GoalUiState.Success) {
-                                _uiState.value = previousState.copy(
-                                    goals = goalModels,
-                                    salaryConfirmedText = salaryText,
-                                    totalAllocationPool = totalMonthlySaving
-                                )
-                            } else {
-                                _uiState.value = GoalUiState.Success(
-                                    goals = goalModels,
-                                    salaryConfirmedText = salaryText,
-                                    totalAllocationPool = totalMonthlySaving
-                                )
-                            }
+                            val savingsToMove = plan.monthlySavings(today)
+                            val previousState = _uiState.value as? GoalUiState.Success
+                            _uiState.value = (previousState ?: GoalUiState.Success(goals = emptyList())).copy(
+                                goals = plan.goals.map { GoalModel.fromSavingsGoal(it, today) },
+                                salaryConfirmedText = salaryConfirmedText,
+                                fromAccount = salaryAccount,
+                                savingsToMove = savingsToMove,
+                                totalAllocationPool = savingsToMove.values.sum(),
+                                isSavingsMovedThisMonth = plan.savingsMovedMonth == YearMonth.from(today),
+                                nextSavingsDate = plan.savingsDayIn(YearMonth.from(today).plusMonths(1)),
+                                payDay = plan.payDay
+                            )
                         }
                     }
                     .onFailure { error ->
@@ -89,35 +120,25 @@ class GoalViewModel @Inject constructor(
     }
 
     fun onOpenNewGoalDialog() {
-        _uiState.update {
-            if (it is GoalUiState.Success) {
-                it.copy(isNewGoalDialogOpen = true)
-            } else it
-        }
+        updateSuccess { copy(isNewGoalDialogOpen = true, editingGoal = null) }
+    }
+
+    fun onEditGoalClick(goalId: String) {
+        val goal = currentPlan?.goals?.find { it.id == goalId } ?: return
+        updateSuccess { copy(isNewGoalDialogOpen = true, editingGoal = goal) }
     }
 
     fun onDismissNewGoalDialog() {
-        _uiState.update {
-            if (it is GoalUiState.Success) {
-                it.copy(isNewGoalDialogOpen = false)
-            } else it
-        }
+        updateSuccess { copy(isNewGoalDialogOpen = false, editingGoal = null) }
     }
 
+    /** "I've moved it": asks how much went to each goal, starting from this month's saving. */
     fun onOpenAllocationDialog() {
-        _uiState.update {
-            if (it is GoalUiState.Success) {
-                it.copy(isAllocationDialogOpen = true)
-            } else it
-        }
+        updateSuccess { copy(isAllocationDialogOpen = true) }
     }
 
     fun onDismissAllocationDialog() {
-        _uiState.update {
-            if (it is GoalUiState.Success) {
-                it.copy(isAllocationDialogOpen = false)
-            } else it
-        }
+        updateSuccess { copy(isAllocationDialogOpen = false) }
     }
 
     fun onSaveNewGoal(
@@ -128,152 +149,84 @@ class GoalViewModel @Inject constructor(
         transferDay: Int,
         allowEmergency: Boolean
     ) {
-        val plan = currentPlan ?: return
-
-        _uiState.update {
-            if (it is GoalUiState.Success) {
-                it.copy(isNewGoalDialogOpen = false, isTransferring = true)
-            } else it
+        val editing = (_uiState.value as? GoalUiState.Success)?.editingGoal
+        val goal = SavingsGoal(
+            name = name,
+            targetAmount = targetAmount,
+            savedAmount = savedAmount,
+            targetDate = LocalDate.now().plusMonths(monthsToDeadline.toLong()),
+            transferDay = transferDay,
+            allowEmergencyWithdrawals = allowEmergency,
+            id = editing?.id.orEmpty()
+        )
+        // The same checks the use case makes, so the dialog stays open with the reason.
+        SaveGoalUseCase.goalError(goal)?.let { message ->
+            updateSuccess { copy(bannerMessage = message) }
+            return
         }
 
+        updateSuccess { copy(isNewGoalDialogOpen = false, editingGoal = null, isTransferring = true) }
         viewModelScope.launch {
-            val targetDate = LocalDate.now().plusMonths(monthsToDeadline.toLong())
-            val newGoal = SavingsGoal(
-                name = name,
-                targetAmount = targetAmount,
-                savedAmount = savedAmount,
-                targetDate = targetDate,
-                transferDay = transferDay,
-                allowEmergencyWithdrawals = allowEmergency
-            )
-
-            val existingIndex = plan.goals.indexOfFirst { it.name.equals(name, ignoreCase = true) }
-            val updatedGoalsList = if (existingIndex >= 0) {
-                plan.goals.toMutableList().apply { set(existingIndex, newGoal) }
-            } else {
-                plan.goals + newGoal
-            }
-
-            val updatedPlan = plan.copy(goals = updatedGoalsList)
-
-            planRepository.savePlan(updatedPlan)
-                .onSuccess {
-                    _uiState.update { state ->
-                        if (state is GoalUiState.Success) {
-                            state.copy(
-                                isTransferring = false,
-                                bannerMessage = "Goal '$name' saved successfully!"
-                            )
-                        } else state
-                    }
-                }
-                .onFailure { error ->
-                    _uiState.update { state ->
-                        if (state is GoalUiState.Success) {
-                            state.copy(
-                                isTransferring = false,
-                                bannerMessage = error.message ?: "Failed to save goal"
-                            )
-                        } else state
-                    }
-                }
+            saveGoal(goal)
+                .onSuccess { finish("Goal '${goal.name.trim()}' saved.") }
+                .onFailure { error -> finish(error.message ?: "Couldn't save the goal.") }
         }
     }
 
-    /**
-     * Distributes salary savings across multiple active goals.
-     * Updates each goal's `savedAmount` in Firestore according to its allocated portion.
-     */
+    /** The user moved money to their savings account: LKR by goal id. */
     fun onConfirmSalaryAllocation(allocations: Map<String, Long>) {
-        val plan = currentPlan ?: return
-        if (allocations.isEmpty()) return
-
-        _uiState.update {
-            if (it is GoalUiState.Success) {
-                it.copy(isTransferring = true, isAllocationDialogOpen = false, bannerMessage = null)
-            } else it
-        }
-
+        updateSuccess { copy(isTransferring = true, isAllocationDialogOpen = false, bannerMessage = null) }
         viewModelScope.launch {
-            val updatedGoals = plan.goals.map { goal ->
-                val allocatedAmount = allocations[goal.name] ?: 0L
-                if (allocatedAmount > 0) {
-                    goal.copy(savedAmount = goal.savedAmount + allocatedAmount)
-                } else goal
-            }
-
-            val updatedPlan = plan.copy(goals = updatedGoals)
-            val totalAllocated = allocations.values.sum()
-
-            planRepository.savePlan(updatedPlan)
-                .onSuccess {
-                    _uiState.update { state ->
-                        if (state is GoalUiState.Success) {
-                            state.copy(
-                                isTransferring = false,
-                                bannerMessage = "Allocated LKR ${formatAmount(totalAllocated)} across goals!"
-                            )
-                        } else state
-                    }
-                }
-                .onFailure { error ->
-                    _uiState.update { state ->
-                        if (state is GoalUiState.Success) {
-                            state.copy(
-                                isTransferring = false,
-                                bannerMessage = error.message ?: "Failed to allocate salary"
-                            )
-                        } else state
-                    }
-                }
+            moveSavings(allocations, LocalDate.now())
+                .onSuccess { moved -> finish("LKR ${formatAmount(moved)} added to your goals. Done for this month.") }
+                .onFailure { error -> finish(error.message ?: "Couldn't update your goals.") }
         }
     }
 
-    /**
-     * Removes a goal by name from Firestore.
-     */
-    fun onDeleteGoal(goalName: String) {
-        val plan = currentPlan ?: return
-        val updatedGoals = plan.goals.filterNot { it.name.equals(goalName, ignoreCase = true) }
-        if (updatedGoals.isEmpty()) return
-
-        _uiState.update {
-            if (it is GoalUiState.Success) {
-                it.copy(isTransferring = true, bannerMessage = null)
-            } else it
-        }
-
+    /** "Remind me tomorrow": the reminder on the calendar comes back tomorrow. */
+    fun onRemindTomorrowClick() {
         viewModelScope.launch {
-            val updatedPlan = plan.copy(goals = updatedGoals)
-            planRepository.savePlan(updatedPlan)
-                .onSuccess {
-                    _uiState.update { state ->
-                        if (state is GoalUiState.Success) {
-                            state.copy(
-                                isTransferring = false,
-                                bannerMessage = "Goal '$goalName' removed."
-                            )
-                        } else state
-                    }
-                }
-                .onFailure { error ->
-                    _uiState.update { state ->
-                        if (state is GoalUiState.Success) {
-                            state.copy(
-                                isTransferring = false,
-                                bannerMessage = error.message ?: "Failed to delete goal"
-                            )
-                        } else state
-                    }
-                }
+            remindSavingsLater(LocalDate.now())
+                .onSuccess { updateSuccess { copy(isReminderSet = true) } }
+                .onFailure { error -> updateSuccess { copy(bannerMessage = error.message) } }
+        }
+    }
+
+    /** The screen has left after "Remind me tomorrow". */
+    fun onReminderHandled() {
+        updateSuccess { copy(isReminderSet = false) }
+    }
+
+    fun onDeleteGoalClick(goalId: String) {
+        updateSuccess { copy(deletingGoalId = goalId) }
+    }
+
+    fun onDeleteGoalDismiss() {
+        updateSuccess { copy(deletingGoalId = null) }
+    }
+
+    fun onDeleteGoalConfirm() {
+        val state = _uiState.value as? GoalUiState.Success ?: return
+        val goalId = state.deletingGoalId ?: return
+        val name = state.goals.find { it.id == goalId }?.name.orEmpty()
+
+        updateSuccess { copy(deletingGoalId = null, isTransferring = true, bannerMessage = null) }
+        viewModelScope.launch {
+            deleteGoal(goalId)
+                .onSuccess { finish("Goal '$name' removed.") }
+                .onFailure { error -> finish(error.message ?: "Couldn't remove the goal.") }
         }
     }
 
     fun onDismissBanner() {
-        _uiState.update {
-            if (it is GoalUiState.Success) {
-                it.copy(bannerMessage = null)
-            } else it
-        }
+        updateSuccess { copy(bannerMessage = null) }
+    }
+
+    private fun finish(message: String) {
+        updateSuccess { copy(isTransferring = false, bannerMessage = message) }
+    }
+
+    private fun updateSuccess(change: GoalUiState.Success.() -> GoalUiState.Success) {
+        _uiState.update { if (it is GoalUiState.Success) it.change() else it }
     }
 }

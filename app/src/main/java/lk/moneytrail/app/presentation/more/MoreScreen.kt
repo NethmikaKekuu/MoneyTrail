@@ -2,6 +2,7 @@ package lk.moneytrail.app.presentation.more
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -35,7 +37,8 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 @Composable
 fun MoreScreen(
     onSettingsClick: () -> Unit,
-    onConfirmSalaryClick: () -> Unit,
+    onSalaryClick: () -> Unit,
+    onCatchUpClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MoreViewModel = hiltViewModel()
@@ -46,7 +49,8 @@ fun MoreScreen(
         uiState = uiState,
         onRetry = viewModel::loadProfile,
         onSettingsClick = onSettingsClick,
-        onConfirmSalaryClick = onConfirmSalaryClick,
+        onSalaryClick = onSalaryClick,
+        onCatchUpClick = onCatchUpClick,
         onSignOutClick = {
             viewModel.signOut()
             onSignedOut()
@@ -60,7 +64,8 @@ private fun MoreContent(
     uiState: MoreState,
     onRetry: () -> Unit,
     onSettingsClick: () -> Unit,
-    onConfirmSalaryClick: () -> Unit,
+    onSalaryClick: () -> Unit,
+    onCatchUpClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -91,15 +96,22 @@ private fun MoreContent(
         // Core Actionable Rows
         MoreRow(
             icon = MoneyTrailIcons.Check,
-            title = "Confirm Salary",
-            subtitle = "Confirm payday arrival & bonus",
-            onClick = onConfirmSalaryClick
+            title = "Salary",
+            subtitle = "Pay day and base salary",
+            onClick = onSalaryClick
+        )
+
+        MoreRow(
+            icon = MoneyTrailIcons.Calendar,
+            title = "Catch up",
+            subtitle = "Back after a break? Get current and balance your accounts",
+            onClick = onCatchUpClick
         )
 
         MoreRow(
             icon = MoneyTrailIcons.Settings,
             title = "Settings",
-            subtitle = "Salary, pay day and your categories",
+            subtitle = "Theme and your categories",
             onClick = onSettingsClick
         )
 
@@ -234,12 +246,12 @@ private fun MoreScreenPreview() {
         MoreContent(
             uiState = MoreState.Ready(
                 name = "Kavindu Silva",
-                email = "kavindu.silva@gmail.com",
-                goalProgressBadge = "2.3%"
+                email = "kavindu.silva@gmail.com"
             ),
             onRetry = {},
             onSettingsClick = {},
-            onConfirmSalaryClick = {},
+            onSalaryClick = {},
+            onCatchUpClick = {},
             onSignOutClick = {}
         )
     }

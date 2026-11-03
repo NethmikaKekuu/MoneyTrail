@@ -16,6 +16,7 @@ import lk.moneytrail.app.domain.model.AccountTemplates
 import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.repository.ConnectivityRepository
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -73,6 +74,24 @@ class FirestoreAccountRepository @Inject constructor(
         }
     }
 
+    override suspend fun saveBalanceCheck(accountId: String, balance: Long, date: LocalDate): Result<Unit> {
+        val uid = auth.currentUser?.uid
+            ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
+
+        return try {
+            // update() leaves the rest of the account, and when it was made, as they are.
+            accountsOf(uid).document(accountId)
+                .update(mapOf(FIELD_CHECKED_BALANCE to balance, FIELD_CHECKED_ON to date.toString()))
+                .awaitServerBriefly(TAG, connectivity.isOnlineNow())
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Saving the balance of $accountId failed", e)
+            Result.failure(AppException(e.toFirestoreMessage(BALANCE_FAILED_MESSAGE), e))
+        }
+    }
+
     private fun accountsOf(uid: String): CollectionReference =
         firestore.collection(USERS_COLLECTION).document(uid).collection(ACCOUNTS_COLLECTION)
 
@@ -80,12 +99,15 @@ class FirestoreAccountRepository @Inject constructor(
     private fun onboardingOrder(id: String): Int =
         AccountTemplates.all.indexOfFirst { it.id == id }.let { if (it < 0) Int.MAX_VALUE else it }
 
-    private fun Account.toFirestore(): Map<String, Any> = mapOf(
-        FIELD_NAME to name,
-        FIELD_DESCRIPTION to description,
-        FIELD_KIND to kind.name,
-        FIELD_CREATED_AT to FieldValue.serverTimestamp()
-    )
+    private fun Account.toFirestore(): Map<String, Any> = buildMap {
+        put(FIELD_NAME, name)
+        put(FIELD_DESCRIPTION, description)
+        put(FIELD_KIND, kind.name)
+        // A starting balance typed in onboarding, so the first catch-up can already compare.
+        checkedBalance?.let { put(FIELD_CHECKED_BALANCE, it) }
+        checkedOn?.let { put(FIELD_CHECKED_ON, it.toString()) }
+        put(FIELD_CREATED_AT, FieldValue.serverTimestamp())
+    }
 
     /** Null for a document with missing or unreadable fields, which is skipped. */
     private fun DocumentSnapshot.toAccount(): Account? {
@@ -95,7 +117,14 @@ class FirestoreAccountRepository @Inject constructor(
             Log.w(TAG, "Skipping account $id: missing or invalid fields")
             return null
         }
-        return Account(id = id, name = name, description = getString(FIELD_DESCRIPTION).orEmpty(), kind = kind)
+        return Account(
+            id = id,
+            name = name,
+            description = getString(FIELD_DESCRIPTION).orEmpty(),
+            kind = kind,
+            checkedBalance = getLong(FIELD_CHECKED_BALANCE),
+            checkedOn = getString(FIELD_CHECKED_ON)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        )
     }
 
     private companion object {
@@ -106,6 +135,9 @@ class FirestoreAccountRepository @Inject constructor(
         const val FIELD_DESCRIPTION = "description"
         const val FIELD_KIND = "kind"
         const val FIELD_CREATED_AT = "createdAt"
+        const val FIELD_CHECKED_BALANCE = "checkedBalance"
+        const val FIELD_CHECKED_ON = "checkedOn"
+        const val BALANCE_FAILED_MESSAGE = "Couldn't save the balance. Please try again."
         const val LOAD_FAILED_MESSAGE = "Couldn't load your accounts. Please try again."
         const val SAVE_FAILED_MESSAGE = "Couldn't save your accounts. Please try again."
     }

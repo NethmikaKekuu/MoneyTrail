@@ -13,7 +13,12 @@ object Routes {
     const val DASHBOARD = "dashboard"
     const val SETTINGS = "settings"
     const val GOAL = "goal"
-    const val CONFIRM_SALARY = "confirm_salary"
+    const val SALARY = "salary"
+    const val CATCH_UP = "catch_up"
+    const val NOTIFICATIONS = "notifications"
+
+    /** Set on the dashboard by the notification list: which reminder's action the user chose, a NotificationKind name. */
+    const val RESULT_NOTIFICATION_ACTION = "notificationAction"
 
     /** Optional yyyy-MM-dd day for a new entry to start on, e.g. the day picked on the calendar. */
     const val ADD_ENTRY_DATE_ARG = "date"
@@ -24,6 +29,12 @@ object Routes {
     /** Firestore id of the entry to edit. */
     const val EDIT_ENTRY_ID_ARG = "entryId"
     const val EDIT_ENTRY = "edit_entry/{$EDIT_ENTRY_ID_ARG}"
+
+    /** Optional yyyy-MM-dd day the AdSense payment screen starts on, passed from the new entry. */
+    const val USD_PAYOUT_DATE_ARG = "date"
+    const val USD_PAYOUT = "usd_payout?$USD_PAYOUT_DATE_ARG={$USD_PAYOUT_DATE_ARG}"
+
+    fun usdPayout(date: LocalDate): String = "usd_payout?$USD_PAYOUT_DATE_ARG=$date"
 
     fun editEntry(id: String): String = "edit_entry/${Uri.encode(id)}"
 }
