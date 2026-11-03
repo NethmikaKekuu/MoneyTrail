@@ -1,5 +1,7 @@
 package lk.moneytrail.app.domain
 
+import lk.moneytrail.app.domain.repository.FreelanceRepository
+import lk.moneytrail.app.domain.model.Project
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -43,6 +45,13 @@ class GetRemindersUseCaseTest {
         override fun observePlan(): Flow<Result<MoneyPlan?>> = flowOf(Result.success(plan))
     }
 
+    private class FakeFreelanceRepository(private val projects: List<Project> = emptyList()) : FreelanceRepository {
+        override fun observeProjects(): Flow<Result<List<Project>>> = flowOf(Result.success(projects))
+        override suspend fun getProject(id: String): Result<Project?> = Result.success(projects.find { it.id == id })
+        override suspend fun saveProject(project: Project): Result<Unit> = Result.success(Unit)
+        override suspend fun deleteProject(id: String): Result<Unit> = Result.success(Unit)
+    }
+
     private class FakeCatchUpRepository : CatchUpRepository {
         override fun lastCatchUpOn(): LocalDate? = null
         override fun setLastCatchUpOn(date: LocalDate) = Unit
@@ -62,7 +71,7 @@ class GetRemindersUseCaseTest {
     private fun reminders(entries: List<Entry>, plan: MoneyPlan? = kavinduPlan, lastLogged: LocalDate? = today): List<Reminder> =
         runBlocking {
             val entryRepository = FakeEntryRepository(entries, lastLogged)
-            GetRemindersUseCase(entryRepository, FakePlanRepository(plan), CheckCatchUpUseCase(entryRepository, FakeCatchUpRepository()))(today)
+            GetRemindersUseCase(entryRepository, FakePlanRepository(plan), CheckCatchUpUseCase(entryRepository, FakeCatchUpRepository()), FakeFreelanceRepository())(today)
         }
 
     private fun salary(status: EntryStatus) =

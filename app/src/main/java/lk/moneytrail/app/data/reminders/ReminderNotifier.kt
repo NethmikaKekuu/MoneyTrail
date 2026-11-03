@@ -1,5 +1,6 @@
 package lk.moneytrail.app.data.reminders
 
+import java.time.temporal.ChronoUnit
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -70,7 +71,7 @@ internal class ReminderNotifier(
     private fun createChannel() {
         // Creating it again does nothing, so it's simply done before each check.
         val channel = NotificationChannel(CHANNEL_ID, "Reminders", NotificationManager.IMPORTANCE_DEFAULT).apply {
-            description = "Money due, paying yourself first, and catching up after a break"
+            description = "Money due, paying yourself first, catching up after a break, and overdue invoices"
         }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
@@ -89,6 +90,20 @@ internal class ReminderNotifier(
         is Reminder.CatchUp ->
             "It's been ${reminder.daysAway} days" to
                 "Catch up in about 2 minutes: confirm what's due and balance your accounts."
+        is Reminder.InvoiceOverdue -> invoiceText(reminder, today)
+    }
+
+    private fun invoiceText(reminder: Reminder.InvoiceOverdue, today: LocalDate): Pair<String, String> {
+        val invoices = reminder.invoices
+        val total = invoices.sumOf { it.amount }
+        if (invoices.size > 1) {
+            return "${invoices.size} invoices overdue" to "LKR ${amount(total)} still unpaid. Tap to follow up with your clients."
+        }
+        val invoice = invoices.first()
+        val days = ChronoUnit.DAYS.between(invoice.dueDate, today)
+        val late = if (days == 1L) "1 day" else "$days days"
+        return "${invoice.project} is $late overdue" to
+            "${invoice.milestone}: LKR ${amount(invoice.amount)}. Tap to follow up or record the payment."
     }
 
     private fun moneyDueText(reminder: Reminder.MoneyDue, today: LocalDate): Pair<String, String> {

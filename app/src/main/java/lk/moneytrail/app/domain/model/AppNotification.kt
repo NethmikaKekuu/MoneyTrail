@@ -3,13 +3,14 @@ package lk.moneytrail.app.domain.model
 import java.time.LocalDate
 
 /** What a reminder is about; one row per kind and day in the notification list. */
-enum class NotificationKind { MONEY_DUE, PAY_YOURSELF_FIRST, CATCH_UP }
+enum class NotificationKind { MONEY_DUE, PAY_YOURSELF_FIRST, CATCH_UP, INVOICE_OVERDUE }
 
 val Reminder.kind: NotificationKind
     get() = when (this) {
         is Reminder.MoneyDue -> NotificationKind.MONEY_DUE
         is Reminder.PayYourselfFirst -> NotificationKind.PAY_YOURSELF_FIRST
         is Reminder.CatchUp -> NotificationKind.CATCH_UP
+        is Reminder.InvoiceOverdue -> NotificationKind.INVOICE_OVERDUE
     }
 
 /**
