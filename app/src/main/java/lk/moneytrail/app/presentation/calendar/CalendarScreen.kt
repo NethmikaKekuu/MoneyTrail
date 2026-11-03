@@ -4,6 +4,9 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Badge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -152,10 +155,21 @@ private fun CalendarContent(
                     )
                     Text(uiState.month.format(MonthFormatter), style = MaterialTheme.typography.headlineSmall)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // The month arrows together, then the bell on its own at the edge, as in most apps.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SquareIconButton(MoneyTrailIcons.ChevronLeft, "Previous month", onPreviousMonthClick)
+                    Spacer(Modifier.width(6.dp))
+                    SquareIconButton(MoneyTrailIcons.ChevronRight, "Next month", onNextMonthClick)
+                    Spacer(Modifier.width(12.dp))
                     BadgedBox(badge = {
                         if (unreadNotifications > 0) {
-                            Badge { Text(if (unreadNotifications > 9) "9+" else unreadNotifications.toString()) }
+                            Badge(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary) {
+                                Text(
+                                    if (unreadNotifications > 9) "9+" else unreadNotifications.toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp
+                                )
+                            }
                         }
                     }) {
                         SquareIconButton(
@@ -164,8 +178,6 @@ private fun CalendarContent(
                             onNotificationsClick
                         )
                     }
-                    SquareIconButton(MoneyTrailIcons.ChevronLeft, "Previous month", onPreviousMonthClick)
-                    SquareIconButton(MoneyTrailIcons.ChevronRight, "Next month", onNextMonthClick)
                 }
             }
 
