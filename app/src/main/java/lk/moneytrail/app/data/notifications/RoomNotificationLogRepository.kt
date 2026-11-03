@@ -1,7 +1,11 @@
 package lk.moneytrail.app.data.notifications
 
+import android.content.Context
+import androidx.core.app.NotificationManagerCompat
+import dagger.hilt.android.qualifiers.ApplicationContext
+import lk.moneytrail.app.data.reminders.systemNotificationId
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import lk.moneytrail.app.domain.model.AppNotification
 import lk.moneytrail.app.domain.model.NotificationKind
@@ -13,12 +17,14 @@ import javax.inject.Singleton
 
 @Singleton
 class RoomNotificationLogRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val dao: NotificationDao,
     private val authRepository: AuthRepository
 ) : NotificationLogRepository {
 
     override fun observeUnread(): Flow<List<AppNotification>> {
-        val uid = authRepository.currentUserId ?: return emptyFlow()
+        // Emits an empty list when nobody is signed in, so the screen doesn't wait forever.
+        val uid = authRepository.currentUserId ?: return flowOf(emptyList())
         return dao.observeUnread(uid).map { rows -> rows.mapNotNull { it.toNotification() } }
     }
 
@@ -39,6 +45,8 @@ class RoomNotificationLogRepository @Inject constructor(
     override suspend fun markKindRead(kind: NotificationKind) {
         val uid = authRepository.currentUserId ?: return
         dao.markKindRead(uid, kind.name)
+        // Done in the app, so take it out of the phone's notification shade too.
+        NotificationManagerCompat.from(context).cancel(kind.systemNotificationId)
     }
 
     private companion object {
