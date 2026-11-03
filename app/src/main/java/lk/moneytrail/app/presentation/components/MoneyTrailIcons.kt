@@ -56,6 +56,10 @@ object MoneyTrailIcons {
         "M3,9h18M8,2v4M16,2v4"
     )
 
+    val Menu = lineIcon("Menu", 2.2f, "M4,7h16M4,12h16M4,17h16")
+
+    val Bell = lineIcon("Bell", 2f, "M6,16v-5a6,6 0,0 1,12 0v5l2,2H4z", "M10,21a2,2 0,0 0,4 0")
+
     val Folder = lineIcon(
         "Folder", 2f,
         "M3,7a2,2 0,0 1,2 -2h4l2,2h8a2,2 0,0 1,2 2v8a2,2 0,0 1,-2 2H5a2,2 0,0 1,-2 -2z"

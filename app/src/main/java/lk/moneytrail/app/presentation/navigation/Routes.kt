@@ -15,6 +15,14 @@ object Routes {
     const val GOAL = "goal"
     const val SALARY = "salary"
     const val CATCH_UP = "catch_up"
+    const val FREELANCE = "freelance"
+    const val ADD_PROJECT = "add_project"
+    const val RECORD_FREELANCE_PAYMENT = "record_freelance_payment"
+
+    const val NOTIFICATIONS = "notifications"
+
+    /** Set on the dashboard by the notification list: which reminder's action the user chose, a NotificationKind name. */
+    const val RESULT_NOTIFICATION_ACTION = "notificationAction"
 
     /** Optional yyyy-MM-dd day for a new entry to start on, e.g. the day picked on the calendar. */
     const val ADD_ENTRY_DATE_ARG = "date"

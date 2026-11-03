@@ -66,51 +66,6 @@ internal class ExpectedCheckActions(
     val onDismiss: () -> Unit
 )
 
-/** "Freelance · LKR 30,000 expected today. Did it come in?" with a Check button. */
-@Composable
-internal fun DueBanner(
-    due: List<Entry>,
-    today: LocalDate,
-    onCheckClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = MaterialTheme.colorScheme
-    val first = due.first()
-    Surface(
-        onClick = onCheckClick,
-        shape = RoundedCornerShape(16.dp),
-        color = colors.primaryContainer,
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(MoneyTrailIcons.Calendar, contentDescription = null, tint = colors.primary, modifier = Modifier.size(20.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = if (due.size == 1) {
-                        "${first.category} · LKR ${formatAmount(first.amount)} expected ${whenExpected(first.date, today)}"
-                    } else {
-                        "${due.size} expected entries to check"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.onPrimaryContainer
-                )
-                Text(
-                    text = if (due.size == 1) question(first) else "Starting with ${first.category}, ${whenExpected(first.date, today)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Normal,
-                    color = colors.onPrimaryContainer
-                )
-            }
-            Text("Check", style = MaterialTheme.typography.labelLarge, fontSize = 14.sp, color = colors.primary)
-        }
-    }
-}
-
 /**
  * Confirm with what really arrived or was paid (it often differs: AdSense, bonuses),
  * move it to a later date, or remove it if it didn't happen.
