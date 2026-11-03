@@ -1,5 +1,7 @@
 package lk.moneytrail.app.presentation.freelance
 
+import lk.moneytrail.app.presentation.navigation.Routes
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +23,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RecordFreelancePaymentViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val freelanceRepository: FreelanceRepository,
     private val entryRepository: EntryRepository,
     private val accountRepository: AccountRepository
@@ -31,6 +34,9 @@ class RecordFreelancePaymentViewModel @Inject constructor(
 
     private var allProjects: List<Project> = emptyList()
 
+    /** Set when opened from a project: start on that project's next unpaid milestone. */
+    private val startProjectId: String? = savedStateHandle[Routes.RECORD_PAYMENT_PROJECT_ARG]
+
     init {
         loadData()
     }
@@ -39,7 +45,7 @@ class RecordFreelancePaymentViewModel @Inject constructor(
         viewModelScope.launch {
             freelanceRepository.observeProjects().collect { result ->
                 result.onSuccess { projects ->
-                    allProjects = projects.ifEmpty { FreelanceViewModel.defaultMockProjects() }
+                    allProjects = projects
                     updateMilestoneOptions(allProjects)
                 }
             }
@@ -48,13 +54,13 @@ class RecordFreelancePaymentViewModel @Inject constructor(
         viewModelScope.launch {
             accountRepository.observeAccounts().collect { result ->
                 result.onSuccess { accountsList ->
-                    if (accountsList.isNotEmpty()) {
-                        _uiState.update { state ->
-                            state.copy(
-                                accounts = accountsList,
-                                selectedAccount = accountsList.first().name
-                            )
-                        }
+                    _uiState.update { state ->
+                        state.copy(
+                            accounts = accountsList,
+                            // Keep the user's choice when the list updates; start on the first account.
+                            selectedAccount = state.selectedAccount.takeIf { name -> accountsList.any { it.name == name } }
+                                ?: accountsList.firstOrNull()?.name.orEmpty()
+                        )
                     }
                 }
             }
@@ -68,7 +74,6 @@ class RecordFreelancePaymentViewModel @Inject constructor(
             project.milestones
                 .filter { it.status != MilestoneStatus.PAID }
                 .forEach { milestone ->
-                    val statusText = if (milestone.status == MilestoneStatus.INVOICED) "invoiced, due 14 Oct" else "overdue 12 days"
                     options.add(
                         UnpaidMilestoneOption(
                             optionId = milestone.id,
@@ -76,7 +81,7 @@ class RecordFreelancePaymentViewModel @Inject constructor(
                             project = project,
                             title = milestone.title,
                             amount = milestone.amount,
-                            subtext = "${project.name} · $statusText"
+                            subtext = "${project.name} · ${milestone.dueText(LocalDate.now())}"
                         )
                     )
                 }
@@ -94,11 +99,16 @@ class RecordFreelancePaymentViewModel @Inject constructor(
         )
 
         _uiState.update { state ->
-            val firstOptionId = options.firstOrNull()?.optionId
+            // Keep what the user picked; the first time, start on the project they came from.
+            val keep = options.find { it.optionId == state.selectedOptionId }
+            val start = keep
+                ?: projects.find { it.id == startProjectId }?.nextUnpaidMilestone()?.let { m -> options.find { it.optionId == m.id } }
+                ?: options.first()
             state.copy(
                 milestoneOptions = options,
-                selectedOptionId = state.selectedOptionId ?: firstOptionId,
-                amountDigits = (options.firstOrNull()?.amount ?: 30000L).toString()
+                selectedOptionId = start.optionId,
+                amountDigits = if (keep != null || state.amountDigits.isNotEmpty()) state.amountDigits
+                else start.amount.takeIf { it > 0 }?.toString().orEmpty()
             )
         }
     }
@@ -131,22 +141,18 @@ class RecordFreelancePaymentViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "Enter an amount received.") }
             return
         }
+        if (state.selectedAccount.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Pick the account the money went into.") }
+            return
+        }
 
         _uiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
             val selectedOption = state.selectedOption
+            val milestone = selectedOption?.milestone
+            val project = selectedOption?.project
 
-            // 1. If linked to a milestone, mark that milestone as PAID on its project
-            if (selectedOption != null && selectedOption.milestone != null && selectedOption.project != null) {
-                val project = selectedOption.project
-                val updatedMilestones = project.milestones.map {
-                    if (it.id == selectedOption.milestone.id) it.copy(status = MilestoneStatus.PAID) else it
-                }
-                val updatedProject = project.copy(milestones = updatedMilestones)
-                freelanceRepository.saveProject(updatedProject)
-            }
-
-            // 2. Automatically generate a confirmed INCOME entry for the calendar
+            // 1. The money itself: a confirmed income entry on the calendar.
             val incomeEntry = Entry(
                 id = "",
                 type = EntryType.INCOME,
@@ -154,28 +160,38 @@ class RecordFreelancePaymentViewModel @Inject constructor(
                 category = "Freelance",
                 account = state.selectedAccount,
                 date = state.selectedDate,
-                note = if (selectedOption?.milestone != null) {
-                    "Freelance payment: ${selectedOption.milestone.title} (${selectedOption.project?.name.orEmpty()})"
+                note = if (milestone != null) {
+                    "Freelance payment: ${milestone.title} (${project?.name.orEmpty()})"
                 } else {
                     "Unlinked freelance income"
                 },
                 spendingType = null,
                 status = EntryStatus.CONFIRMED
             )
+            val saved = entryRepository.addEntry(incomeEntry)
+            if (saved.isFailure) {
+                fail(saved.exceptionOrNull()?.message ?: "Couldn't save the payment.")
+                return@launch
+            }
 
-            entryRepository.addEntry(incomeEntry)
-                .onSuccess {
-                    _uiState.update { it.copy(isSaving = false) }
-                    onSuccess()
+            // 2. Only then mark the milestone paid, so a failed save never shows it as paid.
+            if (milestone != null && project != null) {
+                val updatedProject = project.copy(
+                    milestones = project.milestones.map { if (it.id == milestone.id) it.copy(status = MilestoneStatus.PAID) else it }
+                )
+                val marked = freelanceRepository.saveProject(updatedProject)
+                if (marked.isFailure) {
+                    fail("The payment is saved, but ${milestone.title} couldn't be marked paid. Try again from the project.")
+                    return@launch
                 }
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false,
-                            errorMessage = error.message ?: "Failed to save payment."
-                        )
-                    }
-                }
+            }
+
+            _uiState.update { it.copy(isSaving = false) }
+            onSuccess()
         }
+    }
+
+    private fun fail(message: String) {
+        _uiState.update { it.copy(isSaving = false, errorMessage = message) }
     }
 }

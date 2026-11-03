@@ -59,7 +59,7 @@ import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 fun FreelanceProjectsScreen(
     onBackClick: () -> Unit,
     onAddProjectClick: () -> Unit,
-    onRecordPaymentClick: () -> Unit,
+    onRecordPaymentClick: (projectId: String?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: FreelanceViewModel = hiltViewModel()
 ) {
@@ -106,7 +106,7 @@ fun FreelanceProjectsScreen(
                         state = uiState,
                         onSelectProject = viewModel::onSelectProject,
                         onMarkInvoiced = viewModel::onMarkInvoiced,
-                        onRecordPayment = onRecordPaymentClick,
+                        onRecordPayment = { onRecordPaymentClick(uiState.selectedProject?.id) },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -406,7 +406,8 @@ private fun FreelanceContent(
         ) {
             OutlinedButton(
                 onClick = onMarkInvoiced,
-                enabled = !state.isSaving,
+                // Only when there is a planned milestone left to invoice.
+                enabled = !state.isSaving && selectedProject?.milestones?.any { it.status == MilestoneStatus.PLANNED } == true,
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
@@ -424,7 +425,8 @@ private fun FreelanceContent(
 
             Button(
                 onClick = onRecordPayment,
-                enabled = !state.isSaving,
+                // Only while something on this project is still unpaid.
+                enabled = !state.isSaving && selectedProject?.milestones?.any { it.status != MilestoneStatus.PAID } == true,
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
@@ -529,7 +531,16 @@ private fun FreelanceProjectsScreenPreview() {
     MoneyTrailTheme {
         FreelanceContent(
             state = FreelanceUiState(
-                projects = FreelanceViewModel.defaultMockProjects(),
+                projects = listOf(
+                    Project(
+                        "p1", "Bakery website", "React build · Sep–Nov 2026", 120_000L,
+                        listOf(
+                            Milestone("m1", "Design", 30_000L, MilestoneStatus.PAID),
+                            Milestone("m2", "Launch", 30_000L, MilestoneStatus.INVOICED),
+                            Milestone("m3", "Support", 15_000L, MilestoneStatus.PLANNED)
+                        )
+                    )
+                ),
                 selectedProjectId = "p1"
             ),
             onSelectProject = {},

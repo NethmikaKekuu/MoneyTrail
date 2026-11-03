@@ -45,12 +45,11 @@ class FreelanceViewModel @Inject constructor(
             freelanceRepository.observeProjects().collect { result ->
                 result
                     .onSuccess { projects ->
-                        val initialProjects = projects.ifEmpty { defaultMockProjects() }
                         _uiState.update { state ->
                             state.copy(
                                 isLoading = false,
-                                projects = initialProjects,
-                                selectedProjectId = state.selectedProjectId ?: initialProjects.firstOrNull()?.id
+                                projects = projects,
+                                selectedProjectId = state.selectedProjectId ?: projects.firstOrNull()?.id
                             )
                         }
                     }
@@ -77,19 +76,6 @@ class FreelanceViewModel @Inject constructor(
         saveProjectUpdate(updatedProject)
     }
 
-    /** Marks the first INVOICED milestone of selected project as PAID */
-    fun onRecordPayment() {
-        val selected = _uiState.value.selectedProject ?: return
-        val milestoneToPay = selected.milestones.find { it.status == MilestoneStatus.INVOICED }
-            ?: selected.milestones.find { it.status == MilestoneStatus.PLANNED }
-            ?: return
-
-        val updatedMilestones = selected.milestones.map {
-            if (it.id == milestoneToPay.id) it.copy(status = MilestoneStatus.PAID) else it
-        }
-        val updatedProject = selected.copy(milestones = updatedMilestones)
-        saveProjectUpdate(updatedProject)
-    }
 
     private fun saveProjectUpdate(project: Project) {
         _uiState.update { it.copy(isSaving = true) }
@@ -107,28 +93,4 @@ class FreelanceViewModel @Inject constructor(
         }
     }
 
-    companion object {
-        /** Default initial projects corresponding to the user's mockup design */
-        fun defaultMockProjects(): List<Project> {
-            val now = System.currentTimeMillis()
-            val dayMs = 86_400_000L
-
-            val bakeryMilestones = listOf(
-                Milestone("m1", "Design", 30_000L, MilestoneStatus.PAID, now - (30 * dayMs)),
-                Milestone("m2", "Build", 45_000L, MilestoneStatus.PAID, now - (15 * dayMs)),
-                Milestone("m3", "Launch", 30_000L, MilestoneStatus.INVOICED, now - (5 * dayMs)),
-                Milestone("m4", "Support", 15_000L, MilestoneStatus.PLANNED, now + (20 * dayMs))
-            )
-
-            val clinicMilestones = listOf(
-                Milestone("c1", "Booking Engine", 50_000L, MilestoneStatus.INVOICED, now - (2 * dayMs)),
-                Milestone("c2", "Patient Portal", 70_000L, MilestoneStatus.PLANNED, now + (15 * dayMs))
-            )
-
-            return listOf(
-                Project("p1", "Bakery website", "React build · Sep–Nov 2026", 120_000L, bakeryMilestones),
-                Project("p2", "Clinic booking site", "Next.js · Oct–Dec 2026", 120_000L, clinicMilestones)
-            )
-        }
-    }
 }

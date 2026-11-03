@@ -8,18 +8,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
-import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.background
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.expandVertically
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -59,7 +57,8 @@ private enum class DashboardTab(val label: String, val icon: ImageVector) {
     CALENDAR("Calendar", MoneyTrailIcons.Calendar),
     FOLDERS("Folders", MoneyTrailIcons.Folder),
     GOAL("Goal", MoneyTrailIcons.Goal),
-    INSIGHTS("Insights", MoneyTrailIcons.Insights)
+    INSIGHTS("Insights", MoneyTrailIcons.Insights),
+    MORE("More", MoneyTrailIcons.More)
 }
 
 /**
@@ -91,16 +90,14 @@ fun DashboardScreen(
     }
     var selectedTab by rememberSaveable { mutableStateOf(DashboardTab.CALENDAR) }
     var checkDueRequested by remember { mutableStateOf(false) }
-    // The More page, opened from the menu button over whichever tab is selected.
-    var isMoreOpen by rememberSaveable { mutableStateOf(false) }
-    BackHandler(enabled = isMoreOpen) { isMoreOpen = false }
+    // Back from another tab goes to the calendar first, like the bottom bars of other apps.
+    BackHandler(enabled = selectedTab != DashboardTab.CALENDAR) { selectedTab = DashboardTab.CALENDAR }
 
     // Back on the dashboard: reminders that were dealt with leave the notification list.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
 
     // "Check now" or "Open savings" chosen in the notification list.
     LaunchedEffect(uiState.notificationAction) {
-        isMoreOpen = false
         when (uiState.notificationAction) {
             NotificationKind.MONEY_DUE -> {
                 selectedTab = DashboardTab.CALENDAR
@@ -130,11 +127,9 @@ fun DashboardScreen(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             DashboardNavigationBar(
-                selected = selectedTab.takeUnless { isMoreOpen },
-                onTabClick = {
-                    selectedTab = it
-                    isMoreOpen = false
-                }
+                selected = selectedTab,
+                unreadNotifications = uiState.unreadNotifications,
+                onTabClick = { selectedTab = it }
             )
         }
     ) { innerPadding ->
@@ -147,12 +142,6 @@ fun DashboardScreen(
                 OfflineBanner()
             }
 
-            DashboardTopBar(
-                isMenuOpen = isMoreOpen,
-                unreadNotifications = uiState.unreadNotifications,
-                onMenuClick = { isMoreOpen = !isMoreOpen },
-                onNotificationsClick = onNotificationsClick
-            )
 
             Box(Modifier.weight(1f)) {
                 val tabModifier = Modifier.fillMaxSize()
@@ -174,24 +163,15 @@ fun DashboardScreen(
                         modifier = tabModifier
                     )
                     DashboardTab.INSIGHTS -> InsightsScreen(modifier = tabModifier)
-                }
-
-                // Slides down over the tab; the menu button, Back or any tab closes it again.
-                // Fully named: inside this Box the plain name would pick the Column's version.
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = isMoreOpen,
-                    enter = expandVertically(expandFrom = Alignment.Top),
-                    exit = shrinkVertically(shrinkTowards = Alignment.Top)
-                ) {
-                    MoreScreen(
+                    DashboardTab.MORE -> MoreScreen(
+                        unreadNotifications = uiState.unreadNotifications,
+                        onNotificationsClick = onNotificationsClick,
                         onSettingsClick = onSettingsClick,
                         onSalaryClick = onSalaryClick,
                         onCatchUpClick = onCatchUpClick,
                         onFreelanceClick = onFreelanceClick,
                         onSignedOut = onSignedOut,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)
+                        modifier = tabModifier
                     )
                 }
             }
@@ -201,7 +181,8 @@ fun DashboardScreen(
 
 @Composable
 private fun DashboardNavigationBar(
-    selected: DashboardTab?,
+    selected: DashboardTab,
+    unreadNotifications: Int,
     onTabClick: (DashboardTab) -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
@@ -213,7 +194,16 @@ private fun DashboardNavigationBar(
                 NavigationBarItem(
                     selected = isSelected,
                     onClick = { onTabClick(tab) },
-                    icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(22.dp)) },
+                    icon = {
+                        // Waiting reminders show on More, where the notification list now lives.
+                        BadgedBox(badge = {
+                            if (tab == DashboardTab.MORE && unreadNotifications > 0) {
+                                Badge { Text(if (unreadNotifications > 9) "9+" else unreadNotifications.toString()) }
+                            }
+                        }) {
+                            Icon(tab.icon, contentDescription = null, modifier = Modifier.size(22.dp))
+                        }
+                    },
                     label = {
                         Text(
                             text = tab.label,
@@ -238,6 +228,6 @@ private fun DashboardNavigationBar(
 @Composable
 private fun DashboardNavigationBarPreview() {
     MoneyTrailTheme {
-        DashboardNavigationBar(selected = DashboardTab.CALENDAR, onTabClick = {})
+        DashboardNavigationBar(selected = DashboardTab.CALENDAR, unreadNotifications = 3, onTabClick = {})
     }
 }

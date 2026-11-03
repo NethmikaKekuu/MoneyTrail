@@ -35,7 +35,7 @@ class AddProjectViewModelTest {
         val invalidNameState = AddProjectUiState(
             projectName = "",
             clientName = "Glow Salon",
-            milestones = AddProjectViewModel.defaultInitialMilestones()
+            milestones = listOf(Milestone("1", "Design", 20_000L))
         )
         assertFalse(invalidNameState.isValid)
 
@@ -48,15 +48,11 @@ class AddProjectViewModelTest {
     }
 
     @Test
-    fun defaultInitialMilestones_containsDesignBuildLaunch() {
-        val milestones = AddProjectViewModel.defaultInitialMilestones()
-
-        assertEquals(3, milestones.size)
-        assertEquals("Design", milestones[0].title)
-        assertEquals(20_000L, milestones[0].amount)
-        assertEquals("Build", milestones[1].title)
-        assertEquals(25_000L, milestones[1].amount)
-        assertEquals("Launch", milestones[2].title)
-        assertEquals(15_000L, milestones[2].amount)
+    fun newProject_startsBlank() {
+        val state = AddProjectUiState()
+        assertEquals("", state.projectName)
+        assertEquals("", state.clientName)
+        assertTrue(state.milestones.isEmpty())
+        assertFalse(state.isValid)
     }
 }

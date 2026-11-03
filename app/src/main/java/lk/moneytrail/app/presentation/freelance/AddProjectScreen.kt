@@ -414,7 +414,10 @@ private fun AddProjectScreenPreview() {
             state = AddProjectUiState(
                 projectName = "Salon website",
                 clientName = "Glow Salon, Kandy",
-                milestones = AddProjectViewModel.defaultInitialMilestones()
+                milestones = listOf(
+                    Milestone("m1", "Design", 20_000L),
+                    Milestone("m2", "Build", 25_000L)
+                )
             ),
             onProjectNameChange = {},
             onClientNameChange = {},
