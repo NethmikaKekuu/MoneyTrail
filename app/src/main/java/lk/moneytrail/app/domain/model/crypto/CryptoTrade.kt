@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 
 enum class TradeSide {
     BUY,
-    SELL
+    SELL,
 }
 
 /**
@@ -57,3 +57,28 @@ data class CsvParseResult(
 class InvalidCsvHeaderException(
     val missingColumns: List<String>,
 ) : Exception("Missing required Binance CSV columns: ${missingColumns.joinToString(", ")}")
+
+/**
+ * Represents the realised profit and loss for a matched sell trade fill.
+ *
+ * @property sellTradeId ID of the sell trade.
+ * @property pair The crypto trading pair (e.g., "BTCUSDT").
+ * @property sellDate Date and time when the sell trade occurred.
+ * @property amount Quantity of crypto asset sold in this matched fill.
+ * @property sellPrice Selling price per unit.
+ * @property proceeds Total revenue from sale (amount * sellPrice).
+ * @property costBasis Cost basis of the matched buy lot(s).
+ * @property fee Total fee allocated to this sell trade match (proportional buy fee + sell fee).
+ * @property realisedPnl Net profit or loss (proceeds - costBasis - fee).
+ */
+data class CryptoRealisedPnl(
+    val sellTradeId: String = "",
+    val pair: String,
+    val sellDate: LocalDateTime,
+    val amount: Double,
+    val sellPrice: Double,
+    val proceeds: Double,
+    val costBasis: Double,
+    val fee: Double,
+    val realisedPnl: Double,
+)
