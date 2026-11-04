@@ -16,24 +16,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.Milestone
@@ -69,6 +74,22 @@ fun FreelanceProjectsScreen(
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
             snackbarHostState.showSnackbar(errorMessage)
+        }
+    }
+
+    val undoMessage = uiState.undoMessage
+    LaunchedEffect(undoMessage) {
+        if (undoMessage != null) {
+            val result = snackbarHostState.showSnackbar(
+                message = undoMessage,
+                actionLabel = "Undo",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.onUndoLastAction()
+            } else {
+                viewModel.onDismissUndo()
+            }
         }
     }
 
@@ -104,10 +125,25 @@ fun FreelanceProjectsScreen(
                     FreelanceContent(
                         state = uiState,
                         onSelectProject = viewModel::onSelectProject,
-                        onMarkInvoiced = viewModel::onMarkInvoiced,
-                        onRecordPayment = { onRecordPaymentClick(uiState.selectedProject?.id) },
+                        onMilestoneClicked = viewModel::onMilestoneClicked,
+                        onMarkInvoicedClicked = viewModel::onMarkInvoicedClicked,
+                        onUndoMilestoneClicked = viewModel::onUndoMilestoneClicked,
+                        onDeleteProject = viewModel::onDeleteProject,
+                        onRecordPaymentClicked = { onRecordPaymentClick(uiState.selectedProject?.id) },
                         modifier = Modifier.fillMaxSize()
                     )
+
+                    if (uiState.isEditingMilestone) {
+                        EditMilestoneDialog(
+                            draftTitle = uiState.draftTitle,
+                            draftAmountDigits = uiState.draftAmountDigits,
+                            onTitleChange = viewModel::onDraftTitleChange,
+                            onAmountChange = viewModel::onDraftAmountChange,
+                            onSave = viewModel::onSaveEditedMilestone,
+                            onDismiss = viewModel::onDismissEditMilestone,
+                            errorMessage = uiState.errorMessage
+                        )
+                    }
                 }
             }
         }
@@ -172,11 +208,15 @@ private fun FreelanceTopBar(
 private fun FreelanceContent(
     state: FreelanceUiState,
     onSelectProject: (String) -> Unit,
-    onMarkInvoiced: () -> Unit,
-    onRecordPayment: () -> Unit,
+    onMilestoneClicked: (Milestone) -> Unit,
+    onMarkInvoicedClicked: () -> Unit,
+    onUndoMilestoneClicked: (String) -> Unit,
+    onDeleteProject: (String) -> Unit,
+    onRecordPaymentClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val selectedProject = state.selectedProject
+    var projectToDelete by remember { mutableStateOf<Project?>(null) }
 
     Column(
         modifier = modifier
@@ -283,14 +323,33 @@ private fun FreelanceContent(
                             text = selectedProject.name,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
                         )
-                        Text(
-                            text = formatAmount(selectedProject.totalBudget),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = formatAmount(selectedProject.totalBudget),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            IconButton(
+                                onClick = { projectToDelete = selectedProject },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = MoneyTrailIcons.Trash,
+                                    contentDescription = "Delete project",
+                                    tint = MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
 
                     Text(
@@ -389,7 +448,11 @@ private fun FreelanceContent(
                 )
 
                 selectedProject.milestones.forEach { milestone ->
-                    MilestoneCard(milestone = milestone)
+                    MilestoneCard(
+                        milestone = milestone,
+                        onClick = { onMilestoneClicked(milestone) },
+                        onUndoClicked = { onUndoMilestoneClicked(milestone.id) }
+                    )
                 }
             }
         }
@@ -402,9 +465,9 @@ private fun FreelanceContent(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedButton(
-                onClick = onMarkInvoiced,
-                // Only when there is a planned milestone left to invoice.
-                enabled = !state.isSaving && selectedProject?.milestones?.any { it.status == MilestoneStatus.PLANNED } == true,
+                onClick = onMarkInvoicedClicked,
+                // Enabled only when a PLANNED milestone exists
+                enabled = state.isMarkInvoicedEnabled,
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
@@ -421,9 +484,9 @@ private fun FreelanceContent(
             }
 
             Button(
-                onClick = onRecordPayment,
-                // Only while something on this project is still unpaid.
-                enabled = !state.isSaving && selectedProject?.milestones?.any { it.status != MilestoneStatus.PAID } == true,
+                onClick = onRecordPaymentClicked,
+                // Enabled only when an INVOICED milestone exists
+                enabled = state.isRecordPaymentEnabled,
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
@@ -449,11 +512,58 @@ private fun FreelanceContent(
             }
         }
     }
+
+    // Delete Confirmation Dialog
+    if (projectToDelete != null) {
+        val target = projectToDelete!!
+        AlertDialog(
+            onDismissRequest = { projectToDelete = null },
+            title = {
+                Text(
+                    text = "Delete Project?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete '${target.name}' and all its milestones? This cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val id = target.id
+                        projectToDelete = null
+                        onDeleteProject(id)
+                    }
+                ) {
+                    Text(
+                        text = "Delete",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { projectToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
-private fun MilestoneCard(milestone: Milestone) {
+private fun MilestoneCard(
+    milestone: Milestone,
+    onClick: () -> Unit = {},
+    onUndoClicked: () -> Unit = {}
+) {
     Surface(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp)),
@@ -505,17 +615,37 @@ private fun MilestoneCard(milestone: Milestone) {
                     MilestoneStatus.PLANNED -> Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "Planned")
                 }
 
-                Surface(
-                    color = badgeBg,
-                    shape = RoundedCornerShape(12.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = badgeTextColor,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                    )
+                    // Undo button is shown ONLY for PAID or INVOICED milestones (not for PLANNED)
+                    if (milestone.status != MilestoneStatus.PLANNED) {
+                        IconButton(
+                            onClick = onUndoClicked,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = MoneyTrailIcons.Undo,
+                                contentDescription = "Undo milestone status",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Surface(
+                        color = badgeBg,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = badgeTextColor,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             }
         }
@@ -541,8 +671,11 @@ private fun FreelanceProjectsScreenPreview() {
                 selectedProjectId = "p1"
             ),
             onSelectProject = {},
-            onMarkInvoiced = {},
-            onRecordPayment = {}
+            onMilestoneClicked = {},
+            onMarkInvoicedClicked = {},
+            onUndoMilestoneClicked = {},
+            onDeleteProject = {},
+            onRecordPaymentClicked = {}
         )
     }
 }

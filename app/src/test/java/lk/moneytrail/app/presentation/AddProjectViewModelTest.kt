@@ -3,7 +3,6 @@ package lk.moneytrail.app.presentation
 import lk.moneytrail.app.domain.model.Milestone
 import lk.moneytrail.app.domain.model.MilestoneStatus
 import lk.moneytrail.app.presentation.freelance.AddProjectUiState
-import lk.moneytrail.app.presentation.freelance.AddProjectViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -27,6 +26,19 @@ class AddProjectViewModelTest {
 
         assertEquals(60_000L, state.totalProjectPrice)
         assertEquals("3 added", state.milestoneCountText)
+        assertTrue(state.isValid)
+    }
+
+    @Test
+    fun addProjectUiState_customTotalPriceInput_overridesOrSetsPrice() {
+        val state = AddProjectUiState(
+            projectName = "Salon website",
+            clientName = "Glow Salon",
+            totalBudgetDigits = "75000",
+            milestones = listOf(Milestone("1", "Design", 20_000L))
+        )
+
+        assertEquals(75_000L, state.totalProjectPrice)
         assertTrue(state.isValid)
     }
 
