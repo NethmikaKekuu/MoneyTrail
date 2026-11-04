@@ -170,6 +170,20 @@ class FreelanceViewModel @Inject constructor(
         saveProjectUpdate(updatedProject, undoMessage = "Marked '${milestoneToPay.title}' as Paid")
     }
 
+    /** Directly marks a specific milestone by ID as PAID */
+    fun onMarkMilestonePaid(milestoneId: String) {
+        val selected = _uiState.value.selectedProject ?: return
+        val targetMilestone = selected.milestones.find { it.id == milestoneId } ?: return
+        if (targetMilestone.status == MilestoneStatus.PAID) return
+        previousProjectState = selected
+
+        val updatedMilestones = selected.milestones.map {
+            if (it.id == milestoneId) it.copy(status = MilestoneStatus.PAID) else it
+        }
+        val updatedProject = selected.copy(milestones = updatedMilestones)
+        saveProjectUpdate(updatedProject, undoMessage = "Marked '${targetMilestone.title}' as Paid")
+    }
+
     /** Reverts an individual milestone's status: PAID -> INVOICED, INVOICED -> PLANNED */
     fun onUndoMilestoneClicked(milestoneId: String) {
         val selected = _uiState.value.selectedProject ?: return

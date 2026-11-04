@@ -127,6 +127,7 @@ fun FreelanceProjectsScreen(
                         onSelectProject = viewModel::onSelectProject,
                         onMilestoneClicked = viewModel::onMilestoneClicked,
                         onMarkInvoicedClicked = viewModel::onMarkInvoicedClicked,
+                        onMarkMilestonePaid = viewModel::onMarkMilestonePaid,
                         onUndoMilestoneClicked = viewModel::onUndoMilestoneClicked,
                         onDeleteProject = viewModel::onDeleteProject,
                         onRecordPaymentClicked = { onRecordPaymentClick(uiState.selectedProject?.id) },
@@ -210,6 +211,7 @@ private fun FreelanceContent(
     onSelectProject: (String) -> Unit,
     onMilestoneClicked: (Milestone) -> Unit,
     onMarkInvoicedClicked: () -> Unit,
+    onMarkMilestonePaid: (String) -> Unit,
     onUndoMilestoneClicked: (String) -> Unit,
     onDeleteProject: (String) -> Unit,
     onRecordPaymentClicked: () -> Unit,
@@ -451,6 +453,7 @@ private fun FreelanceContent(
                     MilestoneCard(
                         milestone = milestone,
                         onClick = { onMilestoneClicked(milestone) },
+                        onMarkPaidClicked = { onMarkMilestonePaid(milestone.id) },
                         onUndoClicked = { onUndoMilestoneClicked(milestone.id) }
                     )
                 }
@@ -560,6 +563,7 @@ private fun FreelanceContent(
 private fun MilestoneCard(
     milestone: Milestone,
     onClick: () -> Unit = {},
+    onMarkPaidClicked: () -> Unit = {},
     onUndoClicked: () -> Unit = {}
 ) {
     Surface(
@@ -634,6 +638,21 @@ private fun MilestoneCard(
                         }
                     }
 
+                    // Direct "Mark as Paid" Checkmark Button for unpaid milestones
+                    if (milestone.status != MilestoneStatus.PAID) {
+                        IconButton(
+                            onClick = onMarkPaidClicked,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = MoneyTrailIcons.Check,
+                                contentDescription = "Mark milestone as Paid",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
                     Surface(
                         color = badgeBg,
                         shape = RoundedCornerShape(12.dp)
@@ -673,6 +692,7 @@ private fun FreelanceProjectsScreenPreview() {
             onSelectProject = {},
             onMilestoneClicked = {},
             onMarkInvoicedClicked = {},
+            onMarkMilestonePaid = {},
             onUndoMilestoneClicked = {},
             onDeleteProject = {},
             onRecordPaymentClicked = {}
