@@ -26,12 +26,12 @@ import javax.inject.Inject
  * validates mandatory headers, parses trade rows, and identifies duplicate records against
  * the existing local database records.
  */
-class ParseBinanceCsvUseCase @Inject constructor(
+open class ParseBinanceCsvUseCase @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val cryptoRepository: CryptoRepository,
 ) {
 
-    suspend operator fun invoke(uri: Uri): Result<CsvParseResult> = withContext(Dispatchers.IO) {
+    open suspend operator fun invoke(uri: Uri): Result<CsvParseResult> = withContext(Dispatchers.IO) {
         val inputStream = try {
             context.contentResolver.openInputStream(uri)
                 ?: return@withContext Result.failure(AppException("Could not open file at provided URI."))
