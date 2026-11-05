@@ -18,7 +18,8 @@ users/{uid}                        profile
 ├── categories/{categoryId}        a category the user added
 ├── settings/plan                  pay day, salary, income sources, goals
 ├── projects/{projectId}           a freelance project with its milestones
-└── closes/{yyyy-MM}               a closed month's real balances
+├── closes/{yyyy-MM}               a closed month's real balances
+└── cryptoTrades/{tradeKey}        one trade from a Binance CSV import
 ```
 
 On the phone only (Room, not Firestore): `entries` (a copy for offline reading) and `notifications` (reminder history, kept 30 days after being read).
@@ -105,6 +106,20 @@ The monthly saving needed is calculated (`SavingsGoal.monthlySavingNeeded`), not
 
 Milestones are a list inside the project because a project has only a few and they are always shown together. Recording a payment writes a confirmed `Freelance` income entry first, then marks the milestone paid, so a milestone is never paid without the money being on the calendar. The project id is made on the phone (a UUID), so the app can open the new project straight after saving, even offline.
 
+## `users/{uid}/cryptoTrades/{tradeKey}`
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `tradeId` | string | Binance's trade id, empty if the export has none |
+| `date` | string | `yyyy-MM-ddTHH:mm:ss`, as in the export (UTC) |
+| `pair`, `side` | string | e.g. `BTCUSDT`; `BUY` or `SELL` |
+| `price`, `amount`, `total`, `fee` | number | In the pair's quote coin (usually USDT); `amount` > 0 |
+| `feeCoin` | string | The coin the fee was paid in |
+| `costBasis` | number or null | Only if the export has it |
+| `importedAt` | timestamp | Server time |
+
+The id is `id_<tradeId>`, or a UUID made from the date, pair, side, amount and price when there's no trade id, so importing the same file twice overwrites rather than doubles. Trades are not entries: realised profit or loss is worked out from them (first in, first out, after fees) and shown on the Crypto screen only, so crypto never counts as income or in the plan.
+
 ## `users/{uid}/closes/{yyyy-MM}`
 
 | Field | Type | Notes |
@@ -132,7 +147,7 @@ No composite index is needed: insights and folders read months by date range and
 `app/firestore.rules` is part of the code. Publish it whenever it changes: **Firestore Database → Rules**, replace everything with the file, **Publish**.
 
 - `isOwner(uid)`: `request.auth.uid == uid` on every path.
-- One validation function per collection (`isValidEntry`, `isValidAccount`, `isValidPlan`, `isValidGoal`, `isValidProject`, `isValidCategory`, `isValidClose`): allowed keys only, types, ranges, fixed lists, date formats and server timestamps.
+- One validation function per collection (`isValidEntry`, `isValidAccount`, `isValidPlan`, `isValidGoal`, `isValidProject`, `isValidCategory`, `isValidClose`, `isValidCryptoTrade`): allowed keys only, types, ranges, fixed lists, date formats and server timestamps.
 - Cross-field checks: a bonus only on a Salary income and below the amount; USD fields only on income; a goal's saved amount ≤ its target; a close's `month` equals its id.
 - A catch-all allows other owner-only collections but excludes the validated ones, so their checks can't be skipped.
 
