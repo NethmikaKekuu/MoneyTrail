@@ -87,7 +87,6 @@ class ProjectDetailViewModel @Inject constructor(
 
     fun onOpenAddMilestone() {
         if (_uiState.value.canAddMilestone) _uiState.update { it.copy(isAddMilestoneOpen = true) }
-        else _uiState.update { it.copy(message = "The whole price is already split into milestones.") }
     }
 
     fun onDismissAddMilestone() = _uiState.update { it.copy(isAddMilestoneOpen = false) }
@@ -102,7 +101,11 @@ class ProjectDetailViewModel @Inject constructor(
             status = MilestoneStatus.PLANNED,
             dueTimestamp = dueTimestampOf(input.dueDate)
         )
-        save(project.copy(milestones = project.milestones + milestone), undoMessage = "${input.title} added.")
+        val milestones = project.milestones + milestone
+        // An extra milestone on a fully split project is extra work, so the price grows with it.
+        val price = maxOf(project.totalBudget, milestones.sumOf { it.amount })
+        val note = if (price > project.totalBudget) " Price is now ${lk.moneytrail.app.presentation.components.formatAmount(price)}." else ""
+        save(project.copy(milestones = milestones, totalBudget = price), undoMessage = "${input.title} added.$note")
     }
 
     fun onEditMilestone(milestone: Milestone) {

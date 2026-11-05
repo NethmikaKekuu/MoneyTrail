@@ -47,7 +47,7 @@ Pay day 31 in short months, salary with bonus, expected money that didn't happen
 2. **+** → 850 → Coffee → Save. It appears at once; Insights → Expenses shows the split and dining as days of saving.
 3. Tap the expected salary → "Did it come in?" → 133,400 → Pay yourself first → **I've moved it** → Goal progress moves.
 4. Insights → **Income**: by source, dependable 66% / variable 34%.
-5. More → Freelance: Mark invoiced → Record payment → it's on the calendar.
+5. More → Freelance: totals and the Overdue list → open a project → Mark invoiced → Record payment on that milestone → it's on the calendar.
 6. Bell → a reminder → it opens the right place; the others stay.
 7. More → Monthly close & statement → Close month → Books balanced → Export CSV.
 8. Airplane mode → add an entry → offline banner → back online → show it in the Firestore console.
@@ -65,7 +65,7 @@ Pay day 31 in short months, salary with bonus, expected money that didn't happen
 | How are rules enforced? | `isOwner(uid)` plus a validation function per collection; server timestamps checked. |
 | How is the ViewModel created? | `hiltViewModel()`; Hilt injects repositories and `SavedStateHandle`. |
 | What would you add next? | Transfers between own accounts, crypto losses, recurring bills. |
-| How did you test it? | 172 unit tests on the domain rules, plus a device checklist. |
+| How did you test it? | 184 unit tests on the domain rules, plus a device checklist. |
 
 ## Before the session
 - [ ] Latest APK installed on the demo phone; signed in; notifications allowed.

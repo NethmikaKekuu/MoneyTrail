@@ -34,7 +34,7 @@ class AddProjectViewModel @Inject constructor(
     }
 
     fun onTotalBudgetChange(digits: String) {
-        _uiState.update { it.copy(totalBudgetDigits = digits.filter(Char::isDigit).take(12), errorMessage = null) }
+        _uiState.update { it.copy(totalBudgetDigits = digits.filter(Char::isDigit).take(9), errorMessage = null) }
     }
 
     fun onOpenAddMilestoneDialog() {

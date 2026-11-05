@@ -99,11 +99,11 @@ The monthly saving needed is calculated (`SavingsGoal.monthlySavingNeeded`), not
 | Field | Type | Notes |
 | --- | --- | --- |
 | `name`, `client` | string | ≤ 100 |
-| `totalBudget` | int | LKR; the sum of the milestones |
-| `milestones` | array of maps | `id`, `title`, `amount`, `status` (`planned`, `invoiced`, `paid`), `dueTimestamp` (ms); up to 50 |
+| `totalBudget` | int | LKR; the agreed project price, typed when the project is made. Milestones can add up to less (the rest is "not split yet") but not more; adding a milestone past the price raises it |
+| `milestones` | array of maps | `id`, `title`, `amount`, `status` (`planned`, `invoiced`, `paid`), `dueTimestamp` (start of the due day, ms); up to 50. A project saved without milestones gets one "Full payment" milestone for the whole price |
 | `updatedAt` | timestamp | Server time |
 
-Milestones are a list inside the project because a project has only a few and they are always shown together. Recording a payment writes a confirmed `Freelance` income entry first, then marks the milestone paid.
+Milestones are a list inside the project because a project has only a few and they are always shown together. Recording a payment writes a confirmed `Freelance` income entry first, then marks the milestone paid, so a milestone is never paid without the money being on the calendar. The project id is made on the phone (a UUID), so the app can open the new project straight after saving, even offline.
 
 ## `users/{uid}/closes/{yyyy-MM}`
 

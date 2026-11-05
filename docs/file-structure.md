@@ -65,7 +65,7 @@ One folder per feature, each with `XScreen.kt`, `XViewModel.kt` and `XState.kt` 
 | `goal/` | Goals and pay yourself first |
 | `salary/`, `settings/`, `more/` | Salary, Settings, More |
 | `catchup/`, `monthlyclose/`, `statement/` | Catch-up, Monthly close, Statement with CSV export |
-| `freelance/` | Projects, New project, Add milestone, Record payment |
+| `freelance/` | Projects list (totals, overdue, project cards), Project detail (milestones and their actions), New project, milestone dialog, Record payment |
 | `notifications/` | Notification centre |
 | `navigation/` | `MoneyTrailNavHost`, `Routes` |
 | `components/`, `theme/` | Shared Composables; colours, type, `MoneyTrailTheme` |
