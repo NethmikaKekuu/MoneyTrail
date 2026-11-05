@@ -11,7 +11,9 @@ import kotlinx.coroutines.launch
 import lk.moneytrail.app.domain.model.Milestone
 import lk.moneytrail.app.domain.model.MilestoneStatus
 import lk.moneytrail.app.domain.model.Project
+import lk.moneytrail.app.domain.model.dueTimestampOf
 import lk.moneytrail.app.domain.repository.FreelanceRepository
+import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
 
@@ -32,28 +34,27 @@ class AddProjectViewModel @Inject constructor(
     }
 
     fun onTotalBudgetChange(digits: String) {
-        _uiState.update { it.copy(totalBudgetDigits = digits.filter(Char::isDigit), errorMessage = null) }
+        _uiState.update { it.copy(totalBudgetDigits = digits.filter(Char::isDigit).take(12), errorMessage = null) }
     }
 
     fun onOpenAddMilestoneDialog() {
-        _uiState.update { it.copy(isAddMilestoneDialogOpen = true) }
+        val state = _uiState.value
+        val error = when {
+            state.totalProjectPrice <= 0 -> "Enter the total project price first."
+            state.leftToSplit <= 0 -> "The whole price is already split into milestones."
+            else -> null
+        }
+        _uiState.update { if (error != null) it.copy(errorMessage = error) else it.copy(isAddMilestoneDialogOpen = true, errorMessage = null) }
     }
 
     fun onDismissAddMilestoneDialog() {
         _uiState.update { it.copy(isAddMilestoneDialogOpen = false) }
     }
 
-    fun onAddMilestone(title: String, amount: Long, dueTimestamp: Long) {
-        val newMilestone = Milestone(
-            id = UUID.randomUUID().toString(),
-            title = title,
-            amount = amount,
-            status = MilestoneStatus.PLANNED,
-            dueTimestamp = dueTimestamp
-        )
+    fun onAddMilestone(input: MilestoneInput) {
         _uiState.update {
             it.copy(
-                milestones = it.milestones + newMilestone,
+                milestones = it.milestones + newMilestone(input.title, input.amount, input.dueDate),
                 isAddMilestoneDialogOpen = false,
                 errorMessage = null
             )
@@ -62,50 +63,81 @@ class AddProjectViewModel @Inject constructor(
 
     fun onRemoveMilestone(index: Int) {
         _uiState.update { state ->
-            val updated = state.milestones.toMutableList().apply {
-                if (index in indices) removeAt(index)
-            }
-            state.copy(milestones = updated)
+            state.copy(milestones = state.milestones.filterIndexed { i, _ -> i != index }, errorMessage = null)
         }
     }
 
-    fun onSaveProject(onSuccess: () -> Unit) {
+    fun onSaveProject(onSuccess: (projectId: String) -> Unit) {
         val state = _uiState.value
-        if (state.projectName.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Enter a project name.") }
+        val error = state.saveError
+        if (error != null) {
+            _uiState.update { it.copy(errorMessage = error) }
             return
         }
-        if (state.clientName.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Enter the client name.") }
+        if (state.milestones.isNotEmpty() && state.leftToSplit > 0) {
+            _uiState.update { it.copy(isShortSplitDialogOpen = true) }
             return
         }
-        if (state.totalProjectPrice <= 0) {
-            _uiState.update { it.copy(errorMessage = "Enter a total project price.") }
-            return
+        save(onSuccess)
+    }
+
+    /** From the "short of the price" question: add what's left as one last milestone, then save. */
+    fun onAddRestAndSave(onSuccess: (projectId: String) -> Unit) {
+        _uiState.update {
+            it.copy(
+                milestones = it.milestones + newMilestone("Final payment", it.leftToSplit, it.nextDueDate(LocalDate.now())),
+                isShortSplitDialogOpen = false
+            )
         }
+        save(onSuccess)
+    }
+
+    fun onSaveAnyway(onSuccess: (projectId: String) -> Unit) {
+        _uiState.update { it.copy(isShortSplitDialogOpen = false) }
+        save(onSuccess)
+    }
+
+    fun onDismissShortSplitDialog() {
+        _uiState.update { it.copy(isShortSplitDialogOpen = false) }
+    }
+
+    private fun save(onSuccess: (projectId: String) -> Unit) {
+        val state = _uiState.value
+        if (state.isSaving) return
+        val project = buildNewProject(state, LocalDate.now(), UUID.randomUUID().toString())
 
         _uiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            val project = Project(
-                name = state.projectName.trim(),
-                client = state.clientName.trim(),
-                totalBudget = state.totalProjectPrice,
-                milestones = state.milestones
-            )
-
             freelanceRepository.saveProject(project)
                 .onSuccess {
                     _uiState.update { it.copy(isSaving = false) }
-                    onSuccess()
+                    onSuccess(project.id)
                 }
                 .onFailure { error ->
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false,
-                            errorMessage = error.message ?: "Failed to save project."
-                        )
-                    }
+                    _uiState.update { it.copy(isSaving = false, errorMessage = error.message ?: "Couldn't save the project.") }
                 }
         }
     }
 }
+
+private fun newMilestone(title: String, amount: Long, due: LocalDate) = Milestone(
+    id = UUID.randomUUID().toString(),
+    title = title,
+    amount = amount,
+    status = MilestoneStatus.PLANNED,
+    dueTimestamp = dueTimestampOf(due)
+)
+
+/**
+ * The project to save from the form. With no milestones the whole price becomes one
+ * "Full payment" milestone, so it can still be invoiced and paid.
+ */
+internal fun buildNewProject(state: AddProjectUiState, today: LocalDate, id: String): Project = Project(
+    id = id,
+    name = state.projectName.trim(),
+    client = state.clientName.trim(),
+    totalBudget = state.totalProjectPrice,
+    milestones = state.milestones.ifEmpty {
+        listOf(newMilestone("Full payment", state.totalProjectPrice, state.nextDueDate(today)))
+    }
+)
