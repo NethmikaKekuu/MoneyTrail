@@ -23,6 +23,7 @@ object Routes {
     fun monthlyClose(month: java.time.YearMonth): String = "monthly_close?$MONTH_ARG=$month"
     fun statement(month: java.time.YearMonth?): String = if (month == null) "statement" else "statement?$MONTH_ARG=$month"
     const val CRYPTO = "crypto"
+    const val RECURRING_BILLS = "recurring_bills"
     const val FREELANCE = "freelance"
     const val ADD_PROJECT = "add_project"
     /** Firestore id of the project to open. */

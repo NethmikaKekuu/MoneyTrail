@@ -143,7 +143,7 @@ internal fun ExpectedCheckDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = actions.onConfirm, enabled = enabled) { Text("Confirm") }
+            TextButton(onClick = actions.onConfirm, enabled = enabled) { Text(if (isIncome) "Confirm" else "Paid") }
         },
         dismissButton = {
             Row {

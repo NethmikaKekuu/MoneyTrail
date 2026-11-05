@@ -147,6 +147,29 @@ service cloud.firestore {
       allow create, update: if isOwner(uid) && isValidProject(request.resource.data);
     }
 
+    // users/{uid}/recurringBills/{billId}: a bill that falls due on the same day every
+    // month, such as a subscription. amount is whole LKR; dueDay is 1-31; account and
+    // category are the names used on entries. lastCreatedMonth (yyyy-MM, or null) is the
+    // latest month the bill was put on the calendar, which stops it being added twice.
+    function isValidRecurringBill(data) {
+      let fields = ['name', 'amount', 'account', 'category', 'dueDay', 'isActive', 'lastCreatedMonth', 'updatedAt'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 60
+        && data.amount is int && data.amount > 0 && data.amount <= 999999999
+        && data.account is string && data.account.size() > 0 && data.account.size() <= 50
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 50
+        && data.dueDay is int && data.dueDay >= 1 && data.dueDay <= 31
+        && data.isActive is bool
+        && (data.lastCreatedMonth == null
+          || (data.lastCreatedMonth is string && data.lastCreatedMonth.matches('[0-9]{4}-[0-9]{2}')))
+        && data.updatedAt == request.time;
+    }
+
+    match /users/{uid}/recurringBills/{billId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidRecurringBill(request.resource.data);
+    }
+
     // users/{uid}/categories/{categoryId}: a category the user added, e.g. "Pet care".
     // Expense categories say whether they're usually committed or discretionary;
     // income categories have no spendingType.
@@ -206,7 +229,7 @@ service cloud.firestore {
     // keeps this from also matching users/{uid} itself, and the collections checked
     // above are left out so their checks can't be skipped.
     match /users/{uid}/{collection}/{document=**} {
-      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories', 'projects', 'closes', 'cryptoTrades']);
+      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories', 'projects', 'closes', 'cryptoTrades', 'recurringBills']);
     }
   }
 }
