@@ -1,5 +1,6 @@
 package lk.moneytrail.app.presentation.salary
 
+import lk.moneytrail.app.presentation.components.ScreenTopBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -84,7 +85,7 @@ private fun SalaryContent(
             .systemBarsPadding()
             .imePadding()
     ) {
-        SalaryTopBar(onBackClick = onBackClick)
+        ScreenTopBar(title = "Salary", onBackClick = onBackClick)
 
         when {
             uiState.isLoading -> LoadingView(message = "Loading your salary…")
@@ -161,42 +162,6 @@ private fun SalaryContent(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SalaryTopBar(onBackClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .padding(top = 16.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = MoneyTrailIcons.ChevronLeft,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        Text(
-            text = "Salary",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .weight(1f)
-                .padding(end = 44.dp)
-        )
     }
 }
 

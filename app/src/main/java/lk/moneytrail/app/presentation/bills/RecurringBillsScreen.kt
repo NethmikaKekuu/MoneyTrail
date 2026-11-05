@@ -1,18 +1,15 @@
 package lk.moneytrail.app.presentation.bills
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -21,9 +18,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -37,29 +34,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.RecurringBill
-import lk.moneytrail.app.presentation.auth.AuthErrorText
-import lk.moneytrail.app.presentation.auth.AuthTextField
+import lk.moneytrail.app.presentation.components.ChipEmphasis
 import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.ErrorView
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
+import lk.moneytrail.app.presentation.components.ScreenTopBar
+import lk.moneytrail.app.presentation.components.StatusChip
 import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
+import java.time.LocalDate
 
 /**
  * Recurring bills: the subscriptions and auto-debits that leave an account on the same
  * day every month. Each month an active bill appears on the calendar to be checked with
- * "Did you pay it?".
+ * "Did you pay it?". Laid out like Freelance: totals card, then one card per bill.
  */
 @Composable
 fun RecurringBillsScreen(
@@ -80,14 +78,22 @@ fun RecurringBillsScreen(
 
     Scaffold(
         modifier = modifier,
-        topBar = { BillsTopBar(onBackClick = onBackClick, onAddClick = viewModel::onAddClick) },
+        topBar = {
+            ScreenTopBar(
+                title = "Recurring bills",
+                onBackClick = onBackClick,
+                actionIcon = MoneyTrailIcons.Plus,
+                actionDescription = "Add a bill",
+                onActionClick = viewModel::onAddClick
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when {
                 uiState.isLoading -> LoadingView(message = "Loading your bills…")
-                uiState.loadError != null -> ErrorView(message = uiState.loadError!!, onRetry = viewModel::onRetryClick)
+                uiState.loadError != null -> ErrorView(message = uiState.loadError ?: "", onRetry = viewModel::onRetryClick)
                 uiState.bills.isEmpty() -> EmptyView(
                     title = "No recurring bills yet",
                     message = "Add your subscriptions and auto-debits once. Each month they appear on the calendar, ready to mark as paid.",
@@ -96,9 +102,9 @@ fun RecurringBillsScreen(
                 )
                 else -> BillsList(
                     state = uiState,
+                    today = LocalDate.now(),
                     onEditClick = viewModel::onEditClick,
-                    onActiveChange = viewModel::onActiveChange,
-                    onDeleteClick = viewModel::onDeleteClick
+                    onActiveChange = viewModel::onActiveChange
                 )
             }
         }
@@ -116,6 +122,7 @@ fun RecurringBillsScreen(
             onAccountSelect = viewModel::onAccountSelect,
             onCategorySelect = viewModel::onCategorySelect,
             onSave = viewModel::onSaveClick,
+            onDelete = viewModel::onDeleteFromDraft,
             onDismiss = viewModel::onDraftDismiss
         )
     }
@@ -123,11 +130,11 @@ fun RecurringBillsScreen(
     uiState.deleting?.let { bill ->
         AlertDialog(
             onDismissRequest = viewModel::onDeleteDismiss,
-            title = { Text("Delete this bill?") },
-            text = { Text("${bill.name} will stop appearing on the calendar. Entries it already made stay.") },
+            title = { Text("Delete ${bill.name}?", fontWeight = FontWeight.Bold) },
+            text = { Text("It will stop appearing on the calendar. Entries it already made stay.") },
             confirmButton = {
                 TextButton(onClick = viewModel::onDeleteConfirm) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = { TextButton(onClick = viewModel::onDeleteDismiss) { Text("Cancel") } }
@@ -136,131 +143,140 @@ fun RecurringBillsScreen(
 }
 
 @Composable
-private fun BillsTopBar(onBackClick: () -> Unit, onAddClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp)
-            .padding(top = 16.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconBox(icon = MoneyTrailIcons.ChevronLeft, description = "Back", onClick = onBackClick)
-        Text(
-            text = "Recurring bills",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-        IconBox(icon = MoneyTrailIcons.Plus, description = "Add a bill", onClick = onAddClick)
-    }
-}
-
-@Composable
-private fun IconBox(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(imageVector = icon, contentDescription = description, tint = MaterialTheme.colorScheme.onSurface)
-    }
-}
-
-@Composable
 private fun BillsList(
     state: RecurringBillsState,
+    today: LocalDate,
     onEditClick: (RecurringBill) -> Unit,
-    onActiveChange: (RecurringBill, Boolean) -> Unit,
-    onDeleteClick: (RecurringBill) -> Unit
+    onActiveChange: (RecurringBill, Boolean) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        item { TotalsCard(state, today) }
         item {
-            Surface(
-                color = MaterialTheme.colorScheme.primary,
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "Every month",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
-                    )
-                    Text(
-                        text = "LKR ${formatAmount(state.monthlyTotal)}",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+                Text("Bills", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("${state.bills.size}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        items(state.bills, key = { it.id }) { bill ->
+        items(state.sortedBills, key = { it.id }) { bill ->
             BillCard(
                 bill = bill,
                 onEditClick = { onEditClick(bill) },
-                onActiveChange = { onActiveChange(bill, it) },
-                onDeleteClick = { onDeleteClick(bill) }
+                onActiveChange = { onActiveChange(bill, it) }
+            )
+        }
+        item {
+            Text(
+                "Tap a bill to edit or delete it. Switch it off to stop it without losing its history.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
         }
     }
 }
 
+/** Same layout as the Freelance totals: the main figure, a divider, three small figures. */
 @Composable
-private fun BillCard(
-    bill: RecurringBill,
-    onEditClick: () -> Unit,
-    onActiveChange: (Boolean) -> Unit,
-    onDeleteClick: () -> Unit
-) {
-    val colors = MaterialTheme.colorScheme
+private fun TotalsCard(state: RecurringBillsState, today: LocalDate) {
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
     Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = colors.surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, colors.outlineVariant, RoundedCornerShape(18.dp))
-            .clickable(onClick = onEditClick)
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(20.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Bills every month (active)", style = MaterialTheme.typography.bodyMedium, color = onPrimary.copy(alpha = 0.85f))
                 Text(
-                    text = bill.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    "LKR ${formatAmount(state.monthlyTotal)}",
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (bill.isActive) colors.onSurface else colors.outline
-                )
-                Text(
-                    text = "LKR ${formatAmount(bill.amount)} · day ${bill.dueDay}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant
-                )
-                Text(
-                    text = "${bill.category} · ${bill.account}" + if (bill.isActive) "" else " · Stopped",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.outline
+                    color = onPrimary
                 )
             }
-            Switch(checked = bill.isActive, onCheckedChange = onActiveChange)
-            IconButton(onClick = onDeleteClick) {
-                Icon(MoneyTrailIcons.Trash, contentDescription = "Delete ${bill.name}", tint = colors.outline)
+            HorizontalDivider(color = onPrimary.copy(alpha = 0.2f))
+            Row(Modifier.fillMaxWidth()) {
+                TotalStat("Active", "${state.activeCount}", "bills", Modifier.weight(1f))
+                TotalStat("Stopped", "${state.stoppedCount}", "bills", Modifier.weight(1f))
+                TotalStat("Next due", state.nextDue(today)?.second?.dayOfMonth?.toString() ?: "–", state.nextDue(today)?.first?.name ?: "none", Modifier.weight(1f))
             }
         }
     }
 }
 
+@Composable
+private fun TotalStat(label: String, value: String, caption: String, modifier: Modifier) {
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = onPrimary.copy(alpha = 0.8f))
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = onPrimary, maxLines = 1)
+        Text(caption, style = MaterialTheme.typography.bodySmall, color = onPrimary.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Same card as a Freelance project: name and details on the left, amount and chip on the right. */
+@Composable
+private fun BillCard(
+    bill: RecurringBill,
+    onEditClick: () -> Unit,
+    onActiveChange: (Boolean) -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onEditClick,
+        shape = RoundedCornerShape(18.dp),
+        color = colors.surface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, colors.outlineVariant, RoundedCornerShape(18.dp))
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        bill.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (bill.isActive) colors.onSurface else colors.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "${bill.category} · ${bill.account}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(formatAmount(bill.amount), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    if (bill.isActive) StatusChip("Active", ChipEmphasis.ACTIVE) else StatusChip("Stopped", ChipEmphasis.QUIET)
+                }
+            }
+            HorizontalDivider(color = colors.outlineVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    bill.dueDayText(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(checked = bill.isActive, onCheckedChange = onActiveChange)
+            }
+        }
+    }
+}
+
+/** Same dialog look as the milestone dialog: bold title, rounded outlined fields. */
 @Composable
 private fun BillEditorDialog(
     draft: BillDraft,
@@ -273,50 +289,67 @@ private fun BillEditorDialog(
     onAccountSelect: (String) -> Unit,
     onCategorySelect: (String) -> Unit,
     onSave: () -> Unit,
+    onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val enabled = !isSaving
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (draft.isNew) "New recurring bill" else "Edit bill") },
+        title = {
+            Text(
+                if (draft.isNew) "Add bill" else "Edit bill",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                AuthTextField(
-                    value = draft.name,
-                    onValueChange = onNameChange,
-                    label = "Name",
-                    placeholder = "e.g. Netflix, Gym",
-                    enabled = enabled,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                )
-                AuthTextField(
-                    value = draft.amountDigits,
-                    onValueChange = onAmountChange,
-                    label = "Amount (LKR)",
-                    placeholder = "0",
-                    enabled = enabled,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
-                )
-                AuthTextField(
-                    value = draft.dueDayDigits,
-                    onValueChange = onDueDayChange,
-                    label = "Due day of the month (1-31)",
-                    placeholder = "e.g. 5",
-                    enabled = enabled,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
-                )
+                DialogField(draft.name, onNameChange, "Name (e.g. Netflix, Gym)", enabled, KeyboardOptions(imeAction = ImeAction.Next))
+                DialogField(draft.amountDigits, onAmountChange, "Amount (LKR)", enabled, KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next))
+                DialogField(draft.dueDayDigits, onDueDayChange, "Due day of the month (1–31)", enabled, KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done))
                 ChipGroup(label = "Paid from", options = accountNames, selected = draft.account, enabled = enabled, onSelect = onAccountSelect)
                 ChipGroup(label = "Category", options = categoryNames, selected = draft.category, enabled = enabled, onSelect = onCategorySelect)
-                if (draft.errorMessage != null) {
-                    AuthErrorText(draft.errorMessage)
+                draft.errorMessage?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onSave, enabled = enabled) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = enabled) { Text("Cancel") } }
+        confirmButton = {
+            TextButton(onClick = onSave, enabled = enabled) {
+                Text(if (draft.isNew) "Add" else "Save", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            Row {
+                if (!draft.isNew) {
+                    TextButton(onClick = onDelete, enabled = enabled) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }
+                TextButton(onClick = onDismiss, enabled = enabled) { Text("Cancel") }
+            }
+        }
+    )
+}
+
+@Composable
+private fun DialogField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    enabled: Boolean,
+    keyboardOptions: KeyboardOptions
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        enabled = enabled,
+        singleLine = true,
+        keyboardOptions = keyboardOptions,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
     )
 }
 
@@ -329,7 +362,7 @@ private fun ChipGroup(
     onSelect: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, style = MaterialTheme.typography.labelMedium)
+        Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -339,23 +372,29 @@ private fun ChipGroup(
                     selected = option == selected,
                     onClick = { onSelect(option) },
                     enabled = enabled,
+                    shape = RoundedCornerShape(12.dp),
                     label = { Text(option) }
                 )
             }
-            Spacer(modifier = Modifier.size(1.dp))
         }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, heightDp = 700)
 @Composable
-private fun BillCardPreview() {
+private fun BillsListPreview() {
     MoneyTrailTheme {
-        BillCard(
-            bill = RecurringBill("1", "Netflix", 1_990, "Secondary bank", "Other", 5),
+        BillsList(
+            state = RecurringBillsState(
+                isLoading = false,
+                bills = listOf(
+                    RecurringBill("1", "Netflix", 1_990, "Secondary bank", "Subscriptions", 5),
+                    RecurringBill("2", "Gym", 6_500, "Main bank", "Health", 1, isActive = false)
+                )
+            ),
+            today = LocalDate.of(2026, 11, 5),
             onEditClick = {},
-            onActiveChange = {},
-            onDeleteClick = {}
+            onActiveChange = { _, _ -> }
         )
     }
 }

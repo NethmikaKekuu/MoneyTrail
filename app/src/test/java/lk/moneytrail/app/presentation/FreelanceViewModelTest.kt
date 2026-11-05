@@ -4,7 +4,7 @@ import lk.moneytrail.app.domain.model.Milestone
 import lk.moneytrail.app.domain.model.MilestoneStatus
 import lk.moneytrail.app.domain.model.Project
 import lk.moneytrail.app.domain.model.dueTimestampOf
-import lk.moneytrail.app.presentation.freelance.ChipEmphasis
+import lk.moneytrail.app.presentation.components.ChipEmphasis
 import lk.moneytrail.app.presentation.freelance.FreelanceUiState
 import lk.moneytrail.app.presentation.freelance.ProjectDetailUiState
 import lk.moneytrail.app.presentation.freelance.dueLabel
