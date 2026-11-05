@@ -35,8 +35,6 @@ import lk.moneytrail.app.domain.repository.ReminderScheduler
 import lk.moneytrail.app.domain.repository.UsdRateRepository
 import lk.moneytrail.app.domain.repository.UserRepository
 import javax.inject.Singleton
-import lk.moneytrail.app.data.repository.FirestoreCryptoRepository
-import lk.moneytrail.app.domain.repository.CryptoRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -101,8 +99,4 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindFileExportRepository(impl: ContentResolverFileExportRepository): FileExportRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindCryptoRepository(impl: FirestoreCryptoRepository): CryptoRepository
 }

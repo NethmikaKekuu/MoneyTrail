@@ -1,6 +1,6 @@
 # Testing
 
-MoneyTrail has **197 unit tests in 41 classes**, all plain JUnit 4 on the JVM. They test the rules: the domain layer has no Android or Firebase imports, so its functions and use cases run without an emulator.
+MoneyTrail has **203 unit tests in 39 classes**, all plain JUnit 4 on the JVM. They test the rules: the domain layer has no Android or Firebase imports, so its functions and use cases run without an emulator.
 
 ```
 ./gradlew testDebugUnitTest
@@ -38,7 +38,6 @@ app/src/test/java/lk/moneytrail/app/
 | AdSense USD | `UsdConversionTest`, `UsdPayoutStateTest` | Effective rate and fee; parsing and showing two decimals; typed rupees override the rate |
 | Catch-up and balancing | `CatchUpTest` | Offered after 3 days; "Not logged" for unlogged money; entries on the check day count once |
 | Monthly close and statement | `MonthlyCloseTest` | Balance at the end of a month; opening from last month's close; the CSV's amounts add up to "Kept" |
-| Crypto | `ParseBinanceCsvUseCaseTest`, `CalculateRealisedPnlUseCaseTest`, `CryptoImportTest` | Binance columns and aliases; bad rows skipped with the reason; duplicates by trade id; FIFO with partial fills and fees; importing the same file twice adds nothing; totals by month and coin |
 | Freelance | `FreelanceModelTest`, `FreelanceViewModelTest`, `AddProjectViewModelTest`, `RecordFreelancePaymentTest`, `RecordFreelancePaymentViewModelTest`, `OverdueInvoicesTest` | Totals across projects; due today is not overdue; projects needing attention first; the price is only what was typed; split left and over; no milestones → one "Full payment"; a milestone can't go past the price; due order; the next unpaid milestone; overdue invoices oldest first |
 | Reminders | `GetRemindersUseCaseTest`, `RefreshNotificationsUseCaseTest`, `ReminderScheduleTest` | Money due, pay yourself first and catch-up reminders; a done reminder is marked read; next 9:00 check |
 | Input and calendar UI state | `AmountInputTest`, `AmountVisualTransformationTest`, `CalendarDaysTest`, `MoreStateTest`, `ThemePreferencesTest` | Keypad digits; commas without moving the cursor; Monday-to-Sunday grid with markers; theme saved and restored |
