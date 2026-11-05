@@ -1,6 +1,4 @@
-<img width="96" height="96" alt="ic_launcher" src="https://github.com/user-attachments/assets/ecd9b527-582a-44e8-bdbd-ce26f28d3711" />
-
-
+<img width="2400" height="744" alt="Untitled design (12)" src="https://github.com/user-attachments/assets/8144d0ce-034f-4542-8737-3c95dae12409" />
 
 
 # MoneyTrail — Personal Finance Management App
