@@ -22,8 +22,10 @@ import lk.moneytrail.app.presentation.catchup.CatchUpScreen
 import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
+import lk.moneytrail.app.presentation.bills.RecurringBillsScreen
 import lk.moneytrail.app.presentation.freelance.AddProjectScreen
 import lk.moneytrail.app.presentation.freelance.FreelanceProjectsScreen
+import lk.moneytrail.app.presentation.freelance.ProjectDetailScreen
 import lk.moneytrail.app.presentation.freelance.RecordFreelancePaymentScreen
 import lk.moneytrail.app.presentation.goal.GoalScreen
 import lk.moneytrail.app.presentation.notifications.NotificationsScreen
@@ -109,6 +111,7 @@ fun MoneyTrailNavHost(
                 onCatchUpClick = { navController.navigate(Routes.CATCH_UP) { launchSingleTop = true } },
                 onStatementClick = { navController.navigate(Routes.statement(null)) { launchSingleTop = true } },
                 onFreelanceClick = { navController.navigate(Routes.FREELANCE) { launchSingleTop = true } },
+                onRecurringBillsClick = { navController.navigate(Routes.RECURRING_BILLS) { launchSingleTop = true } },
 
                 onNotificationsClick = { navController.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                 onSignedOut = { navController.navigateAndClearBackStack(Routes.LOGIN) }
@@ -174,23 +177,49 @@ fun MoneyTrailNavHost(
                 onSetUpClick = { navController.navigate(Routes.ONBOARDING) { launchSingleTop = true } }
             )
         }
+        composable(Routes.RECURRING_BILLS) {
+            RecurringBillsScreen(
+                onBackClick = { navController.popBackStack(Routes.RECURRING_BILLS, inclusive = true) }
+            )
+        }
         composable(Routes.FREELANCE) {
             FreelanceProjectsScreen(
                 onBackClick = { navController.popBackStack(Routes.FREELANCE, inclusive = true) },
                 onAddProjectClick = { navController.navigate(Routes.ADD_PROJECT) { launchSingleTop = true } },
-                onRecordPaymentClick = { projectId -> navController.navigate(Routes.recordFreelancePayment(projectId)) { launchSingleTop = true } }
+                onProjectClick = { projectId -> navController.navigate(Routes.projectDetail(projectId)) { launchSingleTop = true } }
+            )
+        }
+        composable(
+            route = Routes.PROJECT_DETAIL,
+            arguments = listOf(navArgument(Routes.PROJECT_ID_ARG) { type = NavType.StringType })
+        ) {
+            ProjectDetailScreen(
+                onBackClick = { navController.popBackStack(Routes.PROJECT_DETAIL, inclusive = true) },
+                onRecordPaymentClick = { projectId, milestoneId ->
+                    navController.navigate(Routes.recordFreelancePayment(projectId, milestoneId)) { launchSingleTop = true }
+                }
             )
         }
         composable(Routes.ADD_PROJECT) {
             AddProjectScreen(
                 onBackClick = { navController.popBackStack(Routes.ADD_PROJECT, inclusive = true) },
-                onProjectSaved = { navController.popBackStack(Routes.ADD_PROJECT, inclusive = true) }
+                // Open the new project in place of the form, so Back returns to the list.
+                onProjectSaved = { projectId ->
+                    navController.navigate(Routes.projectDetail(projectId)) {
+                        popUpTo(Routes.ADD_PROJECT) { inclusive = true }
+                    }
+                }
             )
         }
         composable(
             route = Routes.RECORD_FREELANCE_PAYMENT,
             arguments = listOf(
                 navArgument(Routes.RECORD_PAYMENT_PROJECT_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument(Routes.RECORD_PAYMENT_MILESTONE_ARG) {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null

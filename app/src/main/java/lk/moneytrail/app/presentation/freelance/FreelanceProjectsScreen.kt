@@ -1,571 +1,203 @@
 package lk.moneytrail.app.presentation.freelance
 
-import androidx.compose.foundation.background
+import lk.moneytrail.app.presentation.components.ChipEmphasis
+import lk.moneytrail.app.presentation.components.LegendItem
+import lk.moneytrail.app.presentation.components.ScreenTopBar
+import lk.moneytrail.app.presentation.components.StatusChip
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.moneytrail.app.domain.model.Milestone
 import lk.moneytrail.app.domain.model.MilestoneStatus
+import lk.moneytrail.app.domain.model.OverdueInvoice
 import lk.moneytrail.app.domain.model.Project
+import lk.moneytrail.app.domain.model.dueTimestampOf
 import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.ErrorView
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
+import java.time.LocalDate
 
 @Composable
 fun FreelanceProjectsScreen(
     onBackClick: () -> Unit,
     onAddProjectClick: () -> Unit,
-    onRecordPaymentClick: (projectId: String?) -> Unit,
+    onProjectClick: (projectId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: FreelanceViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    val errorMessage = uiState.errorMessage
-    LaunchedEffect(errorMessage) {
-        if (errorMessage != null) {
-            snackbarHostState.showSnackbar(errorMessage)
-        }
-    }
-
-    val undoMessage = uiState.undoMessage
-    LaunchedEffect(undoMessage) {
-        if (undoMessage != null) {
-            val result = snackbarHostState.showSnackbar(
-                message = undoMessage,
-                actionLabel = "Undo",
-                duration = SnackbarDuration.Short
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.onUndoLastAction()
-            } else {
-                viewModel.onDismissUndo()
-            }
-        }
-    }
 
     Scaffold(
         modifier = modifier,
         topBar = {
-            FreelanceTopBar(
+            ScreenTopBar(
+                title = "Freelance",
                 onBackClick = onBackClick,
-                onAddProjectClick = onAddProjectClick
+                actionIcon = MoneyTrailIcons.Plus,
+                actionDescription = "New project",
+                onActionClick = onAddProjectClick
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+        Box(Modifier.fillMaxSize().padding(innerPadding)) {
             when {
                 uiState.isLoading -> LoadingView(message = "Loading freelance projects…")
                 uiState.errorMessage != null && uiState.projects.isEmpty() -> ErrorView(
-                    message = uiState.errorMessage ?: "Failed to load projects",
+                    message = uiState.errorMessage ?: "Couldn't load freelance projects.",
                     onRetry = viewModel::onRetry
                 )
                 uiState.projects.isEmpty() -> EmptyView(
-                    title = "No Freelance Projects",
-                    message = "Track clients, budgets, and milestone payments by adding your first project.",
-                    actionLabel = "Add Project",
+                    title = "No freelance projects",
+                    message = "Add a project with its price, split it into milestones, and track what's invoiced and paid.",
+                    actionLabel = "New project",
                     onAction = onAddProjectClick
                 )
-                else -> {
-                    FreelanceContent(
-                        state = uiState,
-                        onSelectProject = viewModel::onSelectProject,
-                        onMilestoneClicked = viewModel::onMilestoneClicked,
-                        onMarkInvoicedClicked = viewModel::onMarkInvoicedClicked,
-                        onMarkMilestonePaid = viewModel::onMarkMilestonePaid,
-                        onUndoMilestoneClicked = viewModel::onUndoMilestoneClicked,
-                        onDeleteProject = viewModel::onDeleteProject,
-                        onRecordPaymentClicked = { onRecordPaymentClick(uiState.selectedProject?.id) },
-                        modifier = Modifier.fillMaxSize()
-                    )
-
-                    if (uiState.isEditingMilestone) {
-                        EditMilestoneDialog(
-                            draftTitle = uiState.draftTitle,
-                            draftAmountDigits = uiState.draftAmountDigits,
-                            onTitleChange = viewModel::onDraftTitleChange,
-                            onAmountChange = viewModel::onDraftAmountChange,
-                            onSave = viewModel::onSaveEditedMilestone,
-                            onDismiss = viewModel::onDismissEditMilestone,
-                            errorMessage = uiState.errorMessage
-                        )
-                    }
-                }
+                else -> FreelanceList(state = uiState, onProjectClick = onProjectClick)
             }
         }
     }
 }
 
 @Composable
-private fun FreelanceTopBar(
-    onBackClick: () -> Unit,
-    onAddProjectClick: () -> Unit
+private fun FreelanceList(
+    state: FreelanceUiState,
+    onProjectClick: (String) -> Unit
 ) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item { TotalsCard(state) }
+
+        if (state.overdueInvoices.isNotEmpty()) {
+            item { SectionTitle("Overdue", "${state.overdueCount}") }
+            item { OverdueCard(state.overdueInvoices, state.today, onProjectClick) }
+        }
+
+        item { SectionTitle("Projects", "${state.projects.size}") }
+        items(state.sortedProjects, key = { it.id }) { project ->
+            ProjectCard(project = project, today = state.today, onClick = { onProjectClick(project.id) })
+        }
+    }
+}
+
+@Composable
+private fun TotalsCard(state: FreelanceUiState) {
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Outstanding (invoiced, unpaid)", style = MaterialTheme.typography.bodyMedium, color = onPrimary.copy(alpha = 0.85f))
+                Text(
+                    "LKR ${formatAmount(state.totalOutstandingInvoiced)}",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = onPrimary
+                )
+            }
+            HorizontalDivider(color = onPrimary.copy(alpha = 0.2f))
+            Row(Modifier.fillMaxWidth()) {
+                TotalStat("Overdue", formatAmount(state.overdueAmount), "${state.overdueCount} invoice${if (state.overdueCount == 1) "" else "s"}", Modifier.weight(1f))
+                TotalStat("Paid", formatAmount(state.totalPaid), "received", Modifier.weight(1f))
+                TotalStat("To invoice", formatAmount(state.totalToInvoice), "planned", Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TotalStat(label: String, value: String, caption: String, modifier: Modifier) {
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = onPrimary.copy(alpha = 0.8f))
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = onPrimary, maxLines = 1)
+        Text(caption, style = MaterialTheme.typography.bodySmall, color = onPrimary.copy(alpha = 0.7f), maxLines = 1)
+    }
+}
+
+@Composable
+private fun SectionTitle(title: String, count: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp)
-            .padding(top = 16.dp, bottom = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = MoneyTrailIcons.ChevronLeft,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        Text(
-            text = "Freelance",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
-                .clickable(onClick = onAddProjectClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = MoneyTrailIcons.Plus,
-                contentDescription = "Add Project",
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(count, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-private fun FreelanceContent(
-    state: FreelanceUiState,
-    onSelectProject: (String) -> Unit,
-    onMilestoneClicked: (Milestone) -> Unit,
-    onMarkInvoicedClicked: () -> Unit,
-    onMarkMilestonePaid: (String) -> Unit,
-    onUndoMilestoneClicked: (String) -> Unit,
-    onDeleteProject: (String) -> Unit,
-    onRecordPaymentClicked: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val selectedProject = state.selectedProject
-    var projectToDelete by remember { mutableStateOf<Project?>(null) }
-
-    Column(
-        modifier = modifier
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp)
-            .padding(top = 12.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+private fun OverdueCard(overdue: List<OverdueInvoice>, today: LocalDate, onProjectClick: (String) -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f), RoundedCornerShape(18.dp)),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface
     ) {
-        // Top Summary Card (Outstanding Card)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.primary,
-            shape = RoundedCornerShape(20.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Outstanding (invoiced, unpaid)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
-                    )
-
-                    if (state.overdueCount > 0) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Text(
-                                text = "${state.overdueCount} overdue",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.surface,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
-
-                Text(
-                    text = "LKR ${formatAmount(state.totalOutstandingInvoiced)}",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-        }
-
-        // Horizontal Project Filter Chips
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            state.projects.forEach { project ->
-                val isSelected = project.id == selectedProject?.id
-                Surface(
-                    onClick = { onSelectProject(project.id) },
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.border(
-                        1.dp,
-                        if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant,
-                        RoundedCornerShape(20.dp)
-                    )
-                ) {
-                    Text(
-                        text = project.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isSelected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
-                    )
-                }
-            }
-        }
-
-        // Selected Project Overview Card
-        if (selectedProject != null) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(22.dp)),
-                shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+        Column {
+            overdue.forEachIndexed { index, invoice ->
+                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Surface(onClick = { onProjectClick(invoice.projectId) }, color = MaterialTheme.colorScheme.surface) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = selectedProject.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = formatAmount(selectedProject.totalBudget),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-
-                            IconButton(
-                                onClick = { projectToDelete = selectedProject },
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    imageVector = MoneyTrailIcons.Trash,
-                                    contentDescription = "Delete project",
-                                    tint = MaterialTheme.colorScheme.outline,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(invoice.milestone, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(invoice.project, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(formatAmount(invoice.amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                            Text(invoice.lateText(today), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
-
-                    Text(
-                        text = selectedProject.client,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-
-                    // Multi-Segment Progress Bar
-                    val budget = selectedProject.totalBudget.coerceAtLeast(1L)
-                    val paidFraction = (selectedProject.paidAmount.toFloat() / budget.toFloat()).coerceIn(0f, 1f)
-                    val invoicedFraction = (selectedProject.invoicedAmount.toFloat() / budget.toFloat()).coerceIn(0f, 1f - paidFraction)
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(MaterialTheme.colorScheme.outlineVariant)
-                    ) {
-                        if (paidFraction > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(paidFraction)
-                                    .fillMaxSize()
-                                    .background(MaterialTheme.colorScheme.primary)
-                            )
-                        }
-                        if (invoicedFraction > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(invoicedFraction)
-                                    .fillMaxSize()
-                                    .background(MaterialTheme.colorScheme.tertiary)
-                            )
-                        }
-                        val remainingFraction = (1f - paidFraction - invoicedFraction).coerceAtLeast(0.001f)
-                        Box(
-                            modifier = Modifier
-                                .weight(remainingFraction)
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.outlineVariant)
-                        )
-                    }
-
-                    // Progress Legend
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
-                            )
-                            Text(
-                                text = "Paid ${formatAmount(selectedProject.paidAmount)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
-                        }
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(MaterialTheme.colorScheme.tertiary, RoundedCornerShape(2.dp))
-                            )
-                            Text(
-                                text = "Outstanding ${formatAmount(selectedProject.invoicedAmount)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Milestones Section
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Milestones",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                selectedProject.milestones.forEach { milestone ->
-                    MilestoneCard(
-                        milestone = milestone,
-                        onClick = { onMilestoneClicked(milestone) },
-                        onMarkPaidClicked = { onMarkMilestonePaid(milestone.id) },
-                        onUndoClicked = { onUndoMilestoneClicked(milestone.id) }
-                    )
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Action Buttons at Bottom
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(
-                onClick = onMarkInvoicedClicked,
-                // Enabled only when a PLANNED milestone exists
-                enabled = state.isMarkInvoicedEnabled,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(26.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
-            ) {
-                Text(
-                    text = "Mark invoiced",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-
-            Button(
-                onClick = onRecordPaymentClicked,
-                // Enabled only when an INVOICED milestone exists
-                enabled = state.isRecordPaymentEnabled,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(26.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                if (state.isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text(
-                        text = "Record payment",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
-        }
-    }
-
-    // Delete Confirmation Dialog
-    if (projectToDelete != null) {
-        val target = projectToDelete!!
-        AlertDialog(
-            onDismissRequest = { projectToDelete = null },
-            title = {
-                Text(
-                    text = "Delete Project?",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    text = "Are you sure you want to delete '${target.name}' and all its milestones? This cannot be undone.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val id = target.id
-                        projectToDelete = null
-                        onDeleteProject(id)
-                    }
-                ) {
-                    Text(
-                        text = "Delete",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { projectToDelete = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 
 @Composable
-private fun MilestoneCard(
-    milestone: Milestone,
-    onClick: () -> Unit = {},
-    onMarkPaidClicked: () -> Unit = {},
-    onUndoClicked: () -> Unit = {}
-) {
+private fun ProjectCard(project: Project, today: LocalDate, onClick: () -> Unit) {
+    val (chipLabel, chipEmphasis) = project.statusChip(today)
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -574,128 +206,48 @@ private fun MilestoneCard(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = milestone.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                val subtext = when (milestone.status) {
-                    MilestoneStatus.PAID -> "Paid 2 Sep"
-                    MilestoneStatus.INVOICED -> "Due 14 Oct"
-                    MilestoneStatus.PLANNED -> "Due 30 Nov"
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(project.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(project.client, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-
-                Text(
-                    text = subtext,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                StatusChip(chipLabel, chipEmphasis)
+                androidx.compose.foundation.layout.Spacer(Modifier.width(4.dp))
+                Icon(MoneyTrailIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = formatAmount(milestone.amount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                val (badgeBg, badgeTextColor, label) = when (milestone.status) {
-                    MilestoneStatus.PAID -> Triple(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary, "Paid")
-                    MilestoneStatus.INVOICED -> Triple(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer, "Invoiced")
-                    MilestoneStatus.PLANNED -> Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "Planned")
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Undo button is shown ONLY for PAID or INVOICED milestones (not for PLANNED)
-                    if (milestone.status != MilestoneStatus.PLANNED) {
-                        IconButton(
-                            onClick = onUndoClicked,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = MoneyTrailIcons.Undo,
-                                contentDescription = "Undo milestone status",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-
-                    // Direct "Mark as Paid" Checkmark Button for unpaid milestones
-                    if (milestone.status != MilestoneStatus.PAID) {
-                        IconButton(
-                            onClick = onMarkPaidClicked,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = MoneyTrailIcons.Check,
-                                contentDescription = "Mark milestone as Paid",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-
-                    Surface(
-                        color = badgeBg,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = badgeTextColor,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                        )
-                    }
+            ProjectProgressBar(project)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(project.paidOfPriceText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (project.invoicedAmount > 0) {
+                    Text("Outstanding ${formatAmount(project.invoicedAmount)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, heightDp = 800)
 @Composable
-private fun FreelanceProjectsScreenPreview() {
+private fun FreelanceListPreview() {
+    val today = LocalDate.of(2026, 11, 5)
     MoneyTrailTheme {
-        FreelanceContent(
+        FreelanceList(
             state = FreelanceUiState(
+                today = today,
                 projects = listOf(
                     Project(
-                        "p1", "Bakery website", "React build · Sep–Nov 2026", 120_000L,
+                        "p1", "Bakery website", "Sweet Crumbs", 120_000L,
                         listOf(
-                            Milestone("m1", "Design", 30_000L, MilestoneStatus.PAID),
-                            Milestone("m2", "Launch", 30_000L, MilestoneStatus.INVOICED),
-                            Milestone("m3", "Support", 15_000L, MilestoneStatus.PLANNED)
+                            Milestone("m1", "Design", 30_000L, MilestoneStatus.PAID, dueTimestampOf(today.minusDays(40))),
+                            Milestone("m2", "Launch", 60_000L, MilestoneStatus.INVOICED, dueTimestampOf(today.minusDays(3))),
+                            Milestone("m3", "Support", 30_000L, MilestoneStatus.PLANNED, dueTimestampOf(today.plusDays(20)))
                         )
-                    )
-                ),
-                selectedProjectId = "p1"
+                    ),
+                    Project("p2", "Clinic booking", "Dr. Perera", 80_000L, listOf(Milestone("m4", "Full payment", 80_000L)))
+                )
             ),
-            onSelectProject = {},
-            onMilestoneClicked = {},
-            onMarkInvoicedClicked = {},
-            onMarkMilestonePaid = {},
-            onUndoMilestoneClicked = {},
-            onDeleteProject = {},
-            onRecordPaymentClicked = {}
+            onProjectClick = {}
         )
     }
 }

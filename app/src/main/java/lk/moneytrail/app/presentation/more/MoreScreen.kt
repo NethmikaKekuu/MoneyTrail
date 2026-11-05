@@ -45,6 +45,7 @@ fun MoreScreen(
     onCatchUpClick: () -> Unit,
     onStatementClick: () -> Unit,
     onFreelanceClick: () -> Unit,
+    onRecurringBillsClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MoreViewModel = hiltViewModel()
@@ -61,6 +62,7 @@ fun MoreScreen(
         onCatchUpClick = onCatchUpClick,
         onStatementClick = onStatementClick,
         onFreelanceClick = onFreelanceClick,
+        onRecurringBillsClick = onRecurringBillsClick,
         onSignOutClick = {
             viewModel.signOut()
             onSignedOut()
@@ -80,6 +82,7 @@ private fun MoreContent(
     onCatchUpClick: () -> Unit,
     onStatementClick: () -> Unit,
     onFreelanceClick: () -> Unit,
+    onRecurringBillsClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -126,6 +129,13 @@ private fun MoreContent(
             title = "Freelance projects",
             subtitle = "Track clients, milestone invoices & payments",
             onClick = onFreelanceClick
+        )
+
+        MoreRow(
+            icon = MoneyTrailIcons.Calendar,
+            title = "Recurring bills",
+            subtitle = "Subscriptions and auto-debits, ready to mark as paid each month",
+            onClick = onRecurringBillsClick
         )
 
         MoreRow(
@@ -297,6 +307,7 @@ private fun MoreScreenPreview() {
             onCatchUpClick = {},
             onStatementClick = {},
             onFreelanceClick = {},
+            onRecurringBillsClick = {},
             onSignOutClick = {}
         )
     }

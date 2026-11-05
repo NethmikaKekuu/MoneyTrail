@@ -91,6 +91,13 @@ The statement reads the month's entries and this and last month's close. Opening
 
 The in-app list uses the same `openReminder`, and marks the tapped row read by its id, so the others stay as they are.
 
-## 12. Auth state and navigation
+## 12. Freelance projects
+
+1. **New project** (`AddProjectViewModel`): name, client and the **price** are required. The price box holds only what was typed (`totalBudgetDigits`). `AddProjectUiState.leftToSplit` = price − milestones, shown as "Split 40,000 of 60,000 · 20,000 left". The milestone dialog starts on what's left, and `milestoneError` stops a milestone going past it. On Save: milestones over the price block saving; milestones short of it ask *Add the rest as a milestone* or *Save anyway*; no milestones saves one "Full payment". The id is a UUID made on the phone, so the app opens the new project at once.
+2. **Projects list** (`FreelanceUiState`): totals across every project (outstanding = invoiced, paid, to invoice), the overdue invoices from `overdueInvoices(today)` (the same function the daily reminder uses, so "due today" is never late), and project cards sorted overdue → invoiced → the rest → completed.
+3. **Project detail** (`ProjectDetailViewModel`, route `freelance/project/{projectId}`): milestones in due order. Planned: *Edit* / *Mark invoiced*. Invoiced: *Not invoiced* / *Record payment*. Paid: no actions, it is already income. Each change is saved to Firestore with Undo; on failure the old project is put back.
+4. **Record payment** opens on the milestone it came from (`milestoneId` argument), saves the income entry, then marks the milestone paid.
+
+## 13. Auth state and navigation
 
 Sign-in screens call the auth use cases, then navigate with `navigateAndClearBackStack(DASHBOARD)` or `(ONBOARDING)` for a new account, so Back can't return to Login. Sign out from More calls `authRepository.signOut()` and clears the stack back to Login. Every repository reads `auth.currentUser?.uid` per call and returns a "signed out" failure when it's null, and every Room query filters by uid, so another account on the same phone never sees the previous user's data.

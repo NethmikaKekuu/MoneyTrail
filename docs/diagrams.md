@@ -122,13 +122,14 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Planned: added with the project
+    [*] --> Planned: added with the project or on its page
     Planned --> Invoiced: Mark invoiced
-    Invoiced --> Overdue: due date passes
+    Invoiced --> Planned: Not invoiced
+    Invoiced --> Overdue: the day after the due date
     Overdue --> Paid: Record payment
     Invoiced --> Paid: Record payment
     Paid --> [*]: Freelance income on the calendar
-    note right of Overdue: daily reminder<br/>"invoice overdue"
+    note right of Overdue: daily reminder "invoice overdue"<br/>and the Overdue list on Freelance
 ```
 
 ## 7. Reminders and notifications
@@ -187,7 +188,8 @@ flowchart TD
     Calendar --> EditEntry
     Calendar --> Notifications
     More --> Notifications & Freelance & Salary & CatchUp & Statement & Settings
-    Freelance --> AddProject & RecordPayment
+    Freelance --> AddProject --> ProjectDetail
+    Freelance --> ProjectDetail --> RecordPayment
     Statement --> MonthlyClose
     Notifications -. opens the place .-> Calendar & Goal & CatchUp & Freelance
 ```

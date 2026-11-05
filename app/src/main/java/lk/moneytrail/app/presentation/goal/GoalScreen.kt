@@ -1,5 +1,6 @@
 package lk.moneytrail.app.presentation.goal
 
+import lk.moneytrail.app.presentation.components.ScreenTopBar
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -106,9 +107,12 @@ fun GoalScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            GoalTopBar(
+            ScreenTopBar(
+                title = "Pay yourself first",
                 onBackClick = onBackClick,
-                onOpenNewGoalDialog = viewModel::onOpenNewGoalDialog
+                actionIcon = MoneyTrailIcons.Plus,
+                actionDescription = "New goal",
+                onActionClick = viewModel::onOpenNewGoalDialog
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -226,59 +230,6 @@ private fun SalaryConfirmedBanner(text: String, modifier: Modifier = Modifier) {
                 text = annotatedText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = textColor
-            )
-        }
-    }
-}
-
-@Composable
-private fun GoalTopBar(
-    onBackClick: () -> Unit,
-    onOpenNewGoalDialog: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp)
-            .padding(top = 16.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = MoneyTrailIcons.ChevronLeft,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        Text(
-            text = "Pay yourself first",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
-                .clickable(onClick = onOpenNewGoalDialog),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = MoneyTrailIcons.Plus,
-                contentDescription = "New Goal",
-                tint = MaterialTheme.colorScheme.primary
             )
         }
     }

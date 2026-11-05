@@ -54,9 +54,10 @@ So MoneyTrail keeps logging fast (a calendar, a keypad and category chips), sort
 | Reminders | System notifications every morning at 9:00, even when the app isn't opened: money due ("Salary expected today. Did it come in?"), Pay yourself first once the salary is in, and "It's been 4 days" for catch-up. Each kind at most once a day; tapping one opens the app, where the matching card waits. Asks for the notification permission on Android 13+ | Not in Figma |
 | Salary | The pay day on a calendar grid and the base salary, with Save once either changes (this month's expected salary follows). The salary itself is confirmed on the calendar's "Did it come in?"; bonuses will show in the income insights. Someone who skipped onboarding is offered to set them up | 13 (simplified) |
 | Catch-up | After 3 or more days without logging, the app opens a catch-up: "Welcome back! It's been 9 days", tick off the bills and income that fell due, log what you remember, then type each account's real balance. Whatever wasn't logged is added as "Not logged" so every account matches the bank. "Later" waits until tomorrow; More › Catch up opens it any time | 23, 21 |
+| Recurring bills | More › Recurring bills: subscriptions and auto-debits with a name, amount, account, category and due day (31 falls on the last day of shorter months), each with a Stopped switch and delete. Each month the calendar adds an active bill as an expected expense on its due day, to mark **Paid** (the amount can be edited, e.g. utilities). A bill is committed spending; one paid, moved or removed with "Didn't happen" is not offered again that month, and one added after its due day starts next month. After days away, bills that fell due are on the catch-up list (up to the last 2 missed months) | Not in Figma; follows the Freelance style |
 | Goal ("Pay yourself first") | A tab with each goal's progress ring and the monthly saving needed to reach it on time. Once the salary is in, it asks "Move LKR 39,900 to Savings now?" with the three steps; **I've moved it** asks how much went to each goal and adds it (never past a goal's target), and **Remind me tomorrow** snoozes the reminder. Goals can be added, edited and removed (at least one stays), and show when they're reached or past their date | 14 |
 
-**Next, in order:** AdSense in USD (multi-currency), income insights, recurring bills, then freelance projects and crypto import if time allows.
+**Next, in order:** income insights, then crypto import if time allows.
 
 ## Tech stack
 
@@ -226,6 +227,21 @@ Written at the end of onboarding, one document per place the user ticked, all in
 | `checkedOn` | string | Optional. `yyyy-MM-dd` the real balance was typed. What the app thinks the account holds is `checkedBalance` plus the confirmed income minus the confirmed expenses logged in it from that day on, so anything logged that day counts once, before or after the balance was typed |
 | `createdAt` | timestamp | Set by the server |
 
+### `users/{uid}/recurringBills/{billId}`
+
+A bill that falls due on the same day every month. `EnsureRecurringBillsUseCase` adds an expected expense for each active bill when the calendar or catch-up opens, so bills reuse the same "Did you pay it?" check as other expected money.
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | string | 1–60 characters, e.g. `Netflix` |
+| `amount` | int | Whole LKR, 1–999,999,999 |
+| `account` | string | The name of the account it is paid from |
+| `category` | string | An expense category name |
+| `dueDay` | int | 1–31 |
+| `isActive` | bool | A stopped bill makes no new entries |
+| `lastCreatedMonth` | string or null | `yyyy-MM` of the latest month the bill was put on the calendar. It is written before the entry, so a month is never added twice |
+| `updatedAt` | timestamp | Set by the server |
+
 ### `users/{uid}/categories/{categoryId}`
 
 Categories the user added on top of the built-in ones: from **+ New** on the new entry screen, from Settings, or as extra ways of earning in onboarding step 3. They're offered after the built-in ones on New entry and Edit entry (`Categories.namesFor(type, custom)`). Deleting one doesn't change entries already saved with it.
@@ -278,7 +294,8 @@ The monthly amount to save is worked out when needed (`SavingsGoal.monthlySaving
 - Each account must have a name, a description and a `kind` from a fixed list, with a server `createdAt` when it's made. Onboarding saves it with a starting `checkedBalance` (a whole number) and `checkedOn` (`yyyy-MM-dd`); balancing it in catch-up updates those two and must keep `createdAt`.
 - The plan must have a pay day of 1–31, a salary of 0 or more, income sources from a fixed list, and a goal with only the allowed fields whose saved amount is no more than its target. The `goals` list may hold up to 20 goals; rules can't loop over a list, so the app checks each goal before saving (`SaveGoalUseCase.goalError`, `NewGoalDialog`). `savingsMovedMonth` must be `yyyy-MM` and `savingsRemindOn` `yyyy-MM-dd`.
 - Each category must have a 1–30 character name and a `type`; expense categories need a `spendingType`, income ones must have `null`. Categories can be created and deleted, not changed.
-- Any other collection under a user is owner-only. Entries, accounts, settings and categories are excluded from that catch-all, so their checks can't be skipped.
+- Each recurring bill needs a 1–60 character name, a positive `amount`, an `account` and `category`, a `dueDay` from 1 to 31, an `isActive` flag and a `lastCreatedMonth` that is `null` or `yyyy-MM`.
+- Any other collection under a user is owner-only. Entries, accounts, settings, categories and recurring bills are excluded from that catch-all, so their checks can't be skipped.
 
 **Every new collection needs its own validation function and match block**, in the same style as `isValidEntry`.
 
