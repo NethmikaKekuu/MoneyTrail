@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,7 +39,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -87,6 +90,7 @@ fun AddProjectScreen(
                 state = uiState,
                 onProjectNameChange = viewModel::onProjectNameChange,
                 onClientNameChange = viewModel::onClientNameChange,
+                onTotalBudgetChange = viewModel::onTotalBudgetChange,
                 onOpenAddMilestoneDialog = viewModel::onOpenAddMilestoneDialog,
                 onRemoveMilestone = viewModel::onRemoveMilestone,
                 onSaveProject = { viewModel.onSaveProject(onSuccess = onProjectSaved) },
@@ -145,6 +149,7 @@ private fun AddProjectContent(
     state: AddProjectUiState,
     onProjectNameChange: (String) -> Unit,
     onClientNameChange: (String) -> Unit,
+    onTotalBudgetChange: (String) -> Unit,
     onOpenAddMilestoneDialog: () -> Unit,
     onRemoveMilestone: (Int) -> Unit,
     onSaveProject: () -> Unit,
@@ -201,35 +206,33 @@ private fun AddProjectContent(
             )
         }
 
-        // Total Project Price Summary Card
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Total project price",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Text(
-                    text = "LKR ${formatAmount(state.totalProjectPrice)}",
-                    style = MaterialTheme.typography.titleLarge,
+        // Total Project Price Input
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = "Total project price (LKR)",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            OutlinedTextField(
+                value = if (state.totalBudgetDigits.isNotEmpty()) state.totalBudgetDigits else if (state.totalProjectPrice > 0) state.totalProjectPrice.toString() else "",
+                onValueChange = onTotalBudgetChange,
+                placeholder = { Text("e.g. 60000") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                ),
+                textStyle = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
-                )
-            }
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         // Milestones Section
@@ -412,6 +415,7 @@ private fun AddProjectScreenPreview() {
             state = AddProjectUiState(
                 projectName = "Salon website",
                 clientName = "Glow Salon, Kandy",
+                totalBudgetDigits = "60000",
                 milestones = listOf(
                     Milestone("m1", "Design", 20_000L),
                     Milestone("m2", "Build", 25_000L)
@@ -419,6 +423,7 @@ private fun AddProjectScreenPreview() {
             ),
             onProjectNameChange = {},
             onClientNameChange = {},
+            onTotalBudgetChange = {},
             onOpenAddMilestoneDialog = {},
             onRemoveMilestone = {},
             onSaveProject = {}
