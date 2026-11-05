@@ -59,6 +59,8 @@ MoneyTrail follows **Clean Architecture combined with the Model-View-ViewModel (
 
 This architecture separates the presentation layer, business logic, and data management to improve maintainability, testability, and scalability.
 
+<img width="2816" height="1536" alt="Gemini_Generated_Image_zfk153zfk153zfk1" src="https://github.com/user-attachments/assets/e7bfa00b-9cf2-4273-ac85-fe9129c90a61" />
+
 ### Architecture Layers
 
 **1. Presentation Layer**
