@@ -75,6 +75,7 @@ fun DashboardScreen(
     onCatchUpClick: () -> Unit,
     onStatementClick: () -> Unit,
     onFreelanceClick: () -> Unit,
+    onCryptoClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -176,6 +177,7 @@ fun DashboardScreen(
                         onCatchUpClick = onCatchUpClick,
                         onStatementClick = onStatementClick,
                         onFreelanceClick = onFreelanceClick,
+                        onCryptoClick = onCryptoClick,
                         onSignedOut = onSignedOut,
                         modifier = tabModifier
                     )

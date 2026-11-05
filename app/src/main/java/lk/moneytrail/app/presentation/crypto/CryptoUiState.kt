@@ -1,39 +1,43 @@
 package lk.moneytrail.app.presentation.crypto
 
-import lk.moneytrail.app.domain.model.crypto.CryptoRealisedPnl
-import java.time.YearMonth
+import lk.moneytrail.app.domain.model.crypto.CryptoSummary
+import lk.moneytrail.app.domain.model.crypto.RejectedTrade
+import java.util.Locale
+
+/** What the last import did, shown until the next one. */
+data class ImportResult(
+    val summary: String,
+    /** The first few skipped rows and why, e.g. "Row 5: Invalid price". */
+    val skippedRows: List<String>
+)
 
 /**
- * Represents the strict UI states for the Crypto module screen.
+ * The crypto screen. The summary is worked out from the saved trades, so it is
+ * the same after the app restarts and on another phone.
  */
-sealed interface CryptoUiState {
-    /**
-     * CSV parsing or PnL computation is currently in progress.
-     */
-    data object Loading : CryptoUiState
+data class CryptoUiState(
+    val isLoading: Boolean = true,
+    val summary: CryptoSummary? = null,
+    val isImporting: Boolean = false,
+    val lastImport: ImportResult? = null,
+    /** Shown in the error view when the trades can't be loaded. */
+    val loadError: String? = null,
+    /** One-off message for a snackbar, e.g. a CSV with the wrong columns. */
+    val message: String? = null,
+    val isDeleteConfirmOpen: Boolean = false
+) {
+    val isEmpty: Boolean
+        get() = !isLoading && loadError == null && (summary == null || summary.tradeCount == 0)
+}
 
-    /**
-     * No trades have been imported yet.
-     */
-    data object Empty : CryptoUiState
+fun RejectedTrade.describe(): String = "Row $rowIndex: $reason"
 
-    /**
-     * CSV trades were parsed and PnL was successfully calculated.
-     *
-     * @property monthlyRealisedPnl Realised PnL items grouped by month.
-     * @property ytdTotal Sum of realised PnL for the current calendar year.
-     */
-    data class Success(
-        val monthlyRealisedPnl: Map<YearMonth, List<CryptoRealisedPnl>>,
-        val ytdTotal: Double,
-    ) : CryptoUiState
-
-    /**
-     * An error occurred during CSV parsing or processing.
-     *
-     * @property message User-friendly error explanation.
-     */
-    data class Error(
-        val message: String,
-    ) : CryptoUiState
+/** "+1,234.50" or "−80.00", in the quote coin (usually USDT). */
+fun formatPnl(value: Double): String {
+    val sign = when {
+        value > 0.005 -> "+"
+        value < -0.005 -> "−"
+        else -> ""
+    }
+    return sign + String.format(Locale.US, "%,.2f", kotlin.math.abs(value))
 }

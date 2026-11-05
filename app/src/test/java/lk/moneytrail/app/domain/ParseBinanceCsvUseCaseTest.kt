@@ -19,6 +19,9 @@ class ParseBinanceCsvUseCaseTest {
         private val existing: List<CryptoTrade> = emptyList()
     ) : CryptoRepository {
         override suspend fun getExistingTrades(): List<CryptoTrade> = existing
+        override fun observeTrades() = kotlinx.coroutines.flow.flowOf(Result.success(existing))
+        override suspend fun saveTrades(trades: List<CryptoTrade>) = Result.success(Unit)
+        override suspend fun deleteAllTrades() = Result.success(Unit)
     }
 
     private fun createUseCase(existingTrades: List<CryptoTrade> = emptyList()): ParseBinanceCsvUseCase {
