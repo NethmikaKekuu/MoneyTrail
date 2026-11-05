@@ -31,6 +31,10 @@ class AddProjectViewModel @Inject constructor(
         _uiState.update { it.copy(clientName = client, errorMessage = null) }
     }
 
+    fun onTotalBudgetChange(digits: String) {
+        _uiState.update { it.copy(totalBudgetDigits = digits.filter(Char::isDigit), errorMessage = null) }
+    }
+
     fun onOpenAddMilestoneDialog() {
         _uiState.update { it.copy(isAddMilestoneDialogOpen = true) }
     }
@@ -75,8 +79,8 @@ class AddProjectViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "Enter the client name.") }
             return
         }
-        if (state.milestones.isEmpty()) {
-            _uiState.update { it.copy(errorMessage = "Add at least one milestone.") }
+        if (state.totalProjectPrice <= 0) {
+            _uiState.update { it.copy(errorMessage = "Enter a total project price.") }
             return
         }
 
@@ -104,5 +108,4 @@ class AddProjectViewModel @Inject constructor(
                 }
         }
     }
-
 }
