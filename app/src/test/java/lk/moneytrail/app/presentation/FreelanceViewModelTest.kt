@@ -83,7 +83,7 @@ class FreelanceViewModelTest {
         assertTrue(state.hasUnpaid)
 
         val full = ProjectDetailUiState(project = bakery.copy(totalBudget = 110_000L), today = today, isLoading = false)
-        assertFalse(full.canAddMilestone)
+        assertEquals(null, full.addMaxAmount)
         assertFalse(ProjectDetailUiState(project = clinic, isLoading = false).hasUnpaid)
     }
 

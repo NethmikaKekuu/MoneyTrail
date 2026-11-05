@@ -126,9 +126,9 @@ fun ProjectDetailScreen(
             heading = "Add milestone",
             confirmLabel = "Add",
             initialTitle = "",
-            initialAmount = uiState.leftToSplit,
+            initialAmount = uiState.leftToSplit.coerceAtLeast(0L),
             initialDueDate = uiState.nextDueDate(),
-            maxAmount = uiState.leftToSplit,
+            maxAmount = uiState.addMaxAmount,
             onSave = viewModel::onAddMilestone,
             onDismiss = viewModel::onDismissAddMilestone
         )
@@ -337,15 +337,30 @@ private fun ActionRow(
             shape = RoundedCornerShape(height / 2),
             contentPadding = PaddingValues(horizontal = 12.dp),
             modifier = Modifier.weight(1f).height(height)
-        ) { Text(secondary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+        ) { ButtonLabel(secondary) }
         Button(
             onClick = onPrimary,
             enabled = enabled,
             shape = RoundedCornerShape(height / 2),
             contentPadding = PaddingValues(horizontal = 12.dp),
             modifier = Modifier.weight(1f).height(height)
-        ) { Text(primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+        ) { ButtonLabel(primary) }
     }
+}
+
+/** One line, centred, same type in every freelance button. */
+@Composable
+private fun ButtonLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -364,14 +379,16 @@ private fun BottomActions(canAdd: Boolean, canRecord: Boolean, onAdd: () -> Unit
                     onClick = onAdd,
                     enabled = canAdd,
                     shape = RoundedCornerShape(26.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
-                ) { Text("Add milestone", fontWeight = FontWeight.Bold, maxLines = 1) }
+                ) { ButtonLabel("Add milestone") }
                 Button(
                     onClick = onRecord,
                     enabled = canRecord,
                     shape = RoundedCornerShape(26.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
-                ) { Text("Record payment", fontWeight = FontWeight.Bold, maxLines = 1) }
+                ) { ButtonLabel("Record payment") }
             }
         }
     }
