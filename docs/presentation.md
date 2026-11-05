@@ -65,7 +65,7 @@ Pay day 31 in short months, salary with bonus, expected money that didn't happen
 | How are rules enforced? | `isOwner(uid)` plus a validation function per collection; server timestamps checked. |
 | How is the ViewModel created? | `hiltViewModel()`; Hilt injects repositories and `SavedStateHandle`. |
 | What would you add next? | Transfers between own accounts, crypto losses, recurring bills. |
-| How did you test it? | 197 unit tests on the domain rules, plus a device checklist. |
+| How did you test it? | 203 unit tests on the domain rules, plus a device checklist. |
 
 ## Before the session
 - [ ] Latest APK installed on the demo phone; signed in; notifications allowed.
