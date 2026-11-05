@@ -17,6 +17,7 @@ Kavindu earns from four places that never arrive the same way twice, and every t
 | Hilt | `di/RepositoryModule.kt`, `di/FirebaseModule.kt` |
 | Navigation | `presentation/navigation/MoneyTrailNavHost.kt`, `Routes.kt` |
 | Security rules | `app/firestore.rules` (`isValidEntry`) |
+| Freelance | `presentation/freelance/ProjectDetailViewModel.kt`, `domain/model/Project.kt` (`overdueInvoices`, `unsplitAmount`) |
 | Background reminders | `data/reminders/ReminderWorker.kt`, `ReminderNotifier.kt` |
 | Theme | `presentation/theme/Theme.kt`, `Type.kt` |
 | Tests | `app/src/test/.../domain/` |
