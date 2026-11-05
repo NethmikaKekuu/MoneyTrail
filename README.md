@@ -3,11 +3,11 @@
 
 # MoneyTrail — Personal Finance Management App
 
-MoneyTrail is a modern Android personal finance management application built with Kotlin and Jetpack Compose. It helps users manage their income, expenses, financial commitments, savings goals, and account balances in one place.
+MoneyTrail is an Android personal finance app built with Kotlin and Jetpack Compose. It is made for someone whose income doesn't arrive the same way twice: a salary with a changing bonus, freelance projects paid by milestone, Google AdSense paid in USD, and crypto trading.
 
-The application supports multiple income sources, committed and discretionary spending, expected transactions, and cryptocurrency profit and loss calculations using Binance trade history exports.
+The app keeps planned money apart from real money, splits the salary into its dependable base and variable bonus, records AdSense in USD next to the rupees that actually landed, ties savings goals to pay day, and makes a missed week easy to catch up on.
 
-MoneyTrail uses Firebase for authentication and cloud data storage, with Firestore persistent caching to support offline access and synchronization.
+MoneyTrail uses Firebase Authentication and Cloud Firestore, with a Room cache and Firestore's persistent cache so it keeps working offline, and WorkManager for daily reminders.
 
 ---
 
@@ -15,49 +15,53 @@ MoneyTrail uses Firebase for authentication and cloud data storage, with Firesto
 
 | Feature | Description |
 |---|---|
-| **User Authentication** | Secure registration and login using Email/Password and Google Sign-In. |
-| **Onboarding & Budget Setup** | Configure payday, base salary, income sources, accounts, and savings goals. |
-| **Income Tracking** | Record and manage salary, freelance, AdSense, investment, and cryptocurrency income. |
-| **Expense Management** | Create, edit, delete, and categorize expenses. |
-| **Spending Classification** | Separate committed expenses from discretionary spending. |
-| **Expected Transactions** | Schedule future transactions and confirm them when they become due. |
-| **Custom Categories** | Create and manage custom income and expense categories. |
-| **Financial Dashboard** | View financial summaries, expense trends, and spending breakdowns. |
-| **Savings Goals** | Set savings targets and monitor progress. |
-| **Account Management** | Manage cash, bank, credit card, and savings accounts. |
-| **Cryptocurrency PnL** | Import Binance CSV exports and calculate realized profits and losses using FIFO cost-basis calculations. |
-| **Offline Support** | Access cached financial data and synchronize changes when connectivity returns. |
-| **Settings** | Update salary information, modify budget configuration, and manage account sessions. |
+| **User Authentication** | Email/password registration and login, Google Sign-In, and password reset. |
+| **Onboarding** | Set pay day, base salary, income sources, accounts and a first savings goal. |
+| **Calendar Home** | A month calendar with markers, the day's entries and the month's totals. |
+| **Fast Entry** | Keypad-first income and expense entry; edit and delete any entry. |
+| **Expected Transactions** | Plan income or bills for a date; on the day, confirm with the real amount, move or remove them. |
+| **Salary and Bonus** | The expected salary appears on pay day; anything above the base is stored as the bonus. |
+| **AdSense in USD** | Record the dollars and the rupees that arrived; the effective rate and fee are worked out. |
+| **Pay Yourself First** | After the salary is confirmed, the app asks to move the month's saving to the goal. |
+| **Savings Goals** | Several goals with target dates and the monthly saving needed to reach them. |
+| **Expense Insights** | Committed vs discretionary spending, top categories, a six-month chart, dining as days of goal saving. |
+| **Income Insights** | Income by source, and dependable vs variable income. |
+| **Folders** | Totals grouped by category and account. |
+| **Freelance Projects** | Projects with a price and milestones; mark invoiced, record payments, see overdue invoices. |
+| **Recurring Bills** | Subscriptions and auto-debits that appear on the calendar every month, ready to mark as paid. |
+| **Catch-up and Balancing** | After a few days away, balance each account; any difference is saved as "Not logged". |
+| **Monthly Close and Statement** | Close a month with real balances, see the statement, and export it as CSV. |
+| **Notifications** | A daily 9:00 check for money due, pay yourself first, catch-up and overdue invoices, with an in-app notification list. |
+| **Custom Categories** | Add your own income and expense categories. |
+| **Offline Support** | Cached data shows offline; changes sync when the connection returns. |
+| **Light and Dark Theme** | Material 3 theme in light, dark or system mode. |
 
 ## Technologies Used
-
-The following technologies and libraries are used in the project:
 
 | Technology | Purpose |
 |---|---|
 | Kotlin 2.2.10 | Primary programming language |
-| Jetpack Compose | Modern declarative Android UI |
+| Jetpack Compose (BOM 2026.02.01) | Declarative Android UI |
 | Material Design 3 | UI components and design system |
 | MVVM | Presentation architecture |
-| Clean Architecture | Separation of application responsibilities |
-| Navigation Compose 2.9.8 | Screen navigation |
-| Firebase Authentication 34.17.0 | User authentication |
-| Cloud Firestore 34.17.0 | Cloud database and synchronization |
-| Android Credential Manager 1.6.0 | Google Sign-In integration |
+| Clean Architecture | Separation of presentation, domain and data |
+| Navigation Compose 2.9.8 | Single-activity screen navigation |
+| Firebase Authentication (BOM 34.17.0) | User authentication |
+| Cloud Firestore (BOM 34.17.0) | Cloud database and real-time listeners |
+| Room 2.8.5 | Offline cache of entries and the notification history |
+| WorkManager 2.11.2 | Daily background reminder check |
+| Android Credential Manager 1.6.0 | Google Sign-In |
 | Hilt 2.60.1 | Dependency injection |
-| Kotlin Coroutines 1.10.2 | Asynchronous operations |
-| StateFlow | Observable UI state management |
-| KSP 2.3.12 | Kotlin symbol processing |
-| Gradle Kotlin DSL | Build configuration |
+| Kotlin Coroutines 1.10.2 | Asynchronous work |
+| StateFlow | Observable UI state |
+| KSP 2.3.12 | Annotation processing for Hilt and Room |
+| Gradle Kotlin DSL (AGP 9.3.3) | Build configuration |
 | JUnit 4 | Unit testing |
-| Espresso 3.7.0 | Android UI testing |
-| Compose UI Testing | Jetpack Compose UI testing |
+| Espresso 3.7.0 / Compose UI Testing | Android UI testing |
 
 ## Architecture Overview
 
-MoneyTrail follows **Clean Architecture combined with the Model-View-ViewModel (MVVM)** architectural pattern.
-
-This architecture separates the presentation layer, business logic, and data management to improve maintainability, testability, and scalability.
+MoneyTrail follows **Clean Architecture combined with MVVM**. Screens only draw state, ViewModels hold it, and the rules live in testable use cases and pure functions in the domain layer.
 
 <img width="2816" height="1536" alt="Gemini_Generated_Image_zfk153zfk153zfk1" src="https://github.com/user-attachments/assets/e7bfa00b-9cf2-4273-ac85-fe9129c90a61" />
 
@@ -65,45 +69,37 @@ This architecture separates the presentation layer, business logic, and data man
 
 **1. Presentation Layer**
 
-Built using Jetpack Compose and ViewModels.
+Jetpack Compose screens, each with a `Screen`, a `ViewModel` and a `State` class.
 
-Responsibilities:
-- Display application screens and UI components.
-- Handle user interactions.
-- Communicate with domain use cases.
-- Observe application state using StateFlow.
-- Display loading, success, and error states.
+- Displays screens and handles user actions.
+- Exposes state as `StateFlow` (private `MutableStateFlow` + `asStateFlow()`).
+- Shows loading, empty and error (with Retry) states on every screen.
+- Contains no business logic; totals and percentages are properties on the state classes.
 
 **2. Domain Layer**
 
-Contains the core business logic of the application.
+The business rules, independent of Android, Firebase and the UI.
 
-Responsibilities:
-- Define business entities and models.
-- Define repository interfaces.
-- Implement application use cases.
-- Perform financial calculations independently of the UI and database.
-
-Examples:
-- `AddEntryUseCase`
-- `UpdateEntryUseCase`
-- `CompleteOnboardingUseCase`
-- `ParseBinanceCsvUseCase`
-- `CalculateRealisedPnlUseCase`
+- Models such as `Entry`, `Account`, `MoneyPlan`, `Project`, `RecurringBill` and `MonthClose`.
+- Repository interfaces.
+- Use cases, for example:
+  - `AddEntryUseCase`, `UpdateEntryUseCase`
+  - `CompleteOnboardingUseCase`, `EnsureMonthlySalaryUseCase`
+  - `BalanceAccountUseCase`, `CloseMonthUseCase`
+  - `EnsureRecurringBillsUseCase`, `GetRemindersUseCase`
 
 **3. Data Layer**
 
-Handles data storage and retrieval.
+Implements the repository interfaces.
 
-Responsibilities:
-- Implement repository interfaces.
-- Communicate with Firebase Authentication.
-- Read and write financial records using Cloud Firestore.
-- Manage data synchronization and persistence.
+- Firebase Authentication and Cloud Firestore repositories.
+- Room database for the entries cache and the notification history.
+- WorkManager reminder scheduling and notifications.
+- USD exchange-rate lookup and CSV file export.
 
 **4. Dependency Injection Layer**
 
-Uses Hilt to manage dependencies and provide required objects throughout the application.
+Hilt modules bind each repository interface to its implementation and provide Firebase, Room and WorkManager.
 
 ### Project Structure
 
@@ -111,298 +107,242 @@ Uses Hilt to manage dependencies and provide required objects throughout the app
 lk.moneytrail.app/
 │
 ├── domain/
-│   ├── model/
-│   │   ├── Entry
-│   │   ├── Account
-│   │   ├── MoneyPlan
-│   │   ├── CryptoTrade
-│   │   ├── CryptoRealisedPnl
-│   │   └── UserProfile
-│   │
-│   ├── repository/
-│   │   ├── EntryRepository
-│   │   ├── AuthRepository
-│   │   ├── UserRepository
-│   │   ├── AccountRepository
-│   │   ├── PlanRepository
-│   │   └── CryptoRepository
-│   │
-│   └── usecase/
-│       ├── AddEntryUseCase
-│       ├── UpdateEntryUseCase
-│       ├── CompleteOnboardingUseCase
-│       ├── ParseBinanceCsvUseCase
-│       └── CalculateRealisedPnlUseCase
+│   ├── model/        Entry, Account, MoneyPlan, GoalModel, Project, RecurringBill,
+│   │                 MonthlyClose, IncomeInsights, SpendingInsights, UsdConversion, Reminder…
+│   ├── repository/   Auth, User, Entry, Account, Plan, Category, Freelance,
+│   │                 RecurringBill, MonthClose, NotificationLog, UsdRate, Connectivity…
+│   └── usecase/      AddEntry, UpdateEntry, CompleteOnboarding, EnsureMonthlySalary,
+│                     BalanceAccount, CloseMonth, EnsureRecurringBills, GetReminders…
 │
 ├── data/
-│   └── repository/
-│       ├── FirestoreEntryRepository
-│       ├── FirebaseAuthRepository
-│       ├── FirestoreUserRepository
-│       └── FirestoreAccountRepository
+│   ├── repository/   Firestore* repositories, FirebaseAuthRepository, HttpUsdRateRepository
+│   ├── local/        Room entries cache
+│   ├── notifications/ Room notification history
+│   ├── reminders/    ReminderWorker, ReminderNotifier, WorkManager scheduler
+│   ├── files/        CSV export through the Storage Access Framework
+│   ├── preferences/  Theme preference
+│   └── remote/       Exchange-rate API
 │
-├── di/
-│   ├── FirebaseModule.kt
-│   └── RepositoryModule.kt
+├── di/               FirebaseModule, DatabaseModule, RepositoryModule, …
 │
 └── presentation/
-    ├── auth/
-    ├── calendar/
-    ├── crypto/
-    ├── dashboard/
-    ├── entry/
-    ├── navigation/
-    ├── onboarding/
-    └── settings/
+    ├── auth/  welcome/  splash/  onboarding/
+    ├── dashboard/  calendar/  entry/  usd/
+    ├── insights/  folders/  goal/  salary/
+    ├── freelance/  bills/  catchup/
+    ├── monthlyclose/  statement/  notifications/
+    ├── more/  settings/  navigation/
+    ├── components/   shared top bar, chips, state views, icons
+    └── theme/
 ```
 
 ### Application Data Flow
 
-The application follows this data flow:
-
-**User Actions:**
+**User actions:**
 
 ```text
 Jetpack Compose UI
         ↓
     ViewModel
         ↓
-   Use Case
+    Use Case
         ↓
    Repository
         ↓
    Firestore
 ```
 
-**UI Updates:**
+**UI updates:**
 
 ```text
-   Firestore
+   Firestore (snapshot listener)
         ↓
-   Repository
+   Room cache
         ↓
-   Use Case
+   Repository (Flow)
         ↓
-    ViewModel
+    ViewModel (StateFlow)
         ↓
 Jetpack Compose UI
 ```
 
-This approach keeps business logic outside UI components and prevents the presentation layer from directly accessing Firebase.
+The presentation layer never calls Firebase directly.
 
 ## Database Structure
 
-MoneyTrail uses Cloud Firestore as its primary database.
-
-All financial records are stored under the authenticated user's Firebase UID to maintain user-specific data separation.
+Cloud Firestore is the primary database. Every record is stored under the signed-in user's Firebase UID.
 
 ### Firestore Collection Structure
 
 ```text
 users/
- └── {uid}/
-      │
-      ├── entries/
-      │    └── {entryId}
-      │
-      ├── accounts/
-      │    └── {accountId}
-      │
-      ├── categories/
-      │    └── {categoryId}
-      │
-      └── settings/
-           └── plan
+ └── {uid}/                    profile: name, email, createdAt
+      ├── entries/{entryId}         one income or expense
+      ├── accounts/{accountId}      a place money sits (main-bank, cash-wallet…)
+      ├── categories/{categoryId}   a category the user added
+      ├── settings/plan             pay day, salary, income sources, goals
+      ├── projects/{projectId}      a freelance project with its milestones
+      ├── recurringBills/{billId}   a bill due on the same day every month
+      └── closes/{yyyy-MM}          a closed month's real balances
 ```
 
 ### Collection Details
 
 | Collection | Description |
 |---|---|
-| `users/{uid}` | Stores user profile information. |
-| `users/{uid}/entries` | Stores income, expenses, and expected transactions. |
-| `users/{uid}/accounts` | Stores user financial accounts. |
-| `users/{uid}/categories` | Stores default and custom categories. |
-| `users/{uid}/settings/plan` | Stores budget configuration and savings goals. |
+| `users/{uid}` | User profile. |
+| `users/{uid}/entries` | Income, expenses and expected transactions. |
+| `users/{uid}/accounts` | The user's accounts and their last checked balance. |
+| `users/{uid}/categories` | Custom categories (built-in ones live in the app). |
+| `users/{uid}/settings/plan` | Pay day, base salary, income sources and savings goals. |
+| `users/{uid}/projects` | Freelance projects with their price and milestones. |
+| `users/{uid}/recurringBills` | Subscriptions and auto-debits. |
+| `users/{uid}/closes` | Closed months with each account's real balance. |
 
 ### Important Data Fields
 
 **Entries**
 
-- `status` — CONFIRMED or EXPECTED
-- `type` — INCOME or EXPENSE
-- `amount` — Financial amount stored as an integer in minor units.
-- `category` — Transaction category.
-- `account` — Associated financial account.
-- `date` — Transaction date.
-- `note` — Additional transaction details.
-- `spendingType` — COMMITTED or DISCRETIONARY.
-- `bonus` — Salary bonus amount.
-- `createdAt` — Creation timestamp.
+- `status` — `CONFIRMED` or `EXPECTED`
+- `type` — `INCOME` or `EXPENSE`
+- `amount` — whole rupees (LKR), always positive
+- `bonus` — the part of a salary above the base pay (0 otherwise)
+- `category`, `account`, `note`
+- `date` — `yyyy-MM-dd`
+- `spendingType` — `COMMITTED` or `DISCRETIONARY` for expenses
+- `usdCents`, `effectiveRate`, `feeLkr` — for AdSense payouts in USD
+- `createdAt` — server timestamp
 
 **Accounts**
 
-- `name`
-- `description`
-- `kind` — CASH, BANK, CREDIT_CARD, or SAVINGS.
+- `name`, `description`
+- `kind` — `BANK`, `CASH`, `SAVINGS` or `CRYPTO`
+- `checkedBalance`, `checkedOn` — the real balance from the last check
 - `createdAt`
 
 **Budget Plan**
 
-- `payDay`
-- `baseSalary`
-- `incomeSources`
-- `goal` — Savings goal information, including name, target amount, saved amount, and target date.
+- `payDay`, `baseSalary`, `incomeSources`
+- `goal` / `goals` — name, target amount, saved amount, target date
+- `savingsMovedMonth`, `savingsRemindOn` — pay yourself first
 
-Financial amounts are stored using integer minor units to reduce floating-point rounding errors.
+Amounts are stored as whole rupees in integers, so there are no floating-point rounding errors. USD is kept in cents beside the rupees that arrived.
+
+### Security Rules
+
+`app/firestore.rules` lets each user read and write only their own data, and validates every collection's fields (types, ranges, allowed keys and server timestamps).
 
 ## Authentication and Firebase Configuration
 
-MoneyTrail uses Firebase Authentication for account registration and login.
-
 ### Supported Authentication Methods
 
-- Email and Password Authentication.
-- Google Sign-In using Android Credential Manager.
+- Email and password, with password reset emails.
+- Google Sign-In through Android Credential Manager.
 
-Additional authentication functionality includes password reset emails and Firebase session persistence.
+Firebase keeps the session, so returning users go straight to the dashboard.
 
 ### Firebase Configuration
 
-The Firebase project must be configured before running the application.
-
 | Setting | Configuration |
 |---|---|
-| Firebase Project | MoneyTrail Firebase project |
+| Firebase Project | `moneytrail-se3092` |
 | Android Package Name | `lk.moneytrail.app` |
-| Authentication | Firebase Authentication |
-| Authentication Providers | Email/Password and Google Sign-In |
+| Authentication Providers | Email/Password and Google |
 | Cloud Database | Cloud Firestore |
-| Configuration File | `app/google-services.json` |
+| Configuration File | `app/google-services.json` (included in the repository) |
 
-**Setup requirements:**
+**To use your own Firebase project:**
 
-1. Create or access the Firebase project.
-2. Register the Android application using the package name `lk.moneytrail.app`.
-3. Download the `google-services.json` configuration file.
-4. Place the file inside the application's `app/` directory.
-5. Enable Email/Password authentication in Firebase Authentication.
-6. Configure Google Sign-In and the required SHA fingerprints.
-7. Ensure Cloud Firestore is enabled.
-
-The Firebase configuration file is not included in the repository and must be supplied separately.
+1. Create a Firebase project and add an Android app with package `lk.moneytrail.app`.
+2. Add your SHA-1 fingerprint (`./gradlew signingReport`) for Google Sign-In.
+3. Download `google-services.json` and replace `app/google-services.json`.
+4. Enable Email/Password and Google sign-in in Firebase Authentication.
+5. Create a Cloud Firestore database.
+6. Publish the rules from `app/firestore.rules`.
 
 ### User Data Isolation
 
-Each user's financial records are stored under their authenticated Firebase UID.
-
-This ensures that application queries are scoped to the currently authenticated user.
+All data is stored under `users/{uid}`, every Room query is filtered by uid, and the security rules allow access only to the owner, so another account on the same phone never sees the previous user's data.
 
 ## Offline Support and Synchronization
 
-MoneyTrail uses Cloud Firestore's persistent local cache to support offline access and data synchronization.
-
-### Offline Functionality
-
-- Previously cached financial records can be accessed without an internet connection.
-- Firestore supports local reads and writes while offline.
-- Snapshot listeners provide updates to the application when data changes.
-- Pending changes are synchronized with the cloud when connectivity returns.
+- Entries are cached in **Room**; screens read Room, and Firestore snapshot listeners keep it up to date.
+- Months already opened show instantly, even offline.
+- Writes go to Firestore's persistent cache and sync when the connection returns.
+- An offline banner tells the user when they are offline; saves don't wait for the server.
+- Profile creation has a 15-second write timeout so the UI never waits indefinitely.
 
 ### Synchronization Flow
 
 ```text
-User Creates or Updates a Record
+User creates or updates a record
               ↓
-       Cloud Firestore
+ Firestore local cache (applied at once)
               ↓
-       Local Cache Update
+ Snapshot listener → Room → UI updates
               ↓
-      Internet Available?
+      Internet available?
           /       \
         No         Yes
         ↓           ↓
-   Keep Pending   Cloud Sync
-   Local Changes     ↓
-                 Updated Data
-                     ↓
-                  UI Update
+   Kept pending   Synced to the cloud
+   until online
 ```
 
-The application also includes a 15-second write timeout in `FirestoreUserRepository` for user profile creation to prevent indefinite UI waiting.
+## Reminders and Notifications
 
-## Cryptocurrency Profit and Loss Calculation
-
-MoneyTrail includes a cryptocurrency profit and loss calculation engine that processes Binance trade history CSV exports.
-
-### Key Capabilities
-
-- Import Binance CSV files using Android's Storage Access Framework.
-- Validate CSV headers and input data.
-- Detect duplicate trades using trade IDs or date, pair, and amount combinations.
-- Calculate realized profit and loss using the FIFO (First-In, First-Out) cost-basis method.
-- Deduct applicable trading fees.
-- Group realized profit and loss by month.
-- Calculate year-to-date (YTD) totals.
-
-The calculations are implemented using Kotlin business logic, keeping financial computation separate from the presentation layer.
+- WorkManager runs a check every day at 9:00, even when the app is closed.
+- Reminders: expected money due today, pay yourself first, catch-up after 3+ days away, and overdue freelance invoices.
+- Each reminder is saved to an in-app notification list (kept 30 days) with a badge for unread ones.
+- Tapping a notification opens the right place in the app.
 
 ## Testing
 
-MoneyTrail includes unit tests and Android instrumentation tests.
+### Unit Tests
 
-### Unit Testing
-
-Tests are located in:
+Located in:
 
 ```text
 app/src/test/java/lk/moneytrail/app/
 ```
 
-The test suite covers:
+MoneyTrail has about 200 plain JUnit 4 unit tests on the domain rules and UI state, covering:
 
-- Income and expense use cases.
-- Category management.
-- Onboarding configuration.
-- Entry totals and financial calculations.
-- Expected transactions.
-- Salary calculations.
-- Savings goal calculations.
-- Spending insights.
-- Binance CSV parsing.
-- Cryptocurrency realized PnL calculations.
-- ViewModel state and presentation logic.
+- Adding and updating entries, categories and onboarding.
+- Entry totals, expected entries, salary and bonus.
+- Savings goals and pay yourself first.
+- Expense and income insights, folders.
+- AdSense USD conversion.
+- Catch-up, balancing and the monthly close (the CSV adds up).
+- Freelance projects, milestones, payments and overdue invoices.
+- Recurring bills.
+- Reminders and notifications.
+- Amount input, calendar grid and other screen state.
 
 ### Important Test Classes
 
 ```text
-AddEntryUseCaseTest
-CategoriesTest
-CompleteOnboardingUseCaseTest
-EntryTotalsTest
-ExpectedEntriesTest
-FolderTotalsTest
-SalaryUseCasesTest
-SavingsGoalTest
-SpendingInsightsTest
-UpdateEntryUseCaseTest
-ParseBinanceCsvUseCaseTest
-CalculateRealisedPnlUseCaseTest
-AmountInputTest
-CalendarDaysTest
-FoldersStateTest
-CryptoViewModelTest
+AddEntryUseCaseTest          UpdateEntryUseCaseTest
+CategoriesTest               CompleteOnboardingUseCaseTest
+EntryTotalsTest              ExpectedEntriesTest
+SalaryUseCasesTest           SavingsGoalTest
+SpendingInsightsTest         IncomeInsightsTest
+UsdConversionTest            CatchUpTest
+MonthlyCloseTest             RecurringBillsTest
+FreelanceModelTest           OverdueInvoicesTest
+GetRemindersUseCaseTest      RefreshNotificationsUseCaseTest
+AddProjectViewModelTest      FreelanceViewModelTest
+RecurringBillsStateTest      CalendarDaysTest
+AmountInputTest              FoldersStateTest
 ```
 
-### Instrumentation Testing
+### Instrumentation Tests
 
 Located in:
 
 ```text
 app/src/androidTest/java/lk/moneytrail/app/
 ```
-
-Includes Android instrumentation testing using AndroidX Test and Espresso.
 
 ### Run Tests
 
@@ -420,84 +360,48 @@ On Windows:
 
 ### Prerequisites
 
-Ensure the following tools are installed:
-
-- Android Studio.
-- Android SDK.
-- Compatible JDK for the project's Gradle configuration.
+- Android Studio (a version that supports Android Gradle Plugin 9.3).
+- Android SDK with API 37.
+- JDK 17 or newer (Android Studio's bundled JDK works).
 - Git.
-- Firebase project access.
-- Android emulator or physical Android device.
+- An Android emulator or a phone running Android 8.0 or later.
 
 ### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/NethmikaKekuu/MoneyTrail.git
-```
-
-Navigate to the project directory:
-
-```bash
 cd MoneyTrail
 ```
 
-### 2. Configure Firebase
+### 2. Firebase
 
-Download the Firebase Android configuration file:
-
-```text
-google-services.json
-```
-
-Place it inside:
-
-```text
-app/google-services.json
-```
-
-Ensure that Firebase Authentication and Cloud Firestore are configured correctly.
+`app/google-services.json` for the shared project is already in the repository. To use your own project, follow the steps under [Firebase Configuration](#firebase-configuration).
 
 ### 3. Open the Project
 
-1. Open Android Studio.
-2. Select **Open**.
-3. Choose the cloned MoneyTrail project directory.
-4. Allow Gradle to synchronize the project.
-5. Resolve any missing SDK or dependency requirements.
+1. Open Android Studio and choose **Open**.
+2. Select the `MoneyTrail` folder.
+3. Wait for the Gradle sync to finish.
 
 ### 4. Build the Application
 
 On Windows:
 
 ```powershell
-.\gradlew.bat build
+.\gradlew.bat assembleDebug
 ```
 
 On macOS or Linux:
 
 ```bash
-./gradlew build
+./gradlew assembleDebug
 ```
 
 ### 5. Run the Application
 
-1. Start an Android emulator or connect an Android device.
-2. Select the MoneyTrail application configuration.
-3. Click **Run** in Android Studio.
-
-### 6. Run Unit Tests
-
-On Windows:
-
-```powershell
-.\gradlew.bat testDebugUnitTest
-```
-
-On macOS or Linux:
-
-```bash
-./gradlew testDebugUnitTest
-```
+1. Start an emulator or connect a phone.
+2. Select the `app` configuration.
+3. Click **Run**.
 
 ## Platform Requirements
 
@@ -512,53 +416,65 @@ On macOS or Linux:
 | UI Framework | Jetpack Compose |
 | Design System | Material Design 3 |
 | Application ID | `lk.moneytrail.app` |
-| Backend | Firebase |
-| Database | Cloud Firestore |
+| Backend | Firebase Authentication, Cloud Firestore |
+| Local Storage | Room |
 
 ## Application Navigation
 
-MoneyTrail uses Navigation Compose to manage navigation between application screens.
+MoneyTrail is a single-activity app using Navigation Compose.
 
 ### Main Navigation Flow
 
 ```text
-Splash Screen
-     ↓
-Welcome Screen
-     ↓
- Login / Register
-     ↓
-  Onboarding
-     ↓
-  Dashboard
-     │
-     ├── Add Entry
-     │
-     ├── Edit Entry
-     │
-     └── Settings
-            │
-            ├── Update Budget
-            │
-            └── Sign Out
+Splash
+  ↓
+Welcome → Login / Register / Forgot password
+  ↓
+Onboarding (new accounts)
+  ↓
+Dashboard (bottom tabs)
+  ├── Calendar ── Add entry ── AdSense (USD)
+  │      ├── Edit entry
+  │      └── Notifications
+  ├── Folders
+  ├── Goal (Pay yourself first)
+  ├── Insights (Expenses / Income)
+  └── More
+         ├── Notifications
+         ├── Freelance projects ── Project ── Record payment
+         │        └── New project
+         ├── Recurring bills
+         ├── Salary
+         ├── Catch-up
+         ├── Statement ── Monthly close
+         ├── Settings
+         └── Sign out
 ```
 
 ### Main Application Screens
 
 | Screen | Purpose |
 |---|---|
-| Splash | Initial application screen and session handling. |
+| Splash | Brand screen and session check. |
 | Welcome | Entry point for new and returning users. |
-| Login | User authentication. |
-| Register | New account registration. |
-| Forgot Password | Password reset functionality. |
-| Onboarding | Initial financial and budget configuration. |
-| Dashboard | Financial overview and insights. |
-| Calendar | View scheduled and expected transactions. |
-| Add Entry | Create income or expense records. |
-| Edit Entry | Modify existing transactions. |
-| Crypto | Import and calculate cryptocurrency PnL. |
-| Settings | Manage salary, budget configuration, and sessions. |
+| Login / Register / Forgot Password | Authentication. |
+| Onboarding | Pay day, salary, income sources, accounts and first goal. |
+| Calendar | The month, its markers, the day's entries and totals. |
+| Add Entry / Edit Entry | Create, change or delete income and expenses. |
+| AdSense (USD) | Record a payout in USD with the rupees received. |
+| Folders | Totals by category and account. |
+| Goal | Savings goals and pay yourself first. |
+| Insights | Expense and income insights. |
+| Freelance | Projects list with totals and overdue invoices. |
+| Project | Milestones: mark invoiced and record payments. |
+| New Project | Price, client and milestones. |
+| Record Payment | Save a freelance payment to an account and date. |
+| Recurring Bills | Subscriptions and auto-debits. |
+| Salary | Pay day and base salary. |
+| Catch-up | Balance accounts after a break. |
+| Monthly Close / Statement | Close a month and export its statement as CSV. |
+| Notifications | Reminder history; tap to open the right place. |
+| Settings | Theme and account settings. |
 
 ## GitHub Repository Information
 
@@ -567,21 +483,20 @@ Welcome Screen
 | Project Name | MoneyTrail |
 | Repository | [MoneyTrail on GitHub](https://github.com/NethmikaKekuu/MoneyTrail) |
 | Main Branch | `main` |
-| Latest Commit | `4914b7ff933e181cc0d566d4f2fbbd46be58e356` |
-| Latest Commit Message | Merge pull request #32 from NethmikaKekuu/develop |
+| Development Branch | `develop` |
+| Latest Commit | `075130f32b634f85505ef399a061b98a6265ed02` |
+| Latest Commit Message | Merge pull request #113 from NethmikaKekuu/develop |
+| More Documentation | [`docs/`](docs/README.md) |
 
 ## Future Improvements
 
-Potential areas for future development include:
+Possible next steps (not implemented yet):
 
-- Additional financial reports and analytics.
-- More advanced budgeting and spending insights.
-- Enhanced cryptocurrency portfolio tracking.
-- Additional currency conversion capabilities.
-- Improved synchronization monitoring and conflict handling.
-- Automated CI/CD testing and build workflows.
-
-These are potential improvements, not claims about currently implemented functionality.
+- Crypto trade import with realised profit and loss (in progress on the `feature/Crypto` branch).
+- Transfers between the user's own accounts.
+- More reports and analytics.
+- More currencies besides LKR and USD.
+- Automated CI builds and tests.
 
 ---
 
