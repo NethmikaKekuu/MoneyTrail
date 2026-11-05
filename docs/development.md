@@ -37,6 +37,27 @@ Look at the Room tables while the app runs: **App Inspection → Database Inspec
 - Unit tests live in `app/src/test`, mirroring `data`, `domain` and `presentation`. See [Testing](testing.md).
 - New rules go into pure functions or use cases with tests; repositories are replaced by small fakes in the test file.
 - Screens and flows are checked by hand on a device; the checklist is in the SRS Verification and Test Checklist document.
+- The security rules have their own tests in `firestore-rules-tests/`, run on the Firestore emulator (needs Node.js 20+ and Java):
+
+  ```bash
+  cd firestore-rules-tests
+  npm install
+  npm test
+  ```
+
+  `npm test` starts the emulator, runs every check in `rules.test.js` and stops it. If an emulator is already running, use `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run test:only`.
+
+## Continuous integration
+
+Three GitHub Actions workflows in `.github/workflows/`:
+
+| Workflow | Runs when | What it does |
+| --- | --- | --- |
+| `ci.yml` (Android CI) | Every push and pull request to `main` or `develop` | Unit tests, then a debug APK; the test report and APK are kept as artifacts on the run |
+| `firestore-rules.yml` | A change to `app/firestore.rules`, `firestore-rules-tests/` or `firebase.json` | The rules tests on the emulator |
+| `release.yml` | A pushed tag such as `v1.2` | Tests, builds the APK and publishes a GitHub release with the APK and its SHA-256 |
+
+A pull request should only be merged once its checks are green.
 
 ## Git workflow
 
@@ -44,8 +65,8 @@ Look at the Room tables while the app runs: **App Inspection → Database Inspec
 2. Keep commits few and focused, with plain-English messages ("Add income insights by source").
 3. Build and run the tests before pushing.
 4. Open a pull request into `develop`; merge `develop` into `main` for a release. `main` only accepts pull requests.
-5. A release: raise `versionCode` and `versionName` in `app/build.gradle.kts`, build the APK, and attach it to a GitHub release tagged `vX.Y` on `main`.
-6. If a pull request changes `app/firestore.rules`, publish the rules once it's merged.
+5. A release: raise `versionCode` and `versionName` in `app/build.gradle.kts`, merge to `main`, then tag it: `git tag v1.2` and `git push origin v1.2`. The release workflow builds the APK and publishes the release.
+6. If a pull request changes `app/firestore.rules`, deploy the rules once it's merged: `npx firebase-tools deploy --only firestore:rules` (uses `.firebaserc` and `firebase.json`; sign in first with `npx firebase-tools login`). Pasting the file into the console still works too.
 
 ## Code rules
 

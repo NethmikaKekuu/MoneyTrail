@@ -14,5 +14,7 @@
 - [Presentation outline](presentation.md): slides, demo script and likely questions, mapped to the rubric.
 - [Viva cheat sheet](cheatsheet.md): a one-page summary for the demo session.
 - [Requirements compliance](requirements-compliance.md): the assignment brief checked against the app.
+- [Decision records](adr/README.md): ADRs for the decisions that shape the app.
+- CI, rules tests and releases: see the [Developer guide](development.md#continuous-integration).
 
 The project overview, Firebase setup and build instructions are also in the repository's main [README](../README.md).

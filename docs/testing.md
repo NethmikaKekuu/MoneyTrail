@@ -44,7 +44,7 @@ app/src/test/java/lk/moneytrail/app/
 
 ## What is tested by hand
 
-Screens, navigation, Firebase and notifications need a device. They are covered by the **SRS Verification and Test Checklist** (69 function tests, 9 end-to-end flows, 14 non-functional checks), run on an Android 8.0 emulator and a recent phone. The security rules are checked in the Firebase **Rules Playground** (another user's data and invalid entries must be denied).
+Screens, navigation, Firebase and notifications need a device. They are covered by the **SRS Verification and Test Checklist** (69 function tests, 9 end-to-end flows, 14 non-functional checks), run on an Android 8.0 emulator and a recent phone. The security rules are tested automatically in `firestore-rules-tests/rules.test.js` on the Firestore emulator: 35 checks covering ownership, every collection's valid and invalid documents, server timestamps, and the catch-all rule. They run in CI whenever the rules change; see the [Developer guide](development.md#testing).
 
 ## Running part of the suite
 
