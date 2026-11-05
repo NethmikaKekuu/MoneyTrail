@@ -54,6 +54,14 @@ import lk.moneytrail.app.domain.model.Project
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextOverflow
+import lk.moneytrail.app.presentation.components.MoneyTrailDatePickerDialog
 import java.time.LocalDate
 
 @Composable
@@ -90,6 +98,8 @@ fun RecordFreelancePaymentScreen(
                 state = uiState,
                 onAmountChange = viewModel::onAmountChange,
                 onSelectOption = viewModel::onSelectOption,
+                onSelectAccount = viewModel::onSelectAccount,
+                onSelectDate = viewModel::onSelectDate,
                 onSavePayment = { viewModel.onSavePayment(onSuccess = onPaymentSaved) },
                 modifier = Modifier.fillMaxSize()
             )
@@ -139,9 +149,14 @@ private fun RecordPaymentContent(
     state: RecordFreelancePaymentUiState,
     onAmountChange: (String) -> Unit,
     onSelectOption: (String) -> Unit,
+    onSelectAccount: (String) -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
     onSavePayment: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showAccounts by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -251,61 +266,33 @@ private fun RecordPaymentContent(
             }
         }
 
-        // Account and Date Selectors Side-by-Side
+        // Account and date: same height side by side, both tappable.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Account Selector Card
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Account",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-                        text = state.selectedAccount,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+            Box(Modifier.weight(1f).fillMaxHeight()) {
+                PickerBox(
+                    label = "Account",
+                    value = state.selectedAccount.ifBlank { "Choose" },
+                    onClick = { showAccounts = true }
+                )
+                DropdownMenu(expanded = showAccounts, onDismissRequest = { showAccounts = false }) {
+                    state.accounts.forEach { account ->
+                        DropdownMenuItem(
+                            text = { Text(account.name) },
+                            onClick = {
+                                onSelectAccount(account.name)
+                                showAccounts = false
+                            }
+                        )
+                    }
                 }
             }
-
-            // Date Selector Card
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Date",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-                        text = state.formattedDateText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+            Box(Modifier.weight(1f).fillMaxHeight()) {
+                PickerBox(label = "Date", value = state.formattedDateText, onClick = { showDatePicker = true })
             }
         }
 
@@ -374,6 +361,45 @@ private fun RecordPaymentContent(
             }
         }
     }
+
+    if (showDatePicker) {
+        MoneyTrailDatePickerDialog(
+            date = state.selectedDate,
+            onDateSelected = onSelectDate,
+            onDismiss = { showDatePicker = false }
+        )
+    }
+}
+
+/** A tappable label/value box that fills the height its row gives it. */
+@Composable
+private fun PickerBox(label: String, value: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxSize()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(MoneyTrailIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
+        }
+    }
 }
 
 @Preview(showBackground = true)
@@ -402,6 +428,8 @@ private fun RecordFreelancePaymentScreenPreview() {
             ),
             onAmountChange = {},
             onSelectOption = {},
+            onSelectAccount = {},
+            onSelectDate = {},
             onSavePayment = {}
         )
     }
