@@ -61,6 +61,7 @@ One folder per feature, each with `XScreen.kt`, `XViewModel.kt` and `XState.kt` 
 | `calendar/` | Month grid, day list, "Did it come in?", reminders and savings cards |
 | `entry/` | New entry (keypad) and Edit entry |
 | `usd/` | AdSense payout in USD |
+| `crypto/` | Crypto: import a Binance CSV, realised profit or loss for the year, by coin and by month |
 | `folders/`, `insights/` | Folders by category; Expense and Income insights |
 | `goal/` | Goals and pay yourself first |
 | `salary/`, `settings/`, `more/` | Salary, Settings, More |
