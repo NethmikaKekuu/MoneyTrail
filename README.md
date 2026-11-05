@@ -230,7 +230,7 @@ Amounts are stored as whole rupees in integers, so there are no floating-point r
 
 ### Security Rules
 
-`app/firestore.rules` lets each user read and write only their own data, and validates every collection's fields (types, ranges, allowed keys and server timestamps).
+`app/firestore.rules` lets each user read and write only their own data, and validates every collection's fields (types, ranges, allowed keys and server timestamps). The rules are tested on the Firestore emulator in `firestore-rules-tests/` and deployed with `npx firebase-tools deploy --only firestore:rules`.
 
 ## Authentication and Firebase Configuration
 
@@ -343,6 +343,18 @@ Located in:
 ```text
 app/src/androidTest/java/lk/moneytrail/app/
 ```
+
+### Firestore Rules Tests
+
+```bash
+cd firestore-rules-tests
+npm install
+npm test
+```
+
+### Continuous Integration
+
+GitHub Actions (`.github/workflows/`) runs the unit tests and builds the APK on every push and pull request, runs the rules tests when the rules change, and publishes a release with the APK when a `v*` tag is pushed.
 
 ### Run Tests
 
@@ -496,7 +508,6 @@ Possible next steps (not implemented yet):
 - Transfers between the user's own accounts.
 - More reports and analytics.
 - More currencies besides LKR and USD.
-- Automated CI builds and tests.
 
 ---
 
