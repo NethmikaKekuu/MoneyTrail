@@ -1,7 +1,10 @@
 package lk.moneytrail.app.presentation.bills
 
 import lk.moneytrail.app.domain.model.RecurringBill
+import lk.moneytrail.app.domain.model.dueDateIn
+import java.time.LocalDate
 import java.time.YearMonth
+import java.util.Locale
 
 /** The bill being added or edited in the dialog, with the amount and day as typed. */
 data class BillDraft(
@@ -65,4 +68,30 @@ data class RecurringBillsState(
     /** What all active bills add up to each month, for the summary at the top. */
     val monthlyTotal: Long
         get() = bills.filter { it.isActive }.sumOf { it.amount }
+
+    val activeCount: Int
+        get() = bills.count { it.isActive }
+
+    val stoppedCount: Int
+        get() = bills.size - activeCount
+
+    /** Active bills first, each group in due-day order. */
+    val sortedBills: List<RecurringBill>
+        get() = bills.sortedWith(compareByDescending<RecurringBill> { it.isActive }.thenBy { it.dueDay }.thenBy { it.name.lowercase(Locale.ENGLISH) })
+
+    /** The next active bill to fall due on or after [today], and when. */
+    fun nextDue(today: LocalDate): Pair<RecurringBill, LocalDate>? =
+        bills.filter { it.isActive }
+            .map { bill ->
+                val thisMonth = bill.dueDateIn(YearMonth.from(today))
+                bill to if (thisMonth.isBefore(today)) bill.dueDateIn(YearMonth.from(today).plusMonths(1)) else thisMonth
+            }
+            .minByOrNull { it.second }
+
+}
+
+/** "Due on the 5th every month". */
+fun RecurringBill.dueDayText(): String {
+    val suffix = if (dueDay in 11..13) "th" else when (dueDay % 10) { 1 -> "st"; 2 -> "nd"; 3 -> "rd"; else -> "th" }
+    return "Due on the $dueDay$suffix every month"
 }

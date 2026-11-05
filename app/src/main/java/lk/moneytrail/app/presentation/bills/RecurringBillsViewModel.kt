@@ -138,6 +138,13 @@ class RecurringBillsViewModel @Inject constructor(
         }
     }
 
+    /** Delete from the edit dialog: close it and ask "Delete this bill?". */
+    fun onDeleteFromDraft() {
+        val state = _uiState.value
+        val bill = state.bills.find { it.id == state.draft?.id } ?: return
+        _uiState.update { it.copy(draft = null, deleting = bill) }
+    }
+
     fun onDeleteClick(bill: RecurringBill) {
         _uiState.update { it.copy(deleting = bill) }
     }

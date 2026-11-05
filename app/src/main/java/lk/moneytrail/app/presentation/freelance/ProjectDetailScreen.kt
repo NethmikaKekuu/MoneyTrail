@@ -1,5 +1,9 @@
 package lk.moneytrail.app.presentation.freelance
 
+import lk.moneytrail.app.presentation.components.ChipEmphasis
+import lk.moneytrail.app.presentation.components.LegendItem
+import lk.moneytrail.app.presentation.components.ScreenTopBar
+import lk.moneytrail.app.presentation.components.StatusChip
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -81,7 +85,7 @@ fun ProjectDetailScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            FreelanceTopBar(
+            ScreenTopBar(
                 title = project?.name ?: "Project",
                 onBackClick = onBackClick,
                 actionIcon = if (project != null) MoneyTrailIcons.Trash else null,

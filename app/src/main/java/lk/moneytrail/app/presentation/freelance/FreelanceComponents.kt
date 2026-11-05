@@ -30,58 +30,6 @@ import androidx.compose.ui.unit.dp
 import lk.moneytrail.app.domain.model.Project
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 
-/** Back button, centred title and an optional action icon, all 44 dp so the title sits in the middle. */
-@Composable
-internal fun FreelanceTopBar(
-    title: String,
-    onBackClick: () -> Unit,
-    actionIcon: ImageVector? = null,
-    actionDescription: String? = null,
-    onActionClick: () -> Unit = {}
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp)
-            .padding(top = 16.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        TopBarIcon(MoneyTrailIcons.ChevronLeft, "Back", onBackClick, MaterialTheme.colorScheme.onSurface)
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 8.dp)
-        )
-        if (actionIcon != null) {
-            TopBarIcon(actionIcon, actionDescription, onActionClick, MaterialTheme.colorScheme.primary)
-        } else {
-            Spacer(Modifier.size(44.dp))
-        }
-    }
-}
-
-@Composable
-private fun TopBarIcon(icon: ImageVector, description: String?, onClick: () -> Unit, tint: androidx.compose.ui.graphics.Color) {
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(imageVector = icon, contentDescription = description, tint = tint)
-    }
-}
-
 /** Paid, then invoiced, then the rest of the price. */
 @Composable
 internal fun ProjectProgressBar(project: Project, modifier: Modifier = Modifier) {
@@ -102,34 +50,3 @@ internal fun ProjectProgressBar(project: Project, modifier: Modifier = Modifier)
     }
 }
 
-/** Small coloured legend dot and label, e.g. "Paid 30,000". */
-@Composable
-internal fun LegendItem(color: androidx.compose.ui.graphics.Color, label: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(8.dp).background(color, RoundedCornerShape(2.dp)))
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-/** Rounded status label; [emphasis] picks the colours. */
-@Composable
-internal fun StatusChip(label: String, emphasis: ChipEmphasis) {
-    val colors = MaterialTheme.colorScheme
-    val (bg, fg) = when (emphasis) {
-        ChipEmphasis.ALERT -> colors.errorContainer to colors.onErrorContainer
-        ChipEmphasis.ACTIVE -> colors.tertiaryContainer to colors.onTertiaryContainer
-        ChipEmphasis.DONE -> colors.primary to colors.onPrimary
-        ChipEmphasis.QUIET -> colors.surfaceVariant to colors.onSurfaceVariant
-    }
-    Surface(color = bg, shape = RoundedCornerShape(12.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = fg,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-        )
-    }
-}
-
-enum class ChipEmphasis { ALERT, ACTIVE, DONE, QUIET }

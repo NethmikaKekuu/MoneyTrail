@@ -1,5 +1,6 @@
 package lk.moneytrail.app.presentation.freelance
 
+import lk.moneytrail.app.presentation.components.ScreenTopBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -84,7 +85,7 @@ fun RecordFreelancePaymentScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            RecordPaymentTopBar(onBackClick = onBackClick)
+            ScreenTopBar(title = "Freelance payment", onBackClick = onBackClick)
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
@@ -104,43 +105,6 @@ fun RecordFreelancePaymentScreen(
                 modifier = Modifier.fillMaxSize()
             )
         }
-    }
-}
-
-@Composable
-private fun RecordPaymentTopBar(onBackClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp)
-            .padding(top = 16.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = MoneyTrailIcons.ChevronLeft,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        Text(
-            text = "Freelance payment",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-
-        Spacer(modifier = Modifier.size(44.dp))
     }
 }
 

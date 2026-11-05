@@ -1,5 +1,9 @@
 package lk.moneytrail.app.presentation.freelance
 
+import lk.moneytrail.app.presentation.components.ChipEmphasis
+import lk.moneytrail.app.presentation.components.LegendItem
+import lk.moneytrail.app.presentation.components.ScreenTopBar
+import lk.moneytrail.app.presentation.components.StatusChip
 import lk.moneytrail.app.domain.model.Milestone
 import lk.moneytrail.app.domain.model.MilestoneStatus
 import lk.moneytrail.app.domain.model.OverdueInvoice
