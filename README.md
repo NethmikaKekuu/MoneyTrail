@@ -1,3 +1,8 @@
+<img width="96" height="96" alt="ic_launcher" src="https://github.com/user-attachments/assets/ecd9b527-582a-44e8-bdbd-ce26f28d3711" />
+
+
+
+
 # MoneyTrail — Personal Finance Management App
 
 MoneyTrail is a modern Android personal finance management application built with Kotlin and Jetpack Compose. It helps users manage their income, expenses, financial commitments, savings goals, and account balances in one place.
