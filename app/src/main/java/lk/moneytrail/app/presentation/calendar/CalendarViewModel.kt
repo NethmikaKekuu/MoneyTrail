@@ -21,6 +21,7 @@ import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.repository.PlanRepository
 import lk.moneytrail.app.domain.repository.UserRepository
 import lk.moneytrail.app.domain.usecase.EnsureMonthlySalaryUseCase
+import lk.moneytrail.app.domain.usecase.EnsureRecurringBillsUseCase
 import lk.moneytrail.app.domain.usecase.UpdateEntryUseCase
 import java.time.LocalDate
 import java.time.YearMonth
@@ -33,7 +34,8 @@ class CalendarViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val planRepository: PlanRepository,
     private val updateEntryUseCase: UpdateEntryUseCase,
-    private val ensureMonthlySalary: EnsureMonthlySalaryUseCase
+    private val ensureMonthlySalary: EnsureMonthlySalaryUseCase,
+    private val ensureRecurringBills: EnsureRecurringBillsUseCase
 ) : ViewModel() {
 
     private val today = LocalDate.now()
@@ -58,6 +60,10 @@ class CalendarViewModel @Inject constructor(
             // Puts this month's salary on the calendar as expected. If it fails, the
             // user can still add it by hand, so there's nothing to show.
             ensureMonthlySalary(today)
+        }
+        viewModelScope.launch {
+            // Likewise this month's recurring bills; they turn up as expected expenses to mark as paid.
+            ensureRecurringBills(today)
         }
     }
 
