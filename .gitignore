@@ -17,3 +17,10 @@ local.properties
 .idea/
 
 .idea/
+
+# Firebase CLI and emulator
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+firestore-rules-tests/node_modules/
