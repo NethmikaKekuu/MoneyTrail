@@ -45,6 +45,7 @@ fun MoreScreen(
     onCatchUpClick: () -> Unit,
     onStatementClick: () -> Unit,
     onFreelanceClick: () -> Unit,
+    onCryptoClick: () -> Unit,
     onRecurringBillsClick: () -> Unit,
     onSignedOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -62,6 +63,7 @@ fun MoreScreen(
         onCatchUpClick = onCatchUpClick,
         onStatementClick = onStatementClick,
         onFreelanceClick = onFreelanceClick,
+        onCryptoClick = onCryptoClick,
         onRecurringBillsClick = onRecurringBillsClick,
         onSignOutClick = {
             viewModel.signOut()
@@ -82,6 +84,7 @@ private fun MoreContent(
     onCatchUpClick: () -> Unit,
     onStatementClick: () -> Unit,
     onFreelanceClick: () -> Unit,
+    onCryptoClick: () -> Unit,
     onRecurringBillsClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -129,6 +132,13 @@ private fun MoreContent(
             title = "Freelance projects",
             subtitle = "Track clients, milestone invoices & payments",
             onClick = onFreelanceClick
+        )
+
+        MoreRow(
+            icon = MoneyTrailIcons.Insights,
+            title = "Crypto",
+            subtitle = "Import Binance trades, see realised profit or loss",
+            onClick = onCryptoClick
         )
 
         MoreRow(
@@ -307,6 +317,7 @@ private fun MoreScreenPreview() {
             onCatchUpClick = {},
             onStatementClick = {},
             onFreelanceClick = {},
+            onCryptoClick = {},
             onRecurringBillsClick = {},
             onSignOutClick = {}
         )

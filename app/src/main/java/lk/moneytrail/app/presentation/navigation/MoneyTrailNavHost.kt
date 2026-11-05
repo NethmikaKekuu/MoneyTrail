@@ -22,6 +22,7 @@ import lk.moneytrail.app.presentation.catchup.CatchUpScreen
 import lk.moneytrail.app.presentation.dashboard.DashboardScreen
 import lk.moneytrail.app.presentation.entry.AddEntryScreen
 import lk.moneytrail.app.presentation.entry.EditEntryScreen
+import lk.moneytrail.app.presentation.crypto.CryptoScreen
 import lk.moneytrail.app.presentation.bills.RecurringBillsScreen
 import lk.moneytrail.app.presentation.freelance.AddProjectScreen
 import lk.moneytrail.app.presentation.freelance.FreelanceProjectsScreen
@@ -111,6 +112,7 @@ fun MoneyTrailNavHost(
                 onCatchUpClick = { navController.navigate(Routes.CATCH_UP) { launchSingleTop = true } },
                 onStatementClick = { navController.navigate(Routes.statement(null)) { launchSingleTop = true } },
                 onFreelanceClick = { navController.navigate(Routes.FREELANCE) { launchSingleTop = true } },
+                onCryptoClick = { navController.navigate(Routes.CRYPTO) { launchSingleTop = true } },
                 onRecurringBillsClick = { navController.navigate(Routes.RECURRING_BILLS) { launchSingleTop = true } },
 
                 onNotificationsClick = { navController.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
@@ -176,6 +178,9 @@ fun MoneyTrailNavHost(
                 // Onboarding ends on a fresh dashboard, which then expects the new salary.
                 onSetUpClick = { navController.navigate(Routes.ONBOARDING) { launchSingleTop = true } }
             )
+        }
+        composable(Routes.CRYPTO) {
+            CryptoScreen(onBackClick = { navController.popBackStack(Routes.CRYPTO, inclusive = true) })
         }
         composable(Routes.RECURRING_BILLS) {
             RecurringBillsScreen(

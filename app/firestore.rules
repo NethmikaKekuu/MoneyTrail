@@ -204,11 +204,32 @@ service cloud.firestore {
       allow create, update: if isOwner(uid) && isValidClose(month, request.resource.data);
     }
 
+    // users/{uid}/cryptoTrades/{tradeKey}: one trade from a Binance CSV import.
+    // Kept apart from entries, so crypto gains never count as planned income.
+    function isValidCryptoTrade(data) {
+      let fields = ['tradeId', 'date', 'pair', 'side', 'price', 'amount', 'total', 'fee', 'feeCoin', 'costBasis', 'importedAt'];
+      return data.keys().hasAll(['date', 'pair', 'side', 'price', 'amount', 'importedAt'])
+        && data.keys().hasOnly(fields)
+        && data.date is string && data.date.size() <= 40
+        && data.pair is string && data.pair.size() > 0 && data.pair.size() <= 20
+        && data.side in ['BUY', 'SELL']
+        && data.price is number && data.price >= 0
+        && data.amount is number && data.amount > 0
+        && (!('fee' in data) || (data.fee is number && data.fee >= 0))
+        && (!('costBasis' in data) || data.costBasis == null || data.costBasis is number)
+        && data.importedAt == request.time;
+    }
+
+    match /users/{uid}/cryptoTrades/{tradeKey} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && tradeKey.size() <= 120 && isValidCryptoTrade(request.resource.data);
+    }
+
     // Everything else stored under a user is private to them. The {collection} segment
     // keeps this from also matching users/{uid} itself, and the collections checked
     // above are left out so their checks can't be skipped.
     match /users/{uid}/{collection}/{document=**} {
-      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories', 'projects', 'closes', 'recurringBills']);
+      allow read, write: if isOwner(uid) && !(collection in ['entries', 'accounts', 'settings', 'categories', 'projects', 'closes', 'cryptoTrades', 'recurringBills']);
     }
   }
 }
