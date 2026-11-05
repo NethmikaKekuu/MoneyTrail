@@ -1,5 +1,6 @@
 package lk.moneytrail.app.presentation.freelance
 
+import lk.moneytrail.app.presentation.components.ScreenTopBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,7 +20,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -53,13 +56,14 @@ import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
 import lk.moneytrail.app.presentation.theme.MoneyTrailTheme
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.Date
 import java.util.Locale
 
 @Composable
 fun AddProjectScreen(
     onBackClick: () -> Unit,
-    onProjectSaved: () -> Unit,
+    onProjectSaved: (projectId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AddProjectViewModel = hiltViewModel()
 ) {
@@ -76,7 +80,7 @@ fun AddProjectScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            AddProjectTopBar(onBackClick = onBackClick)
+            ScreenTopBar(title = "New project", onBackClick = onBackClick)
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
@@ -98,49 +102,34 @@ fun AddProjectScreen(
             )
 
             if (uiState.isAddMilestoneDialogOpen) {
-                AddMilestoneDialog(
-                    onAddMilestone = viewModel::onAddMilestone,
+                MilestoneDialog(
+                    heading = "Add milestone",
+                    confirmLabel = "Add",
+                    initialTitle = "",
+                    initialAmount = uiState.leftToSplit,
+                    initialDueDate = uiState.nextDueDate(LocalDate.now()),
+                    maxAmount = uiState.leftToSplit,
+                    onSave = viewModel::onAddMilestone,
                     onDismiss = viewModel::onDismissAddMilestoneDialog
                 )
             }
+
+            if (uiState.isShortSplitDialogOpen) {
+                AlertDialog(
+                    onDismissRequest = viewModel::onDismissShortSplitDialog,
+                    title = { Text("Price not fully split", fontWeight = FontWeight.Bold) },
+                    text = { Text(uiState.shortSplitText) },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.onAddRestAndSave(onProjectSaved) }) {
+                            Text("Add the rest as a milestone", fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { viewModel.onSaveAnyway(onProjectSaved) }) { Text("Save anyway") }
+                    }
+                )
+            }
         }
-    }
-}
-
-@Composable
-private fun AddProjectTopBar(onBackClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 20.dp)
-            .padding(top = 16.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = MoneyTrailIcons.ChevronLeft,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        Text(
-            text = "New project",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-
-        Spacer(modifier = Modifier.size(44.dp))
     }
 }
 
@@ -215,7 +204,7 @@ private fun AddProjectContent(
                 color = MaterialTheme.colorScheme.onSurface
             )
             OutlinedTextField(
-                value = if (state.totalBudgetDigits.isNotEmpty()) state.totalBudgetDigits else if (state.totalProjectPrice > 0) state.totalProjectPrice.toString() else "",
+                value = state.totalBudgetDigits,
                 onValueChange = onTotalBudgetChange,
                 placeholder = { Text("e.g. 60000") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -246,7 +235,7 @@ private fun AddProjectContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Milestones (parts he gets paid for)",
+                    text = "Milestones",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -256,6 +245,15 @@ private fun AddProjectContent(
                     text = state.milestoneCountText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
+                )
+            }
+
+            state.splitText?.let { text ->
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (state.isOverSplit) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -290,7 +288,7 @@ private fun AddProjectContent(
             }
 
             Text(
-                text = "All milestones start as Planned. Mark one Invoiced when you ask the client to pay.",
+                text = "Optional. With no milestones the whole price is saved as one payment. Each milestone starts as Planned.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(horizontal = 4.dp)

@@ -7,7 +7,7 @@
 - [Decisions](decisions.md): why each technology, data and UI choice was made, and the architecture rules.
 - [Developer guide](development.md): setup, commands, git workflow and code rules.
 - [Dependencies](dependencies.md): libraries, versions and what each one is for.
-- [Testing](testing.md): how the 172 unit tests are written and what they cover.
+- [Testing](testing.md): how the 203 unit tests are written and what they cover.
 - [Diagrams](diagrams.md): use case, architecture, write path, offline, pay day, freelance, reminders, monthly close and navigation (Mermaid).
 - [Concepts explained](concepts.md): every Kotlin, Compose, Android and Firebase idea the app uses, with where to find it.
 - [Technical deep dive](technical-deep-dive.md): step-by-step walkthroughs of start-up, Hilt, reading and writing entries, pay day, balancing, the monthly close, USD, reminders and notification taps.

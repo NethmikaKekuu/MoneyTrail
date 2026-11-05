@@ -16,6 +16,7 @@ import lk.moneytrail.app.domain.repository.AccountRepository
 import lk.moneytrail.app.domain.repository.CatchUpRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import lk.moneytrail.app.domain.usecase.BalanceAccountUseCase
+import lk.moneytrail.app.domain.usecase.EnsureRecurringBillsUseCase
 import lk.moneytrail.app.domain.usecase.UpdateEntryUseCase
 import java.time.LocalDate
 import javax.inject.Inject
@@ -30,7 +31,8 @@ class CatchUpViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val catchUpRepository: CatchUpRepository,
     private val updateEntry: UpdateEntryUseCase,
-    private val balanceAccount: BalanceAccountUseCase
+    private val balanceAccount: BalanceAccountUseCase,
+    private val ensureRecurringBills: EnsureRecurringBillsUseCase
 ) : ViewModel() {
 
     private val today = LocalDate.now()
@@ -44,6 +46,9 @@ class CatchUpViewModel @Inject constructor(
 
     private fun load() {
         viewModelScope.launch {
+            // Bills that fell due while the user was away are on the list to tick off.
+            // If this fails, the bills already on the calendar still show.
+            ensureRecurringBills(today)
             val lastLogged = entryRepository.lastLoggedDate().getOrNull()
             val due = entryRepository.observeExpected().first().getOrNull().orEmpty().dueExpected(today)
             _uiState.update {

@@ -37,6 +37,9 @@ class RecordFreelancePaymentViewModel @Inject constructor(
     /** Set when opened from a project: start on that project's next unpaid milestone. */
     private val startProjectId: String? = savedStateHandle[Routes.RECORD_PAYMENT_PROJECT_ARG]
 
+    /** Set when opened from a milestone's own Record payment button. */
+    private val startMilestoneId: String? = savedStateHandle[Routes.RECORD_PAYMENT_MILESTONE_ARG]
+
     init {
         loadData()
     }
@@ -102,6 +105,7 @@ class RecordFreelancePaymentViewModel @Inject constructor(
             // Keep what the user picked; the first time, start on the project they came from.
             val keep = options.find { it.optionId == state.selectedOptionId }
             val start = keep
+                ?: options.find { it.optionId == startMilestoneId }
                 ?: projects.find { it.id == startProjectId }?.nextUnpaidMilestone()?.let { m -> options.find { it.optionId == m.id } }
                 ?: options.first()
             state.copy(

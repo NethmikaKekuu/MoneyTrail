@@ -51,7 +51,7 @@ Each constraint and deliverable from the SE3092 Assignment 01 brief, and where M
 | --- | --- |
 | Problem analysis and requirements (15%) | Design document sections 2–3; [Decisions](decisions.md) |
 | Architecture and code quality (15%) | [Architecture](architecture.md); `domain/` use cases; 172 unit tests |
-| Compose UI and UX (15%) | 24 screens; [Diagrams](diagrams.md#navigation-map); theme |
+| Compose UI and UX (15%) | 26 screens; [Diagrams](diagrams.md#navigation-map); theme |
 | Firebase integration (15%) | [Firestore schema](firestore-schema.md); `app/firestore.rules`; listeners; offline |
 | Features and innovation (10%) | Income dependability, catch-up, monthly close and CSV, freelance invoices, AdSense USD, notification centre |
 | Documentation (10%) | `README.md`, `docs/`, design document |

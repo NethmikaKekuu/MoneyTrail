@@ -22,13 +22,27 @@ object Routes {
     const val STATEMENT = "statement?$MONTH_ARG={$MONTH_ARG}"
     fun monthlyClose(month: java.time.YearMonth): String = "monthly_close?$MONTH_ARG=$month"
     fun statement(month: java.time.YearMonth?): String = if (month == null) "statement" else "statement?$MONTH_ARG=$month"
+    const val RECURRING_BILLS = "recurring_bills"
     const val FREELANCE = "freelance"
     const val ADD_PROJECT = "add_project"
+    /** Firestore id of the project to open. */
+    const val PROJECT_ID_ARG = "projectId"
+    const val PROJECT_DETAIL = "freelance/project/{$PROJECT_ID_ARG}"
+    fun projectDetail(projectId: String): String = "freelance/project/${Uri.encode(projectId)}"
+
     const val RECORD_PAYMENT_PROJECT_ARG = "projectId"
-    /** Optional id of the project whose next unpaid milestone the payment screen starts on. */
-    const val RECORD_FREELANCE_PAYMENT = "record_freelance_payment?$RECORD_PAYMENT_PROJECT_ARG={$RECORD_PAYMENT_PROJECT_ARG}"
-    fun recordFreelancePayment(projectId: String?): String =
-        if (projectId == null) "record_freelance_payment" else "record_freelance_payment?$RECORD_PAYMENT_PROJECT_ARG=$projectId"
+    const val RECORD_PAYMENT_MILESTONE_ARG = "milestoneId"
+    /** Optional project and milestone the payment screen starts on. */
+    const val RECORD_FREELANCE_PAYMENT =
+        "record_freelance_payment?$RECORD_PAYMENT_PROJECT_ARG={$RECORD_PAYMENT_PROJECT_ARG}&$RECORD_PAYMENT_MILESTONE_ARG={$RECORD_PAYMENT_MILESTONE_ARG}"
+    fun recordFreelancePayment(projectId: String?, milestoneId: String? = null): String = buildString {
+        append("record_freelance_payment")
+        val args = listOfNotNull(
+            projectId?.let { "$RECORD_PAYMENT_PROJECT_ARG=${Uri.encode(it)}" },
+            milestoneId?.let { "$RECORD_PAYMENT_MILESTONE_ARG=${Uri.encode(it)}" }
+        )
+        if (args.isNotEmpty()) append("?").append(args.joinToString("&"))
+    }
 
     const val NOTIFICATIONS = "notifications"
 
