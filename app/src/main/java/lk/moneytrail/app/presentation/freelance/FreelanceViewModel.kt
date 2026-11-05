@@ -145,7 +145,9 @@ class FreelanceViewModel @Inject constructor(
     /** Finds the first PLANNED milestone of selected project and transitions it to INVOICED */
     fun onMarkInvoicedClicked() {
         val selected = _uiState.value.selectedProject ?: return
-        val milestoneToInvoice = selected.milestones.find { it.status == MilestoneStatus.PLANNED } ?: return
+        val milestoneToInvoice = selected.milestones
+            .filter { it.status == MilestoneStatus.PLANNED }
+            .minByOrNull { if (it.dueTimestamp > 0) it.dueTimestamp else Long.MAX_VALUE } ?: return
         previousProjectState = selected
 
         val updatedMilestones = selected.milestones.map {

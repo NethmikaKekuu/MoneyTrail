@@ -3,6 +3,8 @@ package lk.moneytrail.app.presentation.freelance
 import lk.moneytrail.app.domain.model.Milestone
 import lk.moneytrail.app.domain.model.MilestoneStatus
 import lk.moneytrail.app.domain.model.Project
+import lk.moneytrail.app.domain.model.overdueInvoices
+import java.time.LocalDate
 
 data class FreelanceUiState(
     val projects: List<Project> = emptyList(),
@@ -24,16 +26,9 @@ data class FreelanceUiState(
             p.milestones.filter { it.status == MilestoneStatus.INVOICED }.sumOf { it.amount }
         }
 
-    /** Count of invoiced milestones past due date across all projects. */
+    /** Invoiced milestones due before today, by the same rule as the overdue reminder. */
     val overdueCount: Int
-        get() {
-            val now = System.currentTimeMillis()
-            return projects.sumOf { p ->
-                p.milestones.count { m ->
-                    m.status == MilestoneStatus.INVOICED && m.dueTimestamp > 0 && m.dueTimestamp < now
-                }
-            }
-        }
+        get() = projects.overdueInvoices(LocalDate.now()).size
 
     /** Enabled only when a PLANNED milestone exists on the selected project and not saving. */
     val isMarkInvoicedEnabled: Boolean
