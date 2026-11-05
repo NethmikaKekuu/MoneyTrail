@@ -187,7 +187,7 @@ flowchart TD
     Calendar --> AddEntry --> UsdPayout
     Calendar --> EditEntry
     Calendar --> Notifications
-    More --> Notifications & Freelance & Salary & CatchUp & Statement & Settings
+    More --> Notifications & Freelance & Crypto & Salary & CatchUp & Statement & Settings
     Freelance --> AddProject --> ProjectDetail
     Freelance --> ProjectDetail --> RecordPayment
     Statement --> MonthlyClose
