@@ -87,12 +87,9 @@ class AddEntryViewModel @Inject constructor(
         }
     }
 
-    fun onKeyPress(key: String) {
-        _uiState.update { it.copy(amountDigits = AmountInput.type(it.amountDigits, key), errorMessage = null) }
-    }
-
-    fun onDeletePress() {
-        _uiState.update { it.copy(amountDigits = AmountInput.delete(it.amountDigits), errorMessage = null) }
+    fun onAmountChange(text: String) {
+        val digits = text.filter(Char::isDigit).trimStart('0').take(AmountInput.MAX_DIGITS)
+        _uiState.update { it.copy(amountDigits = digits, errorMessage = null) }
     }
 
     fun onCategoryChange(category: String) {

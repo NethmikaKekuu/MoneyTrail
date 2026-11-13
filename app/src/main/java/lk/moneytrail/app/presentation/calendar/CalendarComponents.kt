@@ -8,12 +8,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -73,6 +77,27 @@ internal fun SquareIconButton(
     }
 }
 
+/** Previous and next month arrows in one outlined pill with a divider between them. */
+@Composable
+internal fun MonthArrows(onPreviousClick: () -> Unit, onNextClick: () -> Unit, modifier: Modifier = Modifier) {
+    val line = MaterialTheme.colorScheme.outlineVariant
+    Row(
+        modifier = modifier
+            .height(38.dp)
+            .border(1.dp, line, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onPreviousClick, modifier = Modifier.size(width = 40.dp, height = 38.dp)) {
+            Icon(MoneyTrailIcons.ChevronLeft, contentDescription = "Previous month", modifier = Modifier.size(16.dp))
+        }
+        Box(Modifier.width(1.dp).height(22.dp).background(line))
+        IconButton(onClick = onNextClick, modifier = Modifier.size(width = 40.dp, height = 38.dp)) {
+            Icon(MoneyTrailIcons.ChevronRight, contentDescription = "Next month", modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
 /** The orange card with the month's confirmed income and expenses, and what's still expected. */
 @Composable
 internal fun MonthSummary(totals: EntryTotals, modifier: Modifier = Modifier) {
@@ -80,22 +105,30 @@ internal fun MonthSummary(totals: EntryTotals, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.tertiary, RoundedCornerShape(20.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         SummaryItem("Income", formatAmount(totals.income), Modifier.weight(1f))
+        SummaryDivider()
         SummaryItem("Expenses", formatAmount(totals.expenses), Modifier.weight(1f))
+        SummaryDivider()
         // Expected money in minus expected money out, e.g. "+30,000" for an unpaid invoice.
         SummaryItem("Expected", formatNet(totals.expectedIncome - totals.expectedExpenses), Modifier.weight(1f))
     }
 }
 
 @Composable
+private fun SummaryDivider() {
+    Box(Modifier.fillMaxHeight().width(1.dp).background(Color.White.copy(alpha = 0.35f)))
+}
+
+@Composable
 private fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier) {
-    // The card is always orange, so its text stays dark in both themes.
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = Ink)
-        Text(value, style = MaterialTheme.typography.titleMedium, fontSize = 16.sp, color = Ink, maxLines = 1)
+    // The card is always orange, so its text is white in both themes.
+    Column(modifier = modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = Color.White)
+        Text(value, style = MaterialTheme.typography.titleMedium, fontSize = 16.sp, color = Color.White, maxLines = 1)
     }
 }
 
