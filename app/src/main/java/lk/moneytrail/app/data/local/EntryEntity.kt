@@ -28,6 +28,9 @@ data class EntryEntity(
     val note: String,
     val spendingType: String?,
     val bonus: Long,
+    val usdCents: Long,
+    val effectiveRate: Long,
+    val feeLkr: Long,
     /** Milliseconds; orders entries within a day. */
     val createdAt: Long
 )
@@ -44,6 +47,9 @@ fun Entry.toEntity(uid: String, createdAt: Long): EntryEntity = EntryEntity(
     note = note,
     spendingType = spendingType?.name,
     bonus = bonus,
+    usdCents = usdCents,
+    effectiveRate = effectiveRate,
+    feeLkr = feeLkr,
     createdAt = createdAt
 )
 
@@ -61,6 +67,9 @@ fun EntryEntity.toEntry(): Entry? {
         note = note,
         spendingType = SpendingType.entries.find { it.name == spendingType },
         status = EntryStatus.entries.find { it.name == status } ?: EntryStatus.CONFIRMED,
-        bonus = bonus
+        bonus = bonus,
+        usdCents = usdCents,
+        effectiveRate = effectiveRate,
+        feeLkr = feeLkr
     )
 }

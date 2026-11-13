@@ -18,8 +18,8 @@ android {
         applicationId = "lk.moneytrail.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -73,6 +73,9 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+
+    // WorkManager (daily reminders, even with the app closed)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Room (offline cache)
     implementation(libs.room.runtime)

@@ -3,6 +3,7 @@ package lk.moneytrail.app.domain.usecase
 import lk.moneytrail.app.domain.model.AppException
 import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryType
+import lk.moneytrail.app.domain.model.UsdConversion
 import lk.moneytrail.app.domain.repository.EntryRepository
 import javax.inject.Inject
 
@@ -16,10 +17,15 @@ class UpdateEntryUseCase @Inject constructor(
     private val entryRepository: EntryRepository
 ) {
     suspend operator fun invoke(entry: Entry): Result<Unit> {
-        val trimmed = entry.copy(note = entry.note.trim())
+        // Changing the rupees of a dollar payout changes the rate it got.
+        val trimmed = entry.copy(
+            note = entry.note.trim(),
+            effectiveRate = if (entry.usdCents > 0) UsdConversion.effectiveRate(entry.usdCents, entry.amount) else 0L
+        )
         val error = AddEntryUseCase.entryError(trimmed.type, trimmed.amount, trimmed.category, trimmed.account, trimmed.note)
             ?: spendingTypeError(trimmed)
             ?: bonusError(trimmed)
+            ?: UsdConversion.error(trimmed)
         if (error != null) return Result.failure(AppException(error))
 
         return entryRepository.updateEntry(trimmed)

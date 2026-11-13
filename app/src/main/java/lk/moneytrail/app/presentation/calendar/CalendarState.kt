@@ -20,7 +20,11 @@ data class CalendarState(
     /** Expected entries whose day has come, from any month, oldest first. */
     val dueExpected: List<Entry> = emptyList(),
     /** The expected entry being checked, while its dialog is open. */
-    val check: ExpectedCheck? = null
+    val check: ExpectedCheck? = null,
+    /** LKR to move to savings this month while Pay yourself first is due; null otherwise. */
+    val savingsDue: Long? = null,
+    /** True once the salary is confirmed and there's saving to do, to open the Goal tab. */
+    val openGoal: Boolean = false
 ) {
     val days: List<CalendarDay>
         get() = buildCalendarDays(month, entries)

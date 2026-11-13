@@ -6,6 +6,7 @@ import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.domain.model.UsdConversion
 import lk.moneytrail.app.domain.repository.EntryRepository
 import java.time.LocalDate
 import javax.inject.Inject
@@ -14,7 +15,9 @@ import javax.inject.Inject
  * Checks a new entry and saves it. Expenses get committed or discretionary from their
  * category, so the user doesn't have to choose it while logging; for a category the
  * user made, the caller passes its setting as [spendingType]. [isExpected] saves money
- * planned for its date, which only counts once the user confirms it.
+ * planned for its date, which only counts once the user confirms it. AdSense income may
+ * come with the [usdCents] it was paid in and the day's [marketRate], from which the
+ * rate it really got and the fee lost are worked out.
  */
 class AddEntryUseCase @Inject constructor(
     private val entryRepository: EntryRepository
@@ -27,7 +30,9 @@ class AddEntryUseCase @Inject constructor(
         date: LocalDate,
         note: String,
         isExpected: Boolean = false,
-        spendingType: SpendingType? = Categories.expense[category]
+        spendingType: SpendingType? = Categories.expense[category],
+        usdCents: Long = 0,
+        marketRate: Long = 0
     ): Result<Unit> {
         val trimmedNote = note.trim()
         val error = entryError(type, amount, category, account, trimmedNote)
@@ -43,8 +48,12 @@ class AddEntryUseCase @Inject constructor(
             date = date,
             note = trimmedNote,
             spendingType = if (type == EntryType.EXPENSE) spendingType else null,
-            status = if (isExpected) EntryStatus.EXPECTED else EntryStatus.CONFIRMED
+            status = if (isExpected) EntryStatus.EXPECTED else EntryStatus.CONFIRMED,
+            usdCents = usdCents,
+            effectiveRate = UsdConversion.effectiveRate(usdCents, amount),
+            feeLkr = UsdConversion.fee(usdCents, marketRate, amount)
         )
+        UsdConversion.error(entry)?.let { return Result.failure(AppException(it)) }
         return entryRepository.addEntry(entry)
     }
 

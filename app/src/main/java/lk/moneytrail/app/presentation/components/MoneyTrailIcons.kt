@@ -56,10 +56,16 @@ object MoneyTrailIcons {
         "M3,9h18M8,2v4M16,2v4"
     )
 
+    val Menu = lineIcon("Menu", 2.2f, "M4,7h16M4,12h16M4,17h16")
+
+    val Bell = lineIcon("Bell", 2f, "M6,16v-5a6,6 0,0 1,12 0v5l2,2H4z", "M10,21a2,2 0,0 0,4 0")
+
     val Folder = lineIcon(
         "Folder", 2f,
         "M3,7a2,2 0,0 1,2 -2h4l2,2h8a2,2 0,0 1,2 2v8a2,2 0,0 1,-2 2H5a2,2 0,0 1,-2 -2z"
     )
+
+    val Goal = lineIcon("Goal", 2f, "M4,21v-17M4,4h12l-2,4 2,4h-12")
 
     val Insights = lineIcon("Insights", 2f, "M4,20V10M10,20V4M16,20v-7M22,20H2")
 
@@ -91,6 +97,11 @@ object MoneyTrailIcons {
     )
 
     val Trash = lineIcon("Trash", 2f, "M4,7h16M10,11v6M14,11v6M6,7l1,13h10l1,-13M9,7V4h6v3")
+
+    val Undo = lineIcon("Undo", 2f, "M3,10h10a5,5 0,0 1,5 5a5,5 0,0 1,-5 5H10", "M3,10l5,-5", "M3,10l5,5")
+
+    /** A pencil, for editing a goal. */
+    val Edit = lineIcon("Edit", 2f, "M4,20h4l10.5,-10.5a2.8,2.8 0,0 0,-4 -4L4,16z", "M13.5,6.5l4,4")
 
     /** Two sliders, for Settings. */
     val Settings = lineIcon(

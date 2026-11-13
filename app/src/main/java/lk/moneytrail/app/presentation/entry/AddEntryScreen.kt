@@ -67,6 +67,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -93,6 +94,7 @@ import java.util.Locale
 @Composable
 fun AddEntryScreen(
     onClose: () -> Unit,
+    onUsdClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AddEntryViewModel = hiltViewModel()
 ) {
@@ -105,8 +107,7 @@ fun AddEntryScreen(
     AddEntryContent(
         uiState = uiState,
         onTypeChange = viewModel::onTypeChange,
-        onKeyPress = viewModel::onKeyPress,
-        onDeletePress = viewModel::onDeletePress,
+        onAmountChange = viewModel::onAmountChange,
         onCategoryChange = viewModel::onCategoryChange,
         onAddCategoryClick = viewModel::onAddCategoryClick,
         onAddCategory = viewModel::onAddCategory,
@@ -115,6 +116,7 @@ fun AddEntryScreen(
         onDateChange = viewModel::onDateChange,
         onNoteChange = viewModel::onNoteChange,
         onExpectedChange = viewModel::onExpectedChange,
+        onUsdClick = onUsdClick,
         onSaveClick = viewModel::save,
         onCloseClick = onClose,
         modifier = modifier
@@ -127,8 +129,7 @@ private val DateButtonFormatter = DateTimeFormatter.ofPattern("EEE, d MMM", Loca
 private fun AddEntryContent(
     uiState: AddEntryState,
     onTypeChange: (EntryType) -> Unit,
-    onKeyPress: (String) -> Unit,
-    onDeletePress: () -> Unit,
+    onAmountChange: (String) -> Unit,
     onCategoryChange: (String) -> Unit,
     onAddCategoryClick: () -> Unit,
     onAddCategory: (String, EntryType, SpendingType?) -> Unit,
@@ -137,6 +138,7 @@ private fun AddEntryContent(
     onDateChange: (LocalDate) -> Unit,
     onNoteChange: (String) -> Unit,
     onExpectedChange: (Boolean) -> Unit,
+    onUsdClick: (LocalDate) -> Unit,
     onSaveClick: () -> Unit,
     onCloseClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -191,9 +193,9 @@ private fun AddEntryContent(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp)
             )
 
-            AmountDisplay(
-                type = uiState.type,
-                amount = uiState.amount,
+            AmountField(
+                digits = uiState.amountDigits,
+                onAmountChange = onAmountChange,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp)
             )
 
@@ -204,6 +206,16 @@ private fun AddEntryContent(
                 onAddClick = onAddCategoryClick,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp)
             )
+
+            if (uiState.canEnterUsd) {
+                PickerButton(
+                    icon = MoneyTrailIcons.Calendar,
+                    text = "Enter it in USD instead",
+                    contentDescription = "Enter the AdSense payout in US dollars",
+                    onClick = { onUsdClick(uiState.date) },
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp).fillMaxWidth()
+                )
+            }
 
             Row(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp),
@@ -276,12 +288,6 @@ private fun AddEntryContent(
             )
 
             Spacer(Modifier.weight(1f))
-
-            Keypad(
-                onKeyPress = onKeyPress,
-                onDeletePress = onDeletePress,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp)
-            )
 
             if (uiState.errorMessage != null) {
                 Text(
@@ -389,27 +395,33 @@ private fun TypeToggle(
 }
 
 @Composable
-private fun AmountDisplay(type: EntryType, amount: Long, modifier: Modifier = Modifier) {
-    val sign = when {
-        amount == 0L -> ""
-        type == EntryType.EXPENSE -> MINUS_SIGN
-        else -> "+"
-    }
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
+private fun AmountField(digits: String, onAmountChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = "Amount (LKR)",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.outline
+            color = colors.onSurface
         )
-        Text(
-            text = sign + formatAmount(amount),
-            style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp, letterSpacing = (-0.02).em),
-            color = MaterialTheme.colorScheme.onSurface
+        OutlinedTextField(
+            value = digits,
+            onValueChange = onAmountChange,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.displaySmall.copy(fontSize = 28.sp, letterSpacing = (-0.02).em),
+            placeholder = { Text("0", style = MaterialTheme.typography.displaySmall.copy(fontSize = 28.sp)) },
+            suffix = { Text("LKR", color = colors.outline) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+            shape = RoundedCornerShape(18.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = colors.surface,
+                unfocusedContainerColor = colors.surface,
+                focusedBorderColor = colors.tertiary,
+                unfocusedBorderColor = colors.outlineVariant,
+                focusedPlaceholderColor = colors.outline,
+                unfocusedPlaceholderColor = colors.outline
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }
@@ -618,43 +630,6 @@ private fun FolderHint(
     }
 }
 
-private val KeypadRows = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"))
-
-@Composable
-private fun Keypad(onKeyPress: (String) -> Unit, onDeletePress: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        KeypadRows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { key -> KeypadKey(onClick = { onKeyPress(key) }, Modifier.weight(1f)) { KeyLabel(key) } }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            KeypadKey(onClick = { onKeyPress("00") }, Modifier.weight(1f)) { KeyLabel("00") }
-            KeypadKey(onClick = { onKeyPress("0") }, Modifier.weight(1f)) { KeyLabel("0") }
-            KeypadKey(onClick = onDeletePress, Modifier.weight(1f)) {
-                Icon(MoneyTrailIcons.Backspace, contentDescription = "Delete digit", modifier = Modifier.size(22.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun KeypadKey(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        modifier = modifier.height(46.dp)
-    ) {
-        Box(contentAlignment = Alignment.Center) { content() }
-    }
-}
-
-@Composable
-private fun KeyLabel(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-}
-
 @Preview(showBackground = true, heightDp = 860)
 @Composable
 private fun AddEntryScreenPreview() {
@@ -667,8 +642,7 @@ private fun AddEntryScreenPreview() {
                 note = "Farewell lunch for a teammate"
             ),
             onTypeChange = {},
-            onKeyPress = {},
-            onDeletePress = {},
+            onAmountChange = {},
             onCategoryChange = {},
             onAddCategoryClick = {},
             onAddCategory = { _, _, _ -> },
@@ -677,6 +651,7 @@ private fun AddEntryScreenPreview() {
             onDateChange = {},
             onNoteChange = {},
             onExpectedChange = {},
+            onUsdClick = {},
             onSaveClick = {},
             onCloseClick = {}
         )

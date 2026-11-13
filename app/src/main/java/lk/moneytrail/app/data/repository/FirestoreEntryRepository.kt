@@ -30,6 +30,7 @@ import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.repository.ConnectivityRepository
 import lk.moneytrail.app.domain.repository.EntryRepository
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -197,6 +198,29 @@ class FirestoreEntryRepository @Inject constructor(
         }
     }
 
+    override suspend fun lastLoggedDate(): Result<LocalDate?> {
+        val uid = auth.currentUser?.uid
+            ?: return Result.failure(AppException(SIGNED_OUT_MESSAGE))
+
+        return try {
+            // The newest entry by when it was saved. Sorting on one field needs no composite
+            // index, and offline Firestore answers from its cache.
+            val snapshot = entriesOf(uid)
+                .orderBy(FIELD_CREATED_AT, Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .await()
+            val createdAt = snapshot.documents.firstOrNull()
+                ?.getTimestamp(FIELD_CREATED_AT, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+            Result.success(createdAt?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Finding the last entry failed", e)
+            Result.failure(AppException(e.toFirestoreMessage(LOAD_FAILED_MESSAGE), e))
+        }
+    }
+
     private fun entriesOf(uid: String): CollectionReference =
         firestore.collection(USERS_COLLECTION).document(uid).collection(ENTRIES_COLLECTION)
 
@@ -213,7 +237,10 @@ class FirestoreEntryRepository @Inject constructor(
         FIELD_DATE to date.toString(),
         FIELD_NOTE to note,
         FIELD_SPENDING_TYPE to spendingType?.name,
-        FIELD_BONUS to bonus
+        FIELD_BONUS to bonus,
+        FIELD_USD_CENTS to usdCents,
+        FIELD_EFFECTIVE_RATE to effectiveRate,
+        FIELD_FEE_LKR to feeLkr
     )
 
     /** The Room row for this document, or null when [toEntry] skips it. */
@@ -249,7 +276,11 @@ class FirestoreEntryRepository @Inject constructor(
             status = getString(FIELD_STATUS)?.let { name -> EntryStatus.entries.find { it.name == name } }
                 ?: EntryStatus.CONFIRMED,
             // Entries saved before salary bonuses existed have no bonus.
-            bonus = getLong(FIELD_BONUS) ?: 0L
+            bonus = getLong(FIELD_BONUS) ?: 0L,
+            // Entries saved before USD income existed were all in rupees.
+            usdCents = getLong(FIELD_USD_CENTS) ?: 0L,
+            effectiveRate = getLong(FIELD_EFFECTIVE_RATE) ?: 0L,
+            feeLkr = getLong(FIELD_FEE_LKR) ?: 0L
         )
     }
 
@@ -266,6 +297,9 @@ class FirestoreEntryRepository @Inject constructor(
         const val FIELD_NOTE = "note"
         const val FIELD_SPENDING_TYPE = "spendingType"
         const val FIELD_BONUS = "bonus"
+        const val FIELD_USD_CENTS = "usdCents"
+        const val FIELD_EFFECTIVE_RATE = "effectiveRate"
+        const val FIELD_FEE_LKR = "feeLkr"
         const val FIELD_CREATED_AT = "createdAt"
         const val LOAD_FAILED_MESSAGE = "Couldn't load your entries. Please try again."
         const val SAVE_FAILED_MESSAGE = "Couldn't save the entry. Please try again."

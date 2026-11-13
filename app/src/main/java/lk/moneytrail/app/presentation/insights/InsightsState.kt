@@ -1,5 +1,12 @@
 package lk.moneytrail.app.presentation.insights
 
+import lk.moneytrail.app.domain.model.cryptoTotal
+import lk.moneytrail.app.domain.model.dependability
+import lk.moneytrail.app.domain.model.IncomeDependability
+import lk.moneytrail.app.domain.model.lastMonthsBySource
+import lk.moneytrail.app.domain.model.MonthBySource
+import lk.moneytrail.app.domain.model.monthIncome
+import lk.moneytrail.app.domain.model.MonthIncome
 import lk.moneytrail.app.domain.model.CategoryTotal
 import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryType
@@ -47,6 +54,24 @@ data class InsightsState(
     /** This month's coffee and dining out as days of goal saving; null without a goal or spending. */
     val diningDaysOfSaving: Int?
         get() = goal?.daysOfSaving(entries.diningSpend(month), today)
+
+    /** This month's income: arrived so far, and still expected. */
+    val income: MonthIncome
+        get() = entries.monthIncome(month)
+
+    /** One bar per month for the income chart, oldest first, this month last. */
+    val incomeBySource: List<MonthBySource>
+        get() = entries.lastMonthsBySource(month, CHART_MONTHS)
+
+    /** Last month, the latest one that is complete, for how dependable income is. */
+    val lastFullMonth: YearMonth
+        get() = month.minusMonths(1)
+
+    val dependability: IncomeDependability
+        get() = entries.dependability(lastFullMonth)
+
+    val cryptoThisYear: Long
+        get() = entries.cryptoTotal(today.year)
 
     companion object {
         const val CHART_MONTHS = 6

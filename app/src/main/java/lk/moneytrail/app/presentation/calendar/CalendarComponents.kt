@@ -8,12 +8,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -41,6 +45,7 @@ import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryTotals
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
+import lk.moneytrail.app.domain.model.UsdConversion
 import lk.moneytrail.app.presentation.components.MINUS_SIGN
 import lk.moneytrail.app.presentation.components.MoneyTrailIcons
 import lk.moneytrail.app.presentation.components.formatAmount
@@ -54,7 +59,7 @@ import java.util.Locale
 
 private val WeekdayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
-/** 44dp outlined square button, used for the month arrows. */
+/** 38dp outlined square button, used for the month arrows and the bell. */
 @Composable
 internal fun SquareIconButton(
     icon: ImageVector,
@@ -64,11 +69,32 @@ internal fun SquareIconButton(
 ) {
     OutlinedIconButton(
         onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = modifier.size(44.dp)
+        modifier = modifier.size(38.dp)
     ) {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(16.dp))
+    }
+}
+
+/** Previous and next month arrows in one outlined pill with a divider between them. */
+@Composable
+internal fun MonthArrows(onPreviousClick: () -> Unit, onNextClick: () -> Unit, modifier: Modifier = Modifier) {
+    val line = MaterialTheme.colorScheme.outlineVariant
+    Row(
+        modifier = modifier
+            .height(38.dp)
+            .border(1.dp, line, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onPreviousClick, modifier = Modifier.size(width = 40.dp, height = 38.dp)) {
+            Icon(MoneyTrailIcons.ChevronLeft, contentDescription = "Previous month", modifier = Modifier.size(16.dp))
+        }
+        Box(Modifier.width(1.dp).height(22.dp).background(line))
+        IconButton(onClick = onNextClick, modifier = Modifier.size(width = 40.dp, height = 38.dp)) {
+            Icon(MoneyTrailIcons.ChevronRight, contentDescription = "Next month", modifier = Modifier.size(16.dp))
+        }
     }
 }
 
@@ -79,22 +105,30 @@ internal fun MonthSummary(totals: EntryTotals, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.tertiary, RoundedCornerShape(20.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         SummaryItem("Income", formatAmount(totals.income), Modifier.weight(1f))
+        SummaryDivider()
         SummaryItem("Expenses", formatAmount(totals.expenses), Modifier.weight(1f))
+        SummaryDivider()
         // Expected money in minus expected money out, e.g. "+30,000" for an unpaid invoice.
         SummaryItem("Expected", formatNet(totals.expectedIncome - totals.expectedExpenses), Modifier.weight(1f))
     }
 }
 
 @Composable
+private fun SummaryDivider() {
+    Box(Modifier.fillMaxHeight().width(1.dp).background(Color.White.copy(alpha = 0.35f)))
+}
+
+@Composable
 private fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier) {
-    // The card is always orange, so its text stays dark in both themes.
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = Ink)
-        Text(value, style = MaterialTheme.typography.titleMedium, fontSize = 16.sp, color = Ink, maxLines = 1)
+    // The card is always orange, so its text is white in both themes.
+    Column(modifier = modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = Color.White)
+        Text(value, style = MaterialTheme.typography.titleMedium, fontSize = 16.sp, color = Color.White, maxLines = 1)
     }
 }
 
@@ -170,38 +204,42 @@ private fun DayCell(
         Modifier.clearAndSetSemantics {}
     }
 
-    Column(
-        modifier = modifier
-            .height(46.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (isSelected) colors.primary else Color.Transparent)
-            .clickable(enabled = day.isInMonth, role = Role.Button, onClick = onClick)
-            .then(semantics),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = day.date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.bodyMedium,
-            fontSize = 14.sp,
-            fontWeight = if (isToday) FontWeight.Bold else FontWeight.SemiBold,
-            color = textColor
-        )
-        Spacer(Modifier.height(3.dp))
-        Row(
-            modifier = Modifier.height(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-            verticalAlignment = Alignment.CenterVertically
+    // The cell fills its column; the highlight is a centred square, so it stays square on
+    // every screen width. The number sits in the middle and the markers under it.
+    Box(modifier = modifier.height(46.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (isSelected) colors.primary else Color.Transparent)
+                .clickable(enabled = day.isInMonth, role = Role.Button, onClick = onClick)
+                .then(semantics),
+            contentAlignment = Alignment.Center
         ) {
-            val markerOnSelected = colors.onPrimary.copy(alpha = 0.75f)
-            if (day.hasIncome) {
-                Marker(if (isSelected) markerOnSelected else colors.secondary, CircleShape)
-            }
-            if (day.hasExpense) {
-                Marker(if (isSelected) markerOnSelected else colors.tertiary, RoundedCornerShape(1.dp))
-            }
-            if (day.hasExpected) {
-                ExpectedMarker(if (isSelected) markerOnSelected else colors.secondary)
+            Text(
+                text = day.date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isToday) FontWeight.Bold else FontWeight.SemiBold,
+                color = textColor
+            )
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 6.dp)
+                    .height(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val markerOnSelected = colors.onPrimary.copy(alpha = 0.75f)
+                if (day.hasIncome) {
+                    Marker(if (isSelected) markerOnSelected else colors.secondary, CircleShape)
+                }
+                if (day.hasExpense) {
+                    Marker(if (isSelected) markerOnSelected else colors.tertiary, RoundedCornerShape(1.dp))
+                }
+                if (day.hasExpected) {
+                    ExpectedMarker(if (isSelected) markerOnSelected else colors.secondary)
+                }
             }
         }
     }
@@ -289,7 +327,8 @@ internal fun EntryCard(entry: Entry, onClick: () -> Unit, modifier: Modifier = M
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(entry.category, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = "${entry.account} · $kind" + if (entry.bonus > 0) " · incl. ${formatAmount(entry.bonus)} bonus" else "",
+                    text = "${entry.account} · $kind" + if (entry.bonus > 0) " · incl. ${formatAmount(entry.bonus)} bonus" else "" +
+                        if (entry.isUsd) " · USD ${UsdConversion.formatHundredths(entry.usdCents)} at ${UsdConversion.formatHundredths(entry.effectiveRate)}" else "",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Normal,
                     color = colors.outline

@@ -1,0 +1,35 @@
+# Runs firestore-rules-tests against the Firestore emulator whenever the rules
+# or their tests change.
+name: Firestore rules
+
+on:
+  push:
+    branches: [main, develop]
+    paths: [app/firestore.rules, firestore-rules-tests/**, firebase.json]
+  pull_request:
+    paths: [app/firestore.rules, firestore-rules-tests/**, firebase.json]
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: firestore-rules-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      # The emulator runs on Java.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: firestore-rules-tests/package-lock.json
+
+      - run: npm ci
+      - run: npm test

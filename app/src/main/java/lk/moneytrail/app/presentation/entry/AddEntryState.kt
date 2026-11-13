@@ -32,6 +32,10 @@ data class AddEntryState(
     val amount: Long
         get() = amountDigits.toLongOrNull() ?: 0L
 
+    /** AdSense is paid in dollars, so it gets its own payment screen. */
+    val canEnterUsd: Boolean
+        get() = type == EntryType.INCOME && category == Categories.ADSENSE
+
     val categories: List<String>
         get() = Categories.namesFor(type, customCategories)
 }

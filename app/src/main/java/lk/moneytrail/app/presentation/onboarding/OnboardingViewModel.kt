@@ -60,6 +60,14 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    /** What a place holds now: the start for comparing it with the bank in catch-up later. */
+    fun onBalanceChange(accountId: String, text: String) {
+        val digits = digitsOnly(text)
+        // Leading zeros go, but a lone 0 stays: an empty place holds 0.
+        val cleaned = digits.trimStart('0').ifEmpty { digits.take(1) }
+        _uiState.update { it.copy(balanceDigits = it.balanceDigits + (accountId to cleaned), errorMessage = null) }
+    }
+
     fun onPayDayClick(day: Int) {
         _uiState.update { it.copy(payDay = day, errorMessage = null) }
     }
@@ -139,7 +147,18 @@ class OnboardingViewModel @Inject constructor(
         if (state.isLastStep) {
             finish(state)
         } else {
-            _uiState.update { it.copy(step = OnboardingStep.entries[state.step.ordinal + 1], errorMessage = null) }
+            _uiState.update {
+                it.copy(
+                    step = OnboardingStep.entries[state.step.ordinal + 1],
+                    errorMessage = null,
+                    // What's in Savings is what's saved towards the goal so far; it can be changed there.
+                    goalSavedDigits = if (state.step == OnboardingStep.BALANCES) {
+                        it.goalSavedDigits.ifEmpty { it.savingsBalanceDigits }
+                    } else {
+                        it.goalSavedDigits
+                    }
+                )
+            }
         }
     }
 
@@ -153,6 +172,7 @@ class OnboardingViewModel @Inject constructor(
 
     private fun stepError(state: OnboardingState): String? = when (state.step) {
         OnboardingStep.MONEY_PLACES -> CompleteOnboardingUseCase.accountsError(state.selectedAccounts)
+        OnboardingStep.BALANCES -> CompleteOnboardingUseCase.balancesError(state.accountsToSave)
         OnboardingStep.SALARY -> CompleteOnboardingUseCase.salaryError(state.payDay, state.baseSalary)
         OnboardingStep.INCOME_SOURCES ->
             CompleteOnboardingUseCase.incomeSourcesError(state.incomeSources, state.selectedOwnIncomeList)
@@ -179,13 +199,15 @@ class OnboardingViewModel @Inject constructor(
                 name = state.goalName.trim(),
                 targetAmount = goalTarget,
                 savedAmount = state.goalSaved,
-                targetDate = state.goalDate
+                targetDate = state.goalDate,
+                // Savings are moved once the salary is in, so the pay day is the transfer day.
+                transferDay = payDay
             )
         )
 
         _uiState.update { it.copy(isSaving = true, errorMessage = null) }
         viewModelScope.launch {
-            completeOnboarding(state.selectedAccounts, plan, state.today, state.selectedOwnIncomeList)
+            completeOnboarding(state.accountsToSave, plan, state.today, state.selectedOwnIncomeList)
                 .onSuccess { _uiState.update { it.copy(isSaving = false, isFinished = true) } }
                 .onFailure { e -> _uiState.update { it.copy(isSaving = false, errorMessage = e.message) } }
         }

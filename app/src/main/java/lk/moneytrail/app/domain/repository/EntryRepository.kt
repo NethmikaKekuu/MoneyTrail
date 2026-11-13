@@ -33,4 +33,7 @@ interface EntryRepository {
     suspend fun updateEntry(entry: Entry): Result<Unit>
 
     suspend fun deleteEntry(id: String): Result<Unit>
+
+    /** The day the user last saved an entry (not the entry's own date); null when they never have. */
+    suspend fun lastLoggedDate(): Result<LocalDate?>
 }

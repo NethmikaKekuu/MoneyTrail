@@ -45,7 +45,9 @@ class InsightsViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         listenJob = viewModelScope.launch {
             val month = _uiState.value.month
-            val from = month.minusMonths((InsightsState.CHART_MONTHS - 1).toLong()).atDay(1)
+            // The chart's six months, reaching back to January for the crypto year total.
+            val chartStart = month.minusMonths((InsightsState.CHART_MONTHS - 1).toLong()).atDay(1)
+            val from = minOf(chartStart, month.atDay(1).withDayOfYear(1))
             entryRepository.observeBetween(from, month.atEndOfMonth()).collect { result ->
                 result
                     .onSuccess { entries ->

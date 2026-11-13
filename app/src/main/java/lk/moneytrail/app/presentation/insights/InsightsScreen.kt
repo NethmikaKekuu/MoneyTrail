@@ -50,7 +50,6 @@ import lk.moneytrail.app.domain.model.MonthTotal
 import lk.moneytrail.app.domain.model.SavingsGoal
 import lk.moneytrail.app.domain.model.SpendingSplit
 import lk.moneytrail.app.domain.model.SpendingType
-import lk.moneytrail.app.presentation.components.EmptyView
 import lk.moneytrail.app.presentation.components.ErrorView
 import lk.moneytrail.app.presentation.components.LoadingView
 import lk.moneytrail.app.presentation.components.formatAmount
@@ -75,7 +74,7 @@ fun InsightsScreen(
     )
 }
 
-private val ShortMonthFormatter = DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH)
+internal val ShortMonthFormatter = DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH)
 
 private fun entriesText(count: Int): String = if (count == 1) "1 entry" else "$count entries"
 
@@ -96,16 +95,13 @@ private fun InsightsContent(
         }
 
         when {
-            uiState.tab == InsightsTab.INCOME -> EmptyView(
-                title = "Income insights are on the way",
-                message = "Income by source, and how much of it you can count on, will show here."
-            )
             uiState.errorMessage != null -> ErrorView(
                 title = "Couldn't load your insights",
                 message = uiState.errorMessage,
                 onRetry = onRetryClick
             )
             uiState.isLoading -> LoadingView(message = "Loading your insights…")
+            uiState.tab == InsightsTab.INCOME -> IncomeInsights(uiState)
             else -> ExpenseInsights(uiState)
         }
     }
@@ -239,7 +235,7 @@ private fun ExpenseInsights(uiState: InsightsState) {
 
 /** A bordered card with a bold title and an optional note on the right. */
 @Composable
-private fun InsightCard(title: String, note: String? = null, content: @Composable ColumnScope.() -> Unit) {
+internal fun InsightCard(title: String, note: String? = null, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -309,7 +305,7 @@ private fun SplitBar(split: SpendingSplit) {
 }
 
 @Composable
-private fun SplitValue(label: String, amount: Long, color: Color, modifier: Modifier = Modifier) {
+internal fun SplitValue(label: String, amount: Long, color: Color, modifier: Modifier = Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(
@@ -431,7 +427,7 @@ private fun MonthChart(months: List<MonthTotal>) {
 }
 
 @Composable
-private fun QuietText(text: String) {
+internal fun QuietText(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
 }
 

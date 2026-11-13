@@ -1,5 +1,6 @@
 package lk.moneytrail.app.domain.repository
 
+import kotlinx.coroutines.flow.Flow
 import lk.moneytrail.app.domain.model.MoneyPlan
 
 // Works on the signed-in user's money plan. Failures are returned as an
@@ -11,4 +12,10 @@ interface PlanRepository {
 
     /** The saved plan, or null for someone who skipped onboarding. */
     suspend fun getPlan(): Result<MoneyPlan?>
+
+    /**
+     * The saved plan, or null for someone who skipped onboarding. Updates live whenever
+     * the user's plan or savings goal is changed in Firestore.
+     */
+    fun observePlan(): Flow<Result<MoneyPlan?>>
 }

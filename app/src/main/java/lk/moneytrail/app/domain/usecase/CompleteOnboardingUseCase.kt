@@ -62,6 +62,16 @@ class CompleteOnboardingUseCase @Inject constructor(
         fun accountsError(accounts: List<Account>): String? =
             if (accounts.isEmpty()) "Pick at least one place where you keep money." else null
 
+        /**
+         * Every place needs what it holds now: the start that catch-up compares the bank
+         * against later, to find spending that wasn't logged. 0 is fine for an empty one.
+         */
+        fun balancesError(accounts: List<Account>): String? = when {
+            accounts.any { it.checkedBalance == null } -> "Enter what each place holds now. Type 0 if it's empty."
+            accounts.any { (it.checkedBalance ?: 0L) > MAX_AMOUNT } -> "That balance isn't valid."
+            else -> null
+        }
+
         /** Checks the name of a place the user adds in step 1 against the places already listed. */
         fun placeError(name: String, existing: List<Account>): String? {
             val trimmed = name.trim()
