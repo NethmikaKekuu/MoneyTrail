@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import lk.moneytrail.app.MainActivity
 import lk.moneytrail.app.R
+import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.Reminder
 import lk.moneytrail.app.domain.model.kind
@@ -112,16 +113,21 @@ internal class ReminderNotifier(
     private fun moneyDueText(reminder: Reminder.MoneyDue, today: LocalDate): Pair<String, String> {
         val entries = reminder.entries
         if (entries.size > 1) {
-            val names = entries.take(3).joinToString(", ") { it.category } + if (entries.size > 3) "…" else ""
+            val names = entries.take(3).joinToString(", ") { it.reminderLabel() } + if (entries.size > 3) "…" else ""
             return "${entries.size} things to check" to "$names. Tap to confirm what happened."
         }
         val entry = entries.first()
         val isIncome = entry.type == EntryType.INCOME
         val whenText = if (entry.date == today) "today" else "on ${entry.date.format(DayFormatter)}"
-        val title = if (isIncome) "${entry.category} expected $whenText" else "${entry.category} due $whenText"
+        val label = entry.reminderLabel()
+        val title = if (isIncome) "$label expected $whenText" else "$label due $whenText"
         val question = if (isIncome) "Did it come in?" else "Did it go out?"
         return title to "LKR ${amount(entry.amount)}. $question Tap to check."
     }
+
+    /** What to call an entry in a reminder: its note (a recurring bill's name, e.g. "Netflix") or else its category. */
+    private fun Entry.reminderLabel(): String =
+        note.trim().take(MAX_LABEL_LENGTH).ifBlank { category }
 
     private fun amount(value: Long): String = String.format(Locale.US, "%,d", value)
 
@@ -130,6 +136,7 @@ internal class ReminderNotifier(
     private companion object {
         const val TAG = "ReminderNotifier"
         const val CHANNEL_ID = "reminders"
+        const val MAX_LABEL_LENGTH = 30
         const val PREFS_NAME = "moneytrail_reminders"
         /** Trail orange from the logo, for the icon's tint. */
         const val BRAND_ORANGE = 0xFFF97316.toInt()
