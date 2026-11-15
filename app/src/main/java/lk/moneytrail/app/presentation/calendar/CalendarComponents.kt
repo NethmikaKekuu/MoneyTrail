@@ -126,9 +126,10 @@ private fun SummaryDivider() {
 @Composable
 private fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier) {
     // The card is always orange, so its text is white in both themes.
-    Column(modifier = modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(modifier = modifier.padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = Color.White)
-        Text(value, style = MaterialTheme.typography.titleMedium, fontSize = 16.sp, color = Color.White, maxLines = 1)
+        // softWrap off so a figure like "+11,400" is never split at its comma on a narrow screen.
+        Text(value, style = MaterialTheme.typography.titleMedium, fontSize = 16.sp, color = Color.White, maxLines = 1, softWrap = false)
     }
 }
 
