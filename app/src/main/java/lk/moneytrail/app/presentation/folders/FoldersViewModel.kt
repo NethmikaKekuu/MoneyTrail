@@ -30,12 +30,18 @@ class FoldersViewModel @Inject constructor(
         listenToEntries()
     }
 
+    // Switching folder or month closes the open category, as it belongs to one folder and month.
     fun onFolderClick(type: EntryType) {
-        _uiState.update { it.copy(selectedType = type) }
+        _uiState.update { if (it.selectedType == type) it else it.copy(selectedType = type, openCategory = null) }
     }
 
     fun onMonthClick(month: YearMonth) {
-        _uiState.update { it.copy(selectedMonth = month) }
+        _uiState.update { it.copy(selectedMonth = month, openCategory = null) }
+    }
+
+    /** Opens the category's entries under its row, or closes them if it is already open. */
+    fun onCategoryClick(category: String) {
+        _uiState.update { it.copy(openCategory = if (it.openCategory == category) null else category) }
     }
 
     fun onRetryClick() {

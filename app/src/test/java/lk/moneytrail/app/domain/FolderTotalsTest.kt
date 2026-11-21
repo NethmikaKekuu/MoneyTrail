@@ -2,9 +2,11 @@ package lk.moneytrail.app.domain
 
 import lk.moneytrail.app.domain.model.CategoryTotal
 import lk.moneytrail.app.domain.model.Entry
+import lk.moneytrail.app.domain.model.EntryStatus
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.SpendingType
 import lk.moneytrail.app.domain.model.categoryTotals
+import lk.moneytrail.app.domain.model.entriesIn
 import lk.moneytrail.app.domain.model.monthTotals
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -42,6 +44,27 @@ class FolderTotalsTest {
         val totals = listOf(expense(500, "Rides", day), expense(500, "Coffee", day)).categoryTotals(EntryType.EXPENSE, october)
 
         assertEquals(listOf("Coffee", "Rides"), totals.map { it.category })
+    }
+
+    @Test
+    fun entriesIn_areTheCategorysEntriesForThatMonthNewestFirst() {
+        val list = entries.entriesIn(EntryType.EXPENSE, "Coffee", october)
+
+        assertEquals(listOf(LocalDate.of(2026, 10, 9), LocalDate.of(2026, 10, 2)), list.map { it.date })
+        assertEquals(entries.categoryTotals(EntryType.EXPENSE, october).first { it.category == "Coffee" }.total, list.sumOf { it.amount })
+    }
+
+    @Test
+    fun entriesIn_leavesOutOtherMonthsTypesAndExpectedEntries() {
+        val expected = Entry(
+            "", EntryType.EXPENSE, 700, "Coffee", "Main bank", LocalDate.of(2026, 10, 20), "", SpendingType.DISCRETIONARY,
+            status = EntryStatus.EXPECTED
+        )
+        val all = entries + expected
+
+        assertEquals(listOf(34_000L), all.entriesIn(EntryType.EXPENSE, "Rent", october).map { it.amount })
+        assertEquals(2, all.entriesIn(EntryType.EXPENSE, "Coffee", october).size)
+        assertEquals(emptyList<Entry>(), all.entriesIn(EntryType.INCOME, "Coffee", october))
     }
 
     @Test

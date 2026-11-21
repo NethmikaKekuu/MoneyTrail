@@ -1,8 +1,10 @@
 package lk.moneytrail.app.presentation.folders
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
@@ -31,9 +34,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +74,7 @@ fun FoldersScreen(
         uiState = uiState,
         onFolderClick = viewModel::onFolderClick,
         onMonthClick = viewModel::onMonthClick,
+        onCategoryClick = viewModel::onCategoryClick,
         onRetryClick = viewModel::onRetryClick,
         onAddEntryClick = onAddEntryClick,
         modifier = modifier
@@ -76,6 +82,7 @@ fun FoldersScreen(
 }
 
 private val MonthYearFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)
+private val EntryDateFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)
 private val ShortMonthFormatter = DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH)
 
 private fun entriesText(count: Int): String = if (count == 1) "1 entry" else "$count entries"
@@ -87,6 +94,7 @@ private fun FoldersContent(
     uiState: FoldersState,
     onFolderClick: (EntryType) -> Unit,
     onMonthClick: (YearMonth) -> Unit,
+    onCategoryClick: (String) -> Unit,
     onRetryClick: () -> Unit,
     onAddEntryClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -147,7 +155,7 @@ private fun FoldersContent(
                         if (uiState.categories.isEmpty()) {
                             EmptyFolder(uiState.selectedType, uiState.selectedMonth)
                         } else {
-                            CategoryList(uiState.categories)
+                            CategoryList(uiState.categories, uiState.openCategory, uiState.openEntries, onCategoryClick)
                         }
                     }
                     if (uiState.otherMonths.isNotEmpty()) {
@@ -222,7 +230,12 @@ private fun FolderCard(
 
 /** The open folder's categories, each with a bar against the biggest one. */
 @Composable
-private fun CategoryList(categories: List<CategoryTotal>) {
+private fun CategoryList(
+    categories: List<CategoryTotal>,
+    openCategory: String?,
+    openEntries: List<Entry>,
+    onCategoryClick: (String) -> Unit
+) {
     val colors = MaterialTheme.colorScheme
     val biggest = categories.maxOf { it.total }.coerceAtLeast(1)
     Column(
@@ -232,7 +245,16 @@ private fun CategoryList(categories: List<CategoryTotal>) {
             .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
         categories.forEachIndexed { index, category ->
-            CategoryRow(category, fraction = category.total.toFloat() / biggest)
+            val isOpen = category.category == openCategory
+            CategoryRow(
+                category = category,
+                fraction = category.total.toFloat() / biggest,
+                isOpen = isOpen,
+                onClick = { onCategoryClick(category.category) }
+            )
+            AnimatedVisibility(visible = isOpen) {
+                EntryLines(openEntries)
+            }
             if (index < categories.lastIndex) {
                 HorizontalDivider(color = colors.outlineVariant)
             }
@@ -241,11 +263,12 @@ private fun CategoryList(categories: List<CategoryTotal>) {
 }
 
 @Composable
-private fun CategoryRow(category: CategoryTotal, fraction: Float) {
+private fun CategoryRow(category: CategoryTotal, fraction: Float, isOpen: Boolean, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClickLabel = if (isOpen) "Hide entries" else "Show entries", onClick = onClick)
             .padding(vertical = 10.dp)
             .semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
@@ -289,6 +312,52 @@ private fun CategoryRow(category: CategoryTotal, fraction: Float) {
                     fontWeight = FontWeight.Normal,
                     color = colors.outline
                 )
+            }
+        }
+        Icon(
+            imageVector = MoneyTrailIcons.ChevronRight,
+            contentDescription = null,
+            tint = colors.outline,
+            modifier = Modifier
+                .size(16.dp)
+                .rotate(if (isOpen) 90f else 0f)
+        )
+    }
+}
+
+/** What's behind an open category: each entry's date, note and amount, newest first. */
+@Composable
+private fun EntryLines(entries: List<Entry>) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 48.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        entries.forEach { entry ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = entry.date.format(EntryDateFormatter),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Normal,
+                    color = colors.outline,
+                    modifier = Modifier.width(44.dp)
+                )
+                Text(
+                    text = entry.note.ifBlank { entry.category },
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(formatAmount(entry.amount), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -367,10 +436,12 @@ private fun FoldersScreenPreview() {
                     previewEntry("4", 2_100, "Coffee", october),
                     previewEntry("5", 1_730, "Rides", october),
                     previewEntry("6", 41_000, "Rent", LocalDate.of(2026, 9, 1))
-                )
+                ),
+                openCategory = "Coffee"
             ),
             onFolderClick = {},
             onMonthClick = {},
+            onCategoryClick = {},
             onRetryClick = {},
             onAddEntryClick = {}
         )

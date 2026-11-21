@@ -157,9 +157,7 @@ private fun CalendarContent(
                 }
                 // The month arrows together, then the bell on its own at the edge, as in most apps.
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    SquareIconButton(MoneyTrailIcons.ChevronLeft, "Previous month", onPreviousMonthClick)
-                    Spacer(Modifier.width(6.dp))
-                    SquareIconButton(MoneyTrailIcons.ChevronRight, "Next month", onNextMonthClick)
+                    MonthArrows(onPreviousMonthClick, onNextMonthClick)
                     Spacer(Modifier.width(12.dp))
                     BadgedBox(badge = {
                         if (unreadNotifications > 0) {

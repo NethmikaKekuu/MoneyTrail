@@ -26,6 +26,14 @@ fun List<Entry>.categoryTotals(type: EntryType, month: YearMonth): List<Category
         .map { (category, entries) -> CategoryTotal(category, entries.sumOf { it.amount }, entries.size) }
         .sortedWith(compareByDescending<CategoryTotal> { it.total }.thenBy { it.category })
 
+/**
+ * The confirmed entries of [type] in [category] dated in [month], newest first: what is
+ * behind one [CategoryTotal], so the list always adds up to the total on its row.
+ */
+fun List<Entry>.entriesIn(type: EntryType, category: String, month: YearMonth): List<Entry> =
+    filter { it.type == type && !it.isExpected && it.category == category && YearMonth.from(it.date) == month }
+        .sortedByDescending { it.date }
+
 /** The confirmed total of [type] for every month that has some, newest month first. */
 fun List<Entry>.monthTotals(type: EntryType): List<MonthTotal> =
     filter { it.type == type && !it.isExpected }

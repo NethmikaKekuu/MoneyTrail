@@ -5,6 +5,7 @@ import lk.moneytrail.app.domain.model.Entry
 import lk.moneytrail.app.domain.model.EntryType
 import lk.moneytrail.app.domain.model.MonthTotal
 import lk.moneytrail.app.domain.model.categoryTotals
+import lk.moneytrail.app.domain.model.entriesIn
 import lk.moneytrail.app.domain.model.monthTotals
 import java.time.YearMonth
 
@@ -18,8 +19,14 @@ data class FoldersState(
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     /** Every entry from the oldest month listed up to the end of the current month. */
-    val entries: List<Entry> = emptyList()
+    val entries: List<Entry> = emptyList(),
+    /** The category whose entries are showing under its row; only one at a time. */
+    val openCategory: String? = null
 ) {
+    /** The entries behind the open category, newest first. Follows [entries], so it stays live. */
+    val openEntries: List<Entry>
+        get() = openCategory?.let { entries.entriesIn(selectedType, it, selectedMonth) }.orEmpty()
+
     val expenses: MonthTotal
         get() = totalFor(EntryType.EXPENSE)
 
